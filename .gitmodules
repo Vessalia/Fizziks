@@ -1,3 +1,0 @@
-[submodule "dependencies/GoldEngine"]
-	path = dependencies/GoldEngine
-	url = https://github.com/goldDaniel/GoldEngine.git
