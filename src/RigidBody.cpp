@@ -21,4 +21,8 @@ void RigidBody::setBody(const BodyDef& def)
     body.isStatic = def.isStatic;
 }
 
-void RigidBody::applyForce(const Vector2p& force) { world->apply_force(worldIndex, force); }
+void RigidBody::applyForce(const Vector2p& force) 
+{
+    assert(world && "Body instance not associated with a world!");
+    if(world) world->apply_force(worldIndex, force); 
+}

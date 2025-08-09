@@ -460,3 +460,4 @@ FodyWeavers.xsd
 *.dwo
 
 build/*
+.vscode

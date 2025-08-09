@@ -30,7 +30,7 @@ void main()
     while(true)
     {
         auto now = std::chrono::system_clock::now();
-        dt = (now - lastTick).count();
+        dt = std::chrono::duration_cast<std::chrono::duration<val_t>>(now - lastTick).count();
         world.tick(dt);
         lastTick = now;
     }

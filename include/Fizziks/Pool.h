@@ -27,14 +27,14 @@ public:
         }
     }
 
-    std::pair<Handle, T&> get()
+    std::pair<Handle, T*> get()
     {
         assert(!free_indices.empty() && "Pool is exhausted.");
 
         uint32_t index = free_indices.front(); free_indices.pop();
         slots[index].active = true;
         Handle handle{ index, slots[index].gen };
-        return { handle, slots[index].data };
+        return { handle, &slots[index].data };
     }
 
     bool release(Handle h)
