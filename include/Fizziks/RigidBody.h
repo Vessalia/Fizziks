@@ -1,31 +1,15 @@
 #pragma once
 #include "Dense.h"
-#include "FizzWorld.h"
+#include "BodyDef.h"
 #include "Handle.h"
 #include "Shape.h"
 
-struct BodyDef
+namespace Fizziks
 {
-    Vector2p initPosition;
-    Vector2p initVelocity;
-    Vector2p initAngularVelocity;
-
-    val_t mass;
-
-    Shape shape;
-
-    bool isStatic;
-};
+class FizzWorld;
 
 class RigidBody
 {
-public:
-    RigidBody() : RigidBody({}, nullptr, -1, {}) { };
-
-    void setBody(const BodyDef& def);
-
-    void applyForce(const Vector2p& force);
-
 private:
     friend class FizzWorld;
 
@@ -43,10 +27,35 @@ private:
 
     BodyData body;
 
-    Handle handle;
+    Handle pool_handle;
+    Handle world_handle;
     FizzWorld* world;
 
-    size_t worldIndex;
+    RigidBody(Handle pool_handle, Handle world_handle, FizzWorld* world, const BodyDef& def);
+    
+public:
+    RigidBody() : RigidBody({}, {}, nullptr, {}) { };
 
-    RigidBody(Handle handle, FizzWorld* world, size_t worldIndex, const BodyDef& def);
+    RigidBody& setBody(const BodyDef& def);
+
+    Vector2p position() const;
+    RigidBody& position(const Vector2p& pos);
+
+    Vector2p velocity() const;
+    RigidBody& velocity(const Vector2p& vel);
+
+    Vector2p angularVelocity() const;
+    RigidBody& angularVelocity(const Vector2p& angVel);
+
+    val_t mass() const;
+    RigidBody& mass(val_t m);
+
+    Shape shape() const;
+    RigidBody& shape(Shape s);
+
+    bool isStatic() const;
+    RigidBody& isStatic(bool is);
+
+    RigidBody& applyForce(const Vector2p& force);
+};
 };

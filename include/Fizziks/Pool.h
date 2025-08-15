@@ -3,6 +3,8 @@
 #include <queue>
 #include "Handle.h"
 
+namespace Fizziks
+{
 template<typename T>
 class Pool
 {
@@ -67,4 +69,5 @@ public:
         while (!free_indices.empty()) free_indices.pop();
         for (uint32_t i = 0; i < slots.size(); ++i) free_indices.push(i);
     }
+};
 };

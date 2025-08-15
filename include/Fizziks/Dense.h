@@ -1,21 +1,42 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include <numeric>
 
 #ifndef FIZZIKS_DEFINED
 #define FIZZIKS_DEFINED
 #endif
 
+namespace Fizziks
+{
 #ifdef FIZZIKS_PRECISION_MODE
-    #define val_t double
-    #define Vector2p Eigen::Vector2d
-    #define Vector3p Eigen::Vector3d
-    #define Matrix2p Eigen::Matrix2d
-    #define Matrix3p Eigen::Matrix3d
+    typedef double val_t;
+    typedef Eigen::Vector2d Vector2p;
+    typedef Eigen::Vector3d Vector3p;
+    typedef Eigen::Matrix2d Matrix2p;
+    typedef Eigen::Matrix3d Matrix3p;
 #else
-    #define val_t float
-    #define Vector2p Eigen::Vector2f
-    #define Vector3p Eigen::Vector3f
-    #define Matrix2p Eigen::Matrix2f
-    #define Matrix3p Eigen::Matrix3f
+    typedef float val_t;
+    typedef Eigen::Vector2f Vector2p;
+    typedef Eigen::Vector3f Vector3p;
+    typedef Eigen::Matrix2f Matrix2p;
+    typedef Eigen::Matrix3f Matrix3p;
 #endif
+
+template<typename T>
+T totmax()
+{
+    return std::numeric_limits<T>::max();
+}
+
+template<typename T>
+T totmin()
+{
+    return std::numeric_limits<T>::min();
+}
+
+val_t getDist2(Vector2p v1, Vector2p v2)
+{
+    return ((v1.x() - v2.x()) * (v1.x() - v2.x())) + ((v1.y() - v2.y()) * (v1.y() - v2.y()));
+}
+};

@@ -1,9 +1,13 @@
 #pragma once
 
+namespace Fizziks
+{
 struct Handle 
 {
-    uint32_t index;
-    uint32_t gen;
+    size_t index;
+    size_t gen;
+    bool     isValid;
 
-    bool operator==(const Handle& other) const { return index == other.index && gen == other.gen; }
+    bool operator==(const Handle& other) const { return index == other.index && gen == other.gen && isValid == other.isValid; }
+};
 };

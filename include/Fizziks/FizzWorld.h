@@ -1,11 +1,11 @@
 #pragma once
 #include "Dense.h"
 #include "Pool.h"
+#include "RigidBody.h"
+#include "BodyDef.h"
 
-// handle circular dependency
-class RigidBody;
-struct BodyDef;
-
+namespace Fizziks
+{
 class FizzWorld
 {
 public:
@@ -21,8 +21,12 @@ public:
 
 private:
     friend class RigidBody;
+
     Pool<RigidBody> rigidBodyPool;
     std::vector<RigidBody*> activeBodies;
 
-    void apply_force(size_t worldIndex, Vector2p force);
+    RigidBody::BodyData* get_body(Handle handle) const;
+
+    void apply_force(Handle handle, Vector2p force);
+};
 };

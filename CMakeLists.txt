@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Collect all source files in src/
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE INCLUDES CONFIGURE_DEPENDS include/Fizziks/*.h)
 
 add_executable(Fizziks ${SOURCES})
 
