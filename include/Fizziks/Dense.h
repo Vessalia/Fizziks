@@ -24,13 +24,13 @@ namespace Fizziks
 #endif
 
 template<typename T>
-T totmax()
+T fizzmax()
 {
     return std::numeric_limits<T>::max();
 }
 
 template<typename T>
-T totmin()
+T fizzmin()
 {
     return std::numeric_limits<T>::min();
 }

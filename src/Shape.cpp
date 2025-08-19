@@ -28,16 +28,16 @@ static bool circleOverlapsWithRect(Circle c, Vector2p p1, Rect r, Vector2p p2)
 {
     val_t closestX = std::clamp(p1.x(), p2.x() - r.halfWidth , p2.x() + r.halfWidth );
     val_t closestY = std::clamp(p1.y(), p2.y() - r.halfHeight, p2.y() + r.halfHeight);
-    return Vector2p(closestX, closestY).norm() < c.radius;
+    return Vector2p(closestX, closestY).squaredNorm() < c.radius * c.radius;
 }
 
 static bool rectOverlapsWithRect(Rect r1, Vector2p p1, Rect r2, Vector2p p2)
 {
-    bool right  = p1.x() + r1.halfWidth  < p2.x() - r2.halfWidth;
-    bool left   = p1.x() - r1.halfWidth  > p2.x() + r2.halfWidth;
-    bool top    = p1.y() + r1.halfHeight < p2.y() - r2.halfHeight;
-    bool bottom = p1.y() - r1.halfHeight > p2.y() + r2.halfHeight;
-    return !(right || left || top || bottom);
+    bool farRight  = p1.x() + r1.halfWidth  < p2.x() - r2.halfWidth;
+    bool farLeft   = p1.x() - r1.halfWidth  > p2.x() + r2.halfWidth;
+    bool farTop    = p1.y() + r1.halfHeight < p2.y() - r2.halfHeight;
+    bool farBottom = p1.y() - r1.halfHeight > p2.y() + r2.halfHeight;
+    return !(farRight || farLeft || farTop || farBottom);
 }
 
 static bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
@@ -50,11 +50,9 @@ static bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
             bool s1IsCircle = s1.type == ShapeType::CIRCLE;
             Circle c = s1IsCircle ? s1.circle : s2.circle; 
             Rect r = s1IsCircle ? s2.rect : s1.rect;
-            if (!s1IsCircle)
-            {
-                std::swap(p1, p2);
-            }
-            return circleOverlapsWithRect(c, p1, r, p2);
+            Vector2p pc = s1IsCircle ? p1 : p2;
+            Vector2p pr = s1IsCircle ? p2 : p1;
+            return circleOverlapsWithRect(c, pc, r, pr);
         }
     else if(s1.type == ShapeType::RECT && s2.type == ShapeType::RECT)
         return rectOverlapsWithRect(s1.rect, p1, s2.rect, p2);

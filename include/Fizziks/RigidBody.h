@@ -13,29 +13,13 @@ class RigidBody
 private:
     friend class FizzWorld;
 
-    struct BodyData
-    {
-        Vector2p position, velocity, angularVelocity, accumForce;
-        val_t rotation, accumTorque;
-
-        val_t mass;
-
-        Shape shape;
-
-        bool isStatic;
-    };
-
-    BodyData body;
-
     Handle pool_handle;
     Handle world_handle;
-    FizzWorld* world;
+    FizzWorld& world;
 
-    RigidBody(Handle pool_handle, Handle world_handle, FizzWorld* world, const BodyDef& def);
+    RigidBody(Handle pool_handle, Handle world_handle, FizzWorld& world);
     
 public:
-    RigidBody() : RigidBody({}, {}, nullptr, {}) { };
-
     RigidBody& setBody(const BodyDef& def);
 
     Vector2p position() const;

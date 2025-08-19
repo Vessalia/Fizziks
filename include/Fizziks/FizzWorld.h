@@ -22,11 +22,37 @@ public:
 private:
     friend class RigidBody;
 
-    Pool<RigidBody> rigidBodyPool;
-    std::vector<RigidBody*> activeBodies;
+    struct BodyData;
 
-    RigidBody::BodyData* get_body(Handle handle) const;
+    static const BodyData null_body;
 
-    void apply_force(Handle handle, Vector2p force);
+    Pool<BodyData> rigidBodyPool;
+
+    std::vector<Handle> activeBodyHandles;
+    std::vector<BodyData*> activeBodies;
+
+    void set_body(const RigidBody& rb, const BodyDef& def);
+
+    BodyData* get_body(const RigidBody& handle) const;
+
+    void apply_force(const Handle& handle, const Vector2p& force);
+
+    Vector2p body_position(const RigidBody& rb) const;
+    void body_position(const RigidBody& rb, const Vector2p& pos);
+
+    Vector2p body_velocity(const RigidBody& rb) const;
+    void body_velocity(const RigidBody& rb, const Vector2p& vel);
+
+    Vector2p body_angularVelocity(const RigidBody& rb) const;
+    void body_angularVelocity(const RigidBody& rb, const Vector2p& angVel);
+
+    val_t body_mass(const RigidBody& rb) const;
+    void body_mass(const RigidBody& rb, val_t m);
+
+    Shape body_shape(const RigidBody& rb) const;
+    void body_shape(const RigidBody& rb, Shape s);
+
+    bool body_isStatic(const RigidBody& rb) const;
+    void body_isStatic(const RigidBody& rb, bool is);
 };
 };
