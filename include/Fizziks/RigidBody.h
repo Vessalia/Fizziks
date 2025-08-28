@@ -6,8 +6,6 @@
 
 namespace Fizziks
 {
-class FizzWorld;
-
 class RigidBody
 {
 private:
@@ -15,11 +13,18 @@ private:
 
     Handle pool_handle;
     Handle world_handle;
-    FizzWorld& world;
+    FizzWorld* world;
 
-    RigidBody(Handle pool_handle, Handle world_handle, FizzWorld& world);
+    RigidBody(Handle pool_handle, Handle world_handle, FizzWorld* world);
     
 public:
+    RigidBody(const RigidBody& other) 
+    { 
+        pool_handle = other.pool_handle;
+        world_handle = other.world_handle;
+        world = other.world; 
+    }
+
     RigidBody& setBody(const BodyDef& def);
 
     Vector2p position() const;

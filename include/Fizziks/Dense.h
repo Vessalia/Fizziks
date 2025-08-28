@@ -35,8 +35,6 @@ T fizzmin()
     return std::numeric_limits<T>::min();
 }
 
-val_t getDist2(Vector2p v1, Vector2p v2)
-{
-    return ((v1.x() - v2.x()) * (v1.x() - v2.x())) + ((v1.y() - v2.y()) * (v1.y() - v2.y()));
-}
+val_t getDist2(Vector2p v1, Vector2p v2);
+val_t getDist2(Vector3p v1, Vector3p v2);
 };

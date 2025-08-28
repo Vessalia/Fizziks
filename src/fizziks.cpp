@@ -23,6 +23,7 @@ void main()
         false
     };
     RigidBody body = world.createBody(def);
+    RigidBody b2 = world.createBody(def);
 
     val_t totalTime = 0;
     auto lastTick = std::chrono::system_clock::now();

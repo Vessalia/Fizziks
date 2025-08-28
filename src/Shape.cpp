@@ -2,7 +2,7 @@
 
 namespace Fizziks
 {
-static Shape createCircle(val_t radius)
+Shape createCircle(val_t radius)
 {
     Shape circle;
     circle.type = ShapeType::CIRCLE;
@@ -10,7 +10,7 @@ static Shape createCircle(val_t radius)
     return circle;
 }
 
-static Shape createRectangle(val_t width, val_t height)
+Shape createRectangle(val_t width, val_t height)
 {
     Shape rect;
     rect.type = ShapeType::RECT;
@@ -19,19 +19,19 @@ static Shape createRectangle(val_t width, val_t height)
     return rect;
 }
 
-static bool circleOverlapsWithCircle(Circle c1, Vector2p p1, Circle c2, Vector2p p2)
+bool circleOverlapsWithCircle(Circle c1, Vector2p p1, Circle c2, Vector2p p2)
 {
     return getDist2(p1, p2) < ((c1.radius * c1.radius) + (c2.radius * c2.radius));
 }
 
-static bool circleOverlapsWithRect(Circle c, Vector2p p1, Rect r, Vector2p p2)
+bool circleOverlapsWithRect(Circle c, Vector2p p1, Rect r, Vector2p p2)
 {
     val_t closestX = std::clamp(p1.x(), p2.x() - r.halfWidth , p2.x() + r.halfWidth );
     val_t closestY = std::clamp(p1.y(), p2.y() - r.halfHeight, p2.y() + r.halfHeight);
     return Vector2p(closestX, closestY).squaredNorm() < c.radius * c.radius;
 }
 
-static bool rectOverlapsWithRect(Rect r1, Vector2p p1, Rect r2, Vector2p p2)
+bool rectOverlapsWithRect(Rect r1, Vector2p p1, Rect r2, Vector2p p2)
 {
     bool farRight  = p1.x() + r1.halfWidth  < p2.x() - r2.halfWidth;
     bool farLeft   = p1.x() - r1.halfWidth  > p2.x() + r2.halfWidth;
@@ -40,7 +40,7 @@ static bool rectOverlapsWithRect(Rect r1, Vector2p p1, Rect r2, Vector2p p2)
     return !(farRight || farLeft || farTop || farBottom);
 }
 
-static bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
+bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
 {
     if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
         return circleOverlapsWithCircle(s1.circle, p1, s2.circle, p2);

@@ -30,8 +30,8 @@ struct Shape
     };
 };
 
-static Shape createCircle(val_t radius);
-static Shape createRectangle(val_t width, val_t height);
+Shape createCircle(val_t radius);
+Shape createRectangle(val_t width, val_t height);
 
-static bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2);
+bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2);
 };

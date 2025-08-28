@@ -22,20 +22,36 @@ public:
 private:
     friend class RigidBody;
 
-    struct BodyData;
+    struct BodyData
+    {
+        Vector2p position, velocity, angularVelocity, accumForce;
+        val_t rotation, accumTorque;
+
+        val_t mass;
+
+        Shape shape;
+
+        bool isStatic;
+    };
 
     static const BodyData null_body;
 
+    static uint32_t body_count;
+
     Pool<BodyData> rigidBodyPool;
 
-    std::vector<Handle> activeBodyHandles;
+    std::vector<Handle> activeHandles;
+    std::vector<uint32_t> freeList;
+
+    std::vector<uint32_t> activeList;
     std::vector<BodyData*> activeBodies;
 
     void set_body(const RigidBody& rb, const BodyDef& def);
+    void set_body(BodyData* body, const BodyDef& def);
 
     BodyData* get_body(const RigidBody& handle) const;
 
-    void apply_force(const Handle& handle, const Vector2p& force);
+    void apply_force(const RigidBody& rb, const Vector2p& force);
 
     Vector2p body_position(const RigidBody& rb) const;
     void body_position(const RigidBody& rb, const Vector2p& pos);

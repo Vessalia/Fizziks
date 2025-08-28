@@ -2,18 +2,6 @@
 
 namespace Fizziks
 {
-struct FizzWorld::BodyData
-{
-    Vector2p position, velocity, angularVelocity, accumForce;
-    val_t rotation, accumTorque;
-
-    val_t mass;
-
-    Shape shape;
-
-    bool isStatic;
-};
-
 const FizzWorld::BodyData FizzWorld::null_body = 
 {
     fizzmax<Vector2p>(),
@@ -35,17 +23,21 @@ void FizzWorld::apply_force(const RigidBody& rb, const Vector2p& force)
 
 FizzWorld::BodyData* FizzWorld::get_body(const RigidBody& rb) const
 {
-    if(!rb.world_handle.isValid)
-        return nullptr;
+    if (rb.world_handle.index >= activeHandles.size()) return nullptr;
+    Handle activeHandle = activeHandles[rb.world_handle.index];
+    if(activeHandle.gen != rb.world_handle.gen) return nullptr;
 
-    return activeBodies[rb.world_handle.index];
+    return activeBodies[activeHandle.index];
 }
 
 void FizzWorld::set_body(const RigidBody& rb, const BodyDef& def)
 {
-    Handle bodyHandle = activeBodyHandles[rb.world_handle.index];
-    BodyData* body = activeBodies[bodyHandle.index];
-    
+    BodyData* body = get_body(rb);
+    if(body) set_body(body, def);
+}
+
+void FizzWorld::set_body(BodyData* body, const BodyDef& def)
+{
     body->position = def.initPosition;
     body->velocity = def.initVelocity;
     body->angularVelocity = def.initAngularVelocity;
@@ -132,31 +124,47 @@ void FizzWorld::body_isStatic(const RigidBody& rb, bool is)
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {
     auto entity = rigidBodyPool.get();
+    Handle handle{ activeHandles.size(), 0 };
+    if(freeList.size() > 0)
+    {
+        uint32_t free_index = freeList.back(); freeList.pop_back();
+        activeList.push_back(free_index);
+        handle.index = free_index;
+        handle.gen = activeHandles[free_index].gen;
+        activeHandles[free_index].index = activeBodies.size();
+    }
+    else
+    {
+        activeList.push_back(activeHandles.size());
+        activeHandles.push_back(handle);
+    }
+
     BodyData* b = entity.second;
-    RigidBody rb(entity.first, {activeBodies.size(), 0, true}, *this);
+    RigidBody rb(entity.first, handle, this);
     activeBodies.push_back(b);
-    activeBodyHandles.push_back(rb.world_handle);
     set_body(rb, def);
     return rb;
 }
 
 void FizzWorld::destroyBody(RigidBody& rb)
 {
-    size_t index = rb.world_handle.index;
-    if(index >= activeBodyHandles.size() || !rb.world_handle.isValid)
-        return;
+    Handle* activeHandle = &activeHandles[rb.world_handle.index];
+    if(activeHandle->gen != rb.world_handle.gen) return; // nothing to do here
 
-    // deferred destruction queue in future
-    size_t last = activeBodies.size() - 1;
-    if(index != last && last > 0)
-    {
-        activeBodies[last]->world_handle.index = index;
-        std::swap(activeBodies[index], activeBodies[last]);
-    }
-
+    //swap remove
+    uint32_t swapIndex = activeHandle->index;
+    std::swap(activeBodies[swapIndex], activeBodies.back());
+    std::swap(activeList[swapIndex], activeList.back());
     activeBodies.pop_back();
-    rigidBodyPool.release(body.pool_handle);
-    body.world_handle.isValid = false;
+    activeList.pop_back();
+    rigidBodyPool.release(rb.pool_handle);
+    if(swapIndex < activeBodies.size())
+    {
+        uint32_t movedIndex = activeList[swapIndex];
+        activeHandles[movedIndex].index = swapIndex;
+    }
+    activeHandle->gen++;
+    freeList.push_back(rb.world_handle.index);
 }
 
 const Vector2p FizzWorld::Gravity = {0, -9.81};
