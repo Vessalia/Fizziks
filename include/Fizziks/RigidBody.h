@@ -11,17 +11,15 @@ class RigidBody
 private:
     friend class FizzWorld;
 
-    Handle pool_handle;
-    Handle world_handle;
+    Handle handle;
     FizzWorld* world;
 
-    RigidBody(Handle pool_handle, Handle world_handle, FizzWorld* world);
+    RigidBody(Handle handle, FizzWorld* world);
     
 public:
     RigidBody(const RigidBody& other) 
     { 
-        pool_handle = other.pool_handle;
-        world_handle = other.world_handle;
+        handle = other.handle;
         world = other.world; 
     }
 

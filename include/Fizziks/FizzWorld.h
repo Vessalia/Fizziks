@@ -36,20 +36,17 @@ private:
 
     static const BodyData null_body;
 
-    static uint32_t body_count;
-
-    Pool<BodyData> rigidBodyPool;
-
     std::vector<Handle> activeHandles;
     std::vector<uint32_t> freeList;
 
     std::vector<uint32_t> activeList;
-    std::vector<BodyData*> activeBodies;
+    std::vector<BodyData> activeBodies;
 
     void set_body(const RigidBody& rb, const BodyDef& def);
     void set_body(BodyData* body, const BodyDef& def);
 
-    BodyData* get_body(const RigidBody& handle) const;
+    const BodyData* get_body(const RigidBody& handle) const;
+    BodyData* get_body(const RigidBody& handle);
 
     void apply_force(const RigidBody& rb, const Vector2p& force);
 

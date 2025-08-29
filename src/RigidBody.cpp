@@ -3,9 +3,8 @@
 
 namespace Fizziks
 {
-RigidBody::RigidBody(Handle pool_handle, Handle world_handle, FizzWorld* world) 
-    : pool_handle(pool_handle)
-    , world_handle(world_handle)
+RigidBody::RigidBody(Handle handle, FizzWorld* world) 
+    : handle(handle)
     , world(world) { }
 
 RigidBody& RigidBody::setBody(const BodyDef& def)
