@@ -156,26 +156,37 @@ RigidBody FizzWorld::createBody(const BodyDef& def)
 
 void FizzWorld::destroyBody(RigidBody& rb)
 {
-    Handle* activeHandle = &activeHandles[rb.handle.index];
-    if(activeHandle->gen != rb.handle.gen) return; // nothing to do here
+    destructionQueue.push(rb);
+}
 
-    //swap remove
-    uint32_t swapIndex = activeHandle->index;
-    std::swap(activeBodies[swapIndex], activeBodies.back());
-    std::swap(activeList[swapIndex], activeList.back());
-    activeBodies.pop_back();
-    activeList.pop_back();
-    if(swapIndex < activeBodies.size())
+void FizzWorld::destroy_bodies()
+{
+    while (!destructionQueue.empty())
     {
-        uint32_t movedIndex = activeList[swapIndex];
-        activeHandles[movedIndex].index = swapIndex;
+        RigidBody rb = destructionQueue.front(); destructionQueue.pop();
+
+        Handle* activeHandle = &activeHandles[rb.handle.index];
+        if(activeHandle->gen == rb.handle.gen)
+        {
+            //swap remove
+            uint32_t swapIndex = activeHandle->index;
+            std::swap(activeBodies[swapIndex], activeBodies.back());
+            std::swap(activeList[swapIndex], activeList.back());
+            activeBodies.pop_back();
+            activeList.pop_back();
+            if(swapIndex < activeBodies.size())
+            {
+                uint32_t movedIndex = activeList[swapIndex];
+                activeHandles[movedIndex].index = swapIndex;
+            }
+            activeHandle->gen++;
+            freeList.push_back(rb.handle.index);
+        }
     }
-    activeHandle->gen++;
-    freeList.push_back(rb.handle.index);
 }
 
 const Vector2p FizzWorld::Gravity = {0, -9.81};
-void FizzWorld::tick(val_t dt)
+void FizzWorld::simulate_bodies(val_t dt)
 {
     for (auto body : activeBodies)
     {
@@ -185,5 +196,11 @@ void FizzWorld::tick(val_t dt)
         body.position += body.velocity * dt;
         body.accumForce.setZero();
     }
+}
+
+void FizzWorld::tick(val_t dt)
+{
+    simulate_bodies(dt);
+    destroy_bodies();
 }
 };

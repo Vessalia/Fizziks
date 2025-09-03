@@ -42,6 +42,11 @@ private:
     std::vector<uint32_t> activeList;
     std::vector<BodyData> activeBodies;
 
+    std::queue<RigidBody> destructionQueue;
+
+    void simulate_bodies(val_t dt);
+    void destroy_bodies();
+
     void set_body(const RigidBody& rb, const BodyDef& def);
     void set_body(BodyData* body, const BodyDef& def);
 

@@ -10,52 +10,45 @@ Shape createCircle(val_t radius)
     return circle;
 }
 
-Shape createRectangle(val_t width, val_t height)
+Shape createAABB(val_t width, val_t height)
 {
-    Shape rect;
-    rect.type = ShapeType::RECT;
-    rect.rect.width = width;   rect.rect.halfWidth  = width  / 2;
-    rect.rect.height = height; rect.rect.halfHeight = height / 2;
-    return rect;
+    Shape box;
+    box.type = ShapeType::AABB_t;
+    box.aabb.halfWidth  = width  / 2;
+    box.aabb.halfHeight = height / 2;
+    box.aabb;
+    return box;
 }
 
-bool circleOverlapsWithCircle(Circle c1, Vector2p p1, Circle c2, Vector2p p2)
+bool CircleOverlapsCircle(Circle c1, Vector2p p1, Circle c2, Vector2p p2)
 {
     return getDist2(p1, p2) < ((c1.radius * c1.radius) + (c2.radius * c2.radius));
 }
 
-bool circleOverlapsWithRect(Circle c, Vector2p p1, Rect r, Vector2p p2)
+bool CircleOverlapsAABB(Circle c, Vector2p p1, AABB r, Vector2p p2)
 {
     val_t closestX = std::clamp(p1.x(), p2.x() - r.halfWidth , p2.x() + r.halfWidth );
     val_t closestY = std::clamp(p1.y(), p2.y() - r.halfHeight, p2.y() + r.halfHeight);
     return Vector2p(closestX, closestY).squaredNorm() < c.radius * c.radius;
 }
 
-bool rectOverlapsWithRect(Rect r1, Vector2p p1, Rect r2, Vector2p p2)
+bool AABBOverlapsAABB(AABB r1, Vector2p p1, AABB r2, Vector2p p2)
 {
-    bool farRight  = p1.x() + r1.halfWidth  < p2.x() - r2.halfWidth;
-    bool farLeft   = p1.x() - r1.halfWidth  > p2.x() + r2.halfWidth;
-    bool farTop    = p1.y() + r1.halfHeight < p2.y() - r2.halfHeight;
-    bool farBottom = p1.y() - r1.halfHeight > p2.y() + r2.halfHeight;
-    return !(farRight || farLeft || farTop || farBottom);
+    bool overlapX = abs(p1.x() - p2.x()) <= r1.halfWidth  + r2.halfWidth;
+    bool overlapY = abs(p1.y() - p2.y()) <= r1.halfHeight + r2.halfHeight;
+    return overlapX && overlapY;
 }
 
 bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
 {
     if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
-        return circleOverlapsWithCircle(s1.circle, p1, s2.circle, p2);
-    else if((s1.type == ShapeType::CIRCLE && s2.type == ShapeType::RECT)
-         || (s1.type == ShapeType::RECT && s2.type == ShapeType::CIRCLE))
-        {
-            bool s1IsCircle = s1.type == ShapeType::CIRCLE;
-            Circle c = s1IsCircle ? s1.circle : s2.circle; 
-            Rect r = s1IsCircle ? s2.rect : s1.rect;
-            Vector2p pc = s1IsCircle ? p1 : p2;
-            Vector2p pr = s1IsCircle ? p2 : p1;
-            return circleOverlapsWithRect(c, pc, r, pr);
-        }
-    else if(s1.type == ShapeType::RECT && s2.type == ShapeType::RECT)
-        return rectOverlapsWithRect(s1.rect, p1, s2.rect, p2);
+        return CircleOverlapsCircle(s1.circle, p1, s2.circle, p2);
+    else if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::AABB_t)
+        return CircleOverlapsAABB(s1.circle, p1, s2.aabb, p2);
+    else if(s1.type == ShapeType::AABB_t && s2.type == ShapeType::CIRCLE)
+        return CircleOverlapsAABB(s2.circle, p2, s1.aabb, p1);
+    else if(s1.type == ShapeType::AABB_t && s2.type == ShapeType::AABB_t)
+        return AABBOverlapsAABB(s1.aabb, p1, s2.aabb, p2);
 
     return false;
 }

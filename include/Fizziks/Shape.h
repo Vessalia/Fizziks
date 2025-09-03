@@ -8,15 +8,15 @@ struct Circle
     val_t radius;
 };
 
-struct Rect
+struct AABB
 {
-    val_t width, halfWidth;
-    val_t height, halfHeight;
+    val_t halfWidth;
+    val_t halfHeight;
 };
 
 enum ShapeType
 {
-    CIRCLE, RECT
+    CIRCLE, AABB_t
 };
 
 struct Shape
@@ -26,12 +26,12 @@ struct Shape
     union
     {
         Circle circle;
-        Rect rect;
+        AABB aabb;
     };
 };
 
 Shape createCircle(val_t radius);
-Shape createRectangle(val_t width, val_t height);
+Shape createAABB(val_t width, val_t height);
 
 bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2);
 };
