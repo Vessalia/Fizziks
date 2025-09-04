@@ -9,10 +9,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Collect all source files in src/
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 file(GLOB_RECURSE INCLUDES CONFIGURE_DEPENDS include/Fizziks/*.h)
+file(GLOB_RECURSE INTERNALS CONFIGURE_DEPENDS internal/Fizziks/*.h)
 
-add_executable(Fizziks ${SOURCES})
+add_executable(Fizziks ${SOURCES} ${INCLUDES} ${INTERNALS})
 
-target_include_directories(Fizziks PRIVATE include/Fizziks)
+target_include_directories(Fizziks PUBLIC include/Fizziks
+                                   PRIVATE internal/Fizziks)
 
 add_library(eigen INTERFACE)
 target_include_directories(eigen INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/eigen)
