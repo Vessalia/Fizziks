@@ -1,8 +1,9 @@
 #pragma once
-#include "Dense.h"
-#include "Pool.h"
-#include "RigidBody.h"
-#include "BodyDef.h"
+#include <Dense.h>
+#include <Pool.h>
+#include <RigidBody.h>
+#include <BodyDef.h>
+#include <UniformGrid2D.h>
 
 namespace Fizziks
 {
@@ -11,8 +12,8 @@ class FizzWorld
 public:
     static const Vector2p Gravity;
 
-    FizzWorld(int units_x, int units_y) { }
-    FizzWorld() : FizzWorld(10, 10) { }
+    FizzWorld(size_t unitsX, size_t unitsY);
+    FizzWorld() : FizzWorld(20, 20) { }
 
     RigidBody createBody(const BodyDef& def);
     void destroyBody(RigidBody& body);
@@ -43,6 +44,8 @@ private:
     std::vector<BodyData> activeBodies;
 
     std::queue<RigidBody> destructionQueue;
+
+    UniformGrid2D grid;
 
     void simulate_bodies(val_t dt);
     void destroy_bodies();

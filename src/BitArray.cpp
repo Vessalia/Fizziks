@@ -3,6 +3,8 @@
 namespace Fizziks
 {
 
+const BitArray BitArray::Zero = BitArray(0);
+
 BitArray::BitArray(size_t val)
 {
     uint8_t mask = 0b11111111;
@@ -11,14 +13,15 @@ BitArray::BitArray(size_t val)
     {
         std::bitset<BYTE_SIZE> byte { ((val >> numBits) & mask) };
         bytes.push_back(byte);
-        numBits += BYTE_SIZE;
+        if(byte.any()) numBits += BYTE_SIZE;
     }
     while((val >> numBits) & mask);
 
     auto lastByte = bytes[bytes.size() - 1];
+    lastByte <<= 1; // offset by 1
     while(lastByte.any())
     {
-        lastByte >>= 1;
+        lastByte <<= 1;
         --numBits;
     }
 
@@ -209,44 +212,6 @@ bool BitArray::operator!=(const BitArray& other) const
 
 #pragma region bit operations
 
-BitArray& BitArray::set(size_t index, bool val)
-{
-    size_t byteIndex = index / BYTE_SIZE;
-    size_t bitIndex  = index % BYTE_SIZE;
-
-    if (byteIndex >= bytes.size() && !val) return *this;
-
-    if (byteIndex >= bytes.size())
-        bytes.resize(byteIndex + 1);
-
-    bytes[byteIndex].set(bitIndex, val);
-
-    if (val && index + 1 > bitCount) 
-        bitCount = index + 1;
-
-    return *this;
-}
-BitArray& BitArray::clear(size_t index)
-{
-    return set(index, false);
-}
-BitArray& BitArray::flip(size_t index)
-{
-    bool curr = read(index);
-    return set(index, !curr);
-}
-bool BitArray::read(size_t index) const
-{
-    if(index >= bitCount) return false;
-
-    size_t byteIndex = index / BYTE_SIZE;
-    size_t bitIndex  = index % BYTE_SIZE;
-
-    return bytes[byteIndex].test(bitIndex);
-}
-
-#pragma endregion
-
 #ifdef _MSC_VER
 #include <intrin.h>
 unsigned long getMSB(unsigned long mask)
@@ -274,20 +239,50 @@ uint8_t getMSB(unsigned long mask)
 }
 #endif
 
+BitArray& BitArray::set(size_t index, bool val)
+{
+    size_t byteIndex = index / BYTE_SIZE;
+    size_t bitIndex  = index % BYTE_SIZE;
+
+    if (byteIndex >= bytes.size() && !val) return *this;
+
+    if (byteIndex >= bytes.size())
+        bytes.resize(byteIndex + 1);
+
+    bytes[byteIndex].set(bitIndex, val);
+
+    if (val && index + 1 > bitCount)
+        bitCount = index + 1;
+    else if (!val && index + 1 == bitCount)
+        bitCount = countBits();
+
+    return *this;
+}
+BitArray& BitArray::clear(size_t index)
+{
+    return set(index, false);
+}
+BitArray& BitArray::flip(size_t index)
+{
+    bool curr = read(index);
+    return set(index, !curr);
+}
+bool BitArray::read(size_t index) const
+{
+    if(index >= bitCount) return false;
+
+    size_t byteIndex = index / BYTE_SIZE;
+    size_t bitIndex  = index % BYTE_SIZE;
+
+    return bytes[byteIndex].test(bitIndex);
+}
+
+#pragma endregion
+
 BitArray& BitArray::trim()
 {
-    size_t newCount = 0;
-    for (size_t i = bytes.size() - 1; i >= 0; --i) {
-        if (bytes[i].any()) {
-            unsigned long mask = bytes[i].to_ulong();
-            unsigned long msb = getMSB(mask);
-            newCount = i * BYTE_SIZE + msb + 1;
-            break;
-        }
-    }
-
-    bitCount = newCount;
-    bytes.resize((bitCount + BYTE_SIZE - 1) / BYTE_SIZE);
+    bitCount = countBits();
+    bytes.resize(std::max(1, static_cast<int>(bitCount + BYTE_SIZE - 1) / BYTE_SIZE));
 
     return *this;
 }
@@ -295,5 +290,23 @@ BitArray& BitArray::trim()
 size_t BitArray::size() const
 {
     return bitCount;
+}
+
+size_t BitArray::countBits() const
+{
+    size_t count = 0;
+    for(size_t i = bytes.size(); i > 0; --i) 
+    {
+        auto byte = bytes[i - 1];
+        if (byte.any()) 
+        {
+            unsigned long mask = byte.to_ulong();
+            unsigned long msb = getMSB(mask);
+            count = i * BYTE_SIZE + msb + 1;
+            break;
+        }
+    }
+
+    return count;
 }
 };

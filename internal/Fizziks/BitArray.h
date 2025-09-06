@@ -13,7 +13,11 @@ private:
     std::vector<std::bitset<BYTE_SIZE>> bytes;
     size_t bitCount;
 
+    size_t countBits() const;
+
 public:
+    static const BitArray Zero;
+
     BitArray(size_t val);
     BitArray();
 

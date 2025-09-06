@@ -15,6 +15,9 @@ const FizzWorld::BodyData FizzWorld::null_body =
     false
 };
 
+FizzWorld::FizzWorld(size_t unitsX, size_t unitsY) 
+    : grid(UniformGrid2D(unitsX, unitsY)) { }
+
 void FizzWorld::apply_force(const RigidBody& rb, const Vector2p& force)
 {
     BodyData* body = get_body(rb);
@@ -50,6 +53,8 @@ void FizzWorld::set_body(BodyData* body, const BodyDef& def)
     body->position = def.initPosition;
     body->velocity = def.initVelocity;
     body->angularVelocity = def.initAngularVelocity;
+
+    body->rotation = def.initRotation;
 
     body->mass = def.mass;
 
@@ -130,33 +135,19 @@ void FizzWorld::body_isStatic(const RigidBody& rb, bool is)
     if(body) body->isStatic = is;
 }
 
-RigidBody FizzWorld::createBody(const BodyDef& def)
+const Vector2p FizzWorld::Gravity = {0, -9.81};
+void FizzWorld::simulate_bodies(val_t dt)
 {
-    Handle handle{ activeHandles.size(), 0 };
-    if(freeList.size() > 0)
+    for (size_t i = 0; i < activeBodies.size(); ++i)
     {
-        uint32_t free_index = freeList.back(); freeList.pop_back();
-        activeList.push_back(free_index);
-        handle.index = free_index;
-        handle.gen = activeHandles[free_index].gen;
-        activeHandles[free_index].index = activeBodies.size();
+        auto& body = activeBodies[i];
+        body.accumForce += Gravity;
+        if (body.isStatic) body.accumForce.setZero();
+        body.velocity += body.accumForce * dt;
+        body.position += body.velocity * dt;
+        grid.update(i, body.position /* need to compute aabb if one not given */);
+        body.accumForce.setZero();
     }
-    else
-    {
-        activeList.push_back(activeHandles.size());
-        activeHandles.push_back(handle);
-    }
-
-    BodyData b;
-    RigidBody rb(handle, this);
-    activeBodies.push_back(b);
-    set_body(rb, def);
-    return rb;
-}
-
-void FizzWorld::destroyBody(RigidBody& rb)
-{
-    destructionQueue.push(rb);
 }
 
 void FizzWorld::destroy_bodies()
@@ -174,6 +165,8 @@ void FizzWorld::destroy_bodies()
             std::swap(activeList[swapIndex], activeList.back());
             activeBodies.pop_back();
             activeList.pop_back();
+            grid.remove(swapIndex);
+            grid.replace(activeBodies.size(), swapIndex);
             if(swapIndex < activeBodies.size())
             {
                 uint32_t movedIndex = activeList[swapIndex];
@@ -185,17 +178,36 @@ void FizzWorld::destroy_bodies()
     }
 }
 
-const Vector2p FizzWorld::Gravity = {0, -9.81};
-void FizzWorld::simulate_bodies(val_t dt)
+RigidBody FizzWorld::createBody(const BodyDef& def)
 {
-    for (auto body : activeBodies)
+    Handle handle{ activeHandles.size(), 0 };
+    if(freeList.size() > 0)
     {
-        body.accumForce += Gravity;
-        if (body.isStatic) body.accumForce.setZero();
-        body.velocity += body.accumForce * dt;
-        body.position += body.velocity * dt;
-        body.accumForce.setZero();
+        uint32_t freeIndex = freeList.back(); freeList.pop_back();
+        activeList.push_back(freeIndex);
+        handle.index = freeIndex;
+        handle.gen = activeHandles[freeIndex].gen;
+        activeHandles[freeIndex].index = activeBodies.size();
     }
+    else
+    {
+        activeList.push_back(activeHandles.size());
+        activeHandles.push_back(handle);
+    }
+
+    BodyData b;
+    b.accumForce = Vector2p::Zero();
+    b.accumTorque = 0;
+    RigidBody rb(handle, this);
+    grid.insert(activeBodies.size(), def.initPosition /* need to compute aabb if one not given */);
+    activeBodies.push_back(b);
+    set_body(rb, def);
+    return rb;
+}
+
+void FizzWorld::destroyBody(RigidBody& rb)
+{
+    destructionQueue.push(rb);
 }
 
 void FizzWorld::tick(val_t dt)

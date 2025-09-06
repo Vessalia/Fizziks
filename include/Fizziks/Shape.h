@@ -1,5 +1,5 @@
 #pragma once
-#include "Dense.h"
+#include <Dense.h>
 
 namespace Fizziks
 {
