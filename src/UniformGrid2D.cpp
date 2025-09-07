@@ -15,11 +15,11 @@ bool UniformGrid2D::insert(size_t entityID, Vector2p pos, AABB dim)
 {
     if(validID(entityID)) return false; // probably need a more elegant solution to duplication
 
-    int startX = floor(pos.x() - dim.halfWidth);  int endX = floor(pos.x() + dim.halfWidth); // this is incorrect, objects on a cell boundary should not be considered in both cells
-    int startY = floor(pos.y() - dim.halfHeight); int endY = floor(pos.y() + dim.halfHeight);
-    for(int x = startX; x <= endX; ++x)
+    int startX = floor(pos.x() - dim.halfWidth);  int endX = ceil(pos.x() + dim.halfWidth); // this is incorrect, objects on a cell boundary should not be considered in both cells
+    int startY = floor(pos.y() - dim.halfHeight); int endY = ceil(pos.y() + dim.halfHeight);
+    for(int x = startX; x < endX; ++x)
     {
-        for(int y = startY; y <= endY; ++y)
+        for(int y = startY; y < endY; ++y)
         {
             unsigned int cellX = mod(x, unitsX);
             unsigned int cellY = mod(y, unitsY);
@@ -103,23 +103,78 @@ BitArray UniformGrid2D::neighbourhood(size_t entityID) const
     BitArray rowNeighbours;
     BitArray columnNeighbours;
 
-    for(const auto& row : rows)
-    {
-        if(row.read(entityID))
-            rowNeighbours |= row;
-    }
-
     for(const auto& column : columns)
     {
         if(column.read(entityID))
             rowNeighbours |= column;
     }
 
+    for(const auto& row : rows)
+    {
+        if(row.read(entityID))
+            rowNeighbours |= row;
+    }
+
     return rowNeighbours & columnNeighbours;
+}
+
+BitArray UniformGrid2D::castRay(size_t entityID, Vector2p ray, AABB dim) const
+{
+    return {};
+}
+
+BitArray UniformGrid2D::castRay(size_t entityID, Vector2p dir, val_t len, AABB dim) const
+{
+    return {};
 }
 
 bool UniformGrid2D::validID(size_t entityID) const
 {
     return entityCount > 0 && presence.read(entityID);
+}
+
+AABB UniformGrid2D::computeDim(size_t entityID) const
+{
+    int startX = -1; int endX = -1;
+    int startY = -1; int endY = -1;
+
+    for(int i = 0; i < columns.size(); ++i)
+    {
+        const auto& column = columns[i];
+        if(startX < 0)
+        {
+            if(column.read(entityID))
+                startX = i;
+        }
+        else if(endX < 0)
+        {
+            if(!column.read(entityID))
+                endX = i;
+        }
+    }
+
+    for(int i = 0; i < rows.size(); ++i)
+    {
+        const auto& row = rows[i];
+        if(startY < 0)
+        {
+            if(row.read(entityID))
+                startY = i;
+        }
+        else if(endY < 0)
+        {
+            if(!row.read(entityID))
+                endY = i;
+        }
+    }
+
+    int width  = endX - startX;
+    int height = endY - startY;
+    return createAABB(width, height).aabb;
+}
+
+BitArray UniformGrid2D::castRay(Vector2p from, Vector2p to) const
+{
+    return {};
 }
 };

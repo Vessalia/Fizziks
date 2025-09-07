@@ -17,6 +17,9 @@ public:
     bool replace(size_t prevID, size_t newID);
     bool update(size_t entityID, Vector2p newPos, AABB dim = createAABB(1, 1).aabb);
     BitArray neighbourhood(size_t entityID) const;
+     
+    BitArray castRay(size_t entityID, Vector2p ray, AABB dim = createAABB(0, 0).aabb) const;
+    BitArray castRay(size_t entityID, Vector2p dir, val_t len, AABB dim = createAABB(0, 0).aabb) const;
 
 private:
     size_t entityCount;
@@ -29,5 +32,7 @@ private:
     size_t unitsY;
 
     bool validID(size_t entityID) const;
+    AABB computeDim(size_t entityID) const;
+    BitArray castRay(Vector2p from, Vector2p to) const;
 };
 };
