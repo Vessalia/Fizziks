@@ -49,7 +49,8 @@ public:
     const std::vector<std::bitset<BYTE_SIZE>>& getBytes() const;
 
     BitArray operator~() const;
-    uint8_t  operator[](size_t index) const;
+    bool  operator[](size_t index) const;
+    std::bitset<BYTE_SIZE>::reference operator[](size_t index);
 
     BitArray& operator|=(const BitArray& other);
     BitArray& operator&=(const BitArray& other);
@@ -72,6 +73,9 @@ public:
     bool      read(size_t index) const;
 
     BitArray& trim();
+
+    unsigned long getMSB() const;
+    unsigned long getLSB() const;
 
     size_t size() const;
 };

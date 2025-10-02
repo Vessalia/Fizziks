@@ -35,8 +35,5 @@ T fizzmin()
     return std::numeric_limits<T>::min();
 }
 
-val_t getDist2(Vector2p v1, Vector2p v2);
-val_t getDist2(Vector3p v1, Vector3p v2);
-
 int mod(int a, int b);
 };

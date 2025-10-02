@@ -16,7 +16,7 @@ void main()
 {
     world = FizzWorld();
     BodyDef def = {
-        {0.5, 19.5},
+        {1, 19},
         {0, 0},
         {0, 0},
         0,
@@ -25,6 +25,8 @@ void main()
         false
     };
     RigidBody body = world.createBody(def);
+    def.initPosition = {3.5, 18};
+    RigidBody b2 = world.createBody(def);
 
     val_t totalTime = 0;
     auto lastTick = std::chrono::system_clock::now();

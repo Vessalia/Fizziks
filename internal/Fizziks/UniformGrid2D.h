@@ -9,8 +9,7 @@ namespace Fizziks
 class UniformGrid2D
 {
 public:
-    UniformGrid2D(size_t unitsX, size_t unitsY);
-    UniformGrid2D() : UniformGrid2D(10, 10) { }
+    UniformGrid2D(size_t unitsX, size_t unitsY, size_t worldUnitsX, size_t worldUnitsY);
 
     bool insert(size_t entityID, Vector2p pos, AABB dim = createAABB(1, 1).aabb);
     bool remove(size_t entityID);
@@ -18,8 +17,11 @@ public:
     bool update(size_t entityID, Vector2p newPos, AABB dim = createAABB(1, 1).aabb);
     BitArray neighbourhood(size_t entityID) const;
      
-    BitArray castRay(size_t entityID, Vector2p ray, AABB dim = createAABB(0, 0).aabb) const;
-    BitArray castRay(size_t entityID, Vector2p dir, val_t len, AABB dim = createAABB(0, 0).aabb) const;
+    BitArray castRay(Vector2p pos, Vector2p ray) const;
+    BitArray castRay(Vector2p pos, Vector2p dir, val_t len) const;
+
+    Vector2p world_to_grid_space(const Vector2p& vec) const;
+    AABB world_to_grid_space(const AABB& aabb) const;
 
 private:
     size_t entityCount;
@@ -31,8 +33,11 @@ private:
     size_t unitsX;
     size_t unitsY;
 
-    bool validID(size_t entityID) const;
-    AABB computeDim(size_t entityID) const;
-    BitArray castRay(Vector2p from, Vector2p to) const;
+    size_t worldUnitsX;
+    size_t worldUnitsY;
+
+    bool valid_ID(size_t entityID) const;
+    AABB compute_dim(size_t entityID) const;
+    BitArray cast_ray(Vector2p from, Vector2p to) const;
 };
 };

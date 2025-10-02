@@ -51,14 +51,24 @@ BitArray BitArray::operator~() const
 
     return result;
 }
-uint8_t BitArray::operator[](size_t index) const
+bool BitArray::operator[](size_t index) const
 {
     size_t byteIndex = index / BYTE_SIZE;
     uint8_t bitIndex = index % BYTE_SIZE;
 
-    if(byteIndex > bytes.size()) return 0;
+    if(byteIndex > bytes.size()) return false;
 
-    return (bytes[byteIndex] & (std::bitset<BYTE_SIZE>(1) << bitIndex)).to_ulong();
+    return bytes[byteIndex].test(bitIndex);
+}
+std::bitset<BYTE_SIZE>::reference BitArray::operator[](size_t index)
+{
+    size_t byteIndex = index / BYTE_SIZE;
+    uint8_t bitIndex = index % BYTE_SIZE;
+
+    if(byteIndex > bytes.size()) 
+        throw std::out_of_range("BitArray::operator[] index out of range");
+
+    return bytes[byteIndex][bitIndex];
 }
 
 #pragma endregion
@@ -68,6 +78,7 @@ uint8_t BitArray::operator[](size_t index) const
 BitArray& BitArray::operator|=(const BitArray& other)
 {
     bytes.resize(std::max(bytes.size(), other.bytes.size()));
+    bitCount = std::max(bitCount, other.bitCount);
 
     for(size_t i = 0; i < other.bytes.size(); ++i)
         bytes[i] |= other.bytes[i];
@@ -77,6 +88,7 @@ BitArray& BitArray::operator|=(const BitArray& other)
 BitArray& BitArray::operator&=(const BitArray& other)
 {
     bytes.resize(std::max(bytes.size(), other.bytes.size()));
+    bitCount = std::min(bitCount, other.bitCount);
 
     size_t i;
     for(i = 0; i < other.bytes.size(); ++i)
@@ -93,6 +105,8 @@ BitArray& BitArray::operator^=(const BitArray& other)
 
     for(size_t i = 0; i < other.bytes.size(); ++i)
         bytes[i] ^= other.bytes[i];
+
+    bitCount = countBits();
 
     return *this;
 }
@@ -139,10 +153,12 @@ BitArray& BitArray::operator>>=(size_t shift)
         }
 
         bytes.erase(bytes.begin(), bytes.begin() + byteShift);
+        bitCount -= BYTE_SIZE * byteShift;
     }
 
     if (bitShift == 0) return *this;
 
+    bitCount -= bitShift;
     std::bitset<BYTE_SIZE> carry{};
     for (size_t i = bytes.size(); i > 0; --i)
     {
@@ -214,20 +230,30 @@ bool BitArray::operator!=(const BitArray& other) const
 
 #ifdef _MSC_VER
 #include <intrin.h>
-unsigned long getMSB(unsigned long mask)
+unsigned long MSB(unsigned long mask)
 {
     unsigned long msb;
     _BitScanReverse(&msb, mask);
     return msb;
 }
+unsigned long LSB(unsigned long mask)
+{
+    unsigned long lsb;
+    _BitScanForward(&lsb, mask);
+    return lsb;
+}
 #elif __GNUC__
-unsigned long getMSB(unsigned long mask)
+unsigned long MSB(unsigned long mask)
 {
     constexpr unsigned long max = BYTE_SIZE * sizeof(uint32_t) - 1;
-    return max - __builtin_clz(mask);
+    return max - __builtin_clzl(mask);
+}
+unsigned long LSB(unsigned long mask)
+{
+    return __builtin_ctzl(mask);
 }
 #else
-uint8_t getMSB(unsigned long mask)
+uint8_t MSB(unsigned long mask)
 {
     uint8_t msb = 0;
     uint8_t max = BYTE_SIZE - 1;
@@ -236,6 +262,15 @@ uint8_t getMSB(unsigned long mask)
         if (mask & (1 << bit)) { msb = bit; break; }
     }
     return msb;
+}
+uint8_t LSB(unsigned long mask)
+{
+    uint8_t lsb = 0;
+    for (uint8_t bit = 0; bit < BYTE_SIZE; ++bit)
+    {
+        if (mask & (1 << bit)) { lsb = bit; break; }
+    }
+    return lsb;
 }
 #endif
 
@@ -287,6 +322,23 @@ BitArray& BitArray::trim()
     return *this;
 }
 
+unsigned long BitArray::getMSB() const
+{
+    return bitCount ? bitCount - 1 : 0;
+}
+
+unsigned long BitArray::getLSB() const
+{
+    for (size_t i = 0; i < bytes.size(); ++i) 
+    {
+        auto byte = bytes[i];
+        if (byte.any())
+            return i * BYTE_SIZE + LSB(byte.to_ulong());
+    }
+
+    return 0;
+}
+
 size_t BitArray::size() const
 {
     return bitCount;
@@ -301,7 +353,7 @@ size_t BitArray::countBits() const
         if (byte.any()) 
         {
             unsigned long mask = byte.to_ulong();
-            unsigned long msb = getMSB(mask);
+            unsigned long msb = MSB(mask);
             count = i * BYTE_SIZE + msb + 1;
             break;
         }

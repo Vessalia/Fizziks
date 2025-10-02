@@ -12,8 +12,8 @@ class FizzWorld
 public:
     static const Vector2p Gravity;
 
-    FizzWorld(size_t unitsX, size_t unitsY);
-    FizzWorld() : FizzWorld(20, 20) { }
+    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale);
+    FizzWorld() : FizzWorld(20, 20, 2) { }
 
     RigidBody createBody(const BodyDef& def);
     void destroyBody(RigidBody& body);
@@ -22,6 +22,12 @@ public:
 
 private:
     friend class RigidBody;
+
+    struct CollisionInfo
+    {
+        size_t bodyAIndex, bodyBIndex;
+        Contact contact;
+    };
 
     struct BodyData
     {
@@ -37,6 +43,9 @@ private:
 
     static const BodyData null_body;
 
+    size_t unitsX;
+    size_t unitsY;
+
     std::vector<Handle> activeHandles;
     std::vector<uint32_t> freeList;
 
@@ -44,10 +53,14 @@ private:
     std::vector<BodyData> activeBodies;
 
     std::queue<RigidBody> destructionQueue;
+    std::queue<CollisionInfo> collisionQueue;
 
     UniformGrid2D grid;
 
+    CollisionInfo check_collision(const BodyData& bodyA, size_t bodyAIndex, const BodyData& bodyB, size_t bodyBIndex) const;
+    void detect_collisions(const BodyData& body, size_t bodyIndex);
     void simulate_bodies(val_t dt);
+    void handle_collisions();
     void destroy_bodies();
 
     void set_body(const RigidBody& rb, const BodyDef& def);

@@ -1,4 +1,5 @@
-#include "FizzWorld.h"
+#include <FizzWorld.h>
+#include <Shape.h>
 
 namespace Fizziks
 {
@@ -15,8 +16,10 @@ const FizzWorld::BodyData FizzWorld::null_body =
     false
 };
 
-FizzWorld::FizzWorld(size_t unitsX, size_t unitsY) 
-    : grid(UniformGrid2D(unitsX, unitsY)) { }
+FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale) 
+    : unitsX(unitsX * worldScale)
+    , unitsY(unitsY * worldScale)
+    , grid(UniformGrid2D(unitsX, unitsY, unitsX * worldScale, unitsY * worldScale)) { }
 
 void FizzWorld::apply_force(const RigidBody& rb, const Vector2p& force)
 {
@@ -135,6 +138,44 @@ void FizzWorld::body_isStatic(const RigidBody& rb, bool is)
     if(body) body->isStatic = is;
 }
 
+FizzWorld::CollisionInfo FizzWorld::check_collision(const BodyData& bodyA, size_t bodyAIndex, const BodyData& bodyB, size_t bodyBIndex) const
+{
+    CollisionInfo collision;
+        
+    collision.bodyAIndex = bodyAIndex; 
+    collision.bodyBIndex = bodyBIndex;
+    collision.contact = getShapeContact(bodyA.shape, bodyA.position, bodyB.shape, bodyB.position);
+
+    return collision;
+}
+
+void FizzWorld::detect_collisions(const BodyData& body, size_t bodyIndex)
+{
+    auto neighbourhood = grid.neighbourhood(bodyIndex);
+    if (!neighbourhood) return;
+    
+    auto msb = neighbourhood.getMSB();
+    for(int i = 0; i <= msb; ++i)
+    {
+        if (!neighbourhood[i]) continue;
+        auto& neighbour = activeBodies[i];
+        CollisionInfo collision = check_collision(body, bodyIndex, neighbour, i);
+        if(!collision.contact.overlaps) continue;
+
+        collisionQueue.push(collision);
+    }
+}
+
+void FizzWorld::handle_collisions()
+{
+    for(size_t i = 0; i < activeBodies.size(); ++i)
+    {
+        detect_collisions(activeBodies[i], i);
+    }
+
+    // resolve_collisions();
+}
+
 const Vector2p FizzWorld::Gravity = {0, -9.81};
 void FizzWorld::simulate_bodies(val_t dt)
 {
@@ -180,7 +221,7 @@ void FizzWorld::destroy_bodies()
 
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {
-    Handle handle{ activeHandles.size(), 0 };
+    Handle handle{ static_cast<uint32_t>(activeHandles.size()), 0 }; // this will definitely not cause issues
     if(freeList.size() > 0)
     {
         uint32_t freeIndex = freeList.back(); freeList.pop_back();
@@ -213,6 +254,7 @@ void FizzWorld::destroyBody(RigidBody& rb)
 void FizzWorld::tick(val_t dt)
 {
     simulate_bodies(dt);
+    handle_collisions();
     destroy_bodies();
 }
 };
