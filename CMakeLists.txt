@@ -1,21 +1,12 @@
 cmake_minimum_required(VERSION 3.28...4.1)
 
-project(Fizziks VERSION 1.0 LANGUAGES CXX)
+project(Fizziks_ngin VERSION 1.0 LANGUAGES CXX)
 
-# Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Collect all source files in src/
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-file(GLOB_RECURSE INCLUDES CONFIGURE_DEPENDS include/Fizziks/*.h)
-file(GLOB_RECURSE INTERNALS CONFIGURE_DEPENDS internal/Fizziks/*.h)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Bin)
 
-add_executable(Fizziks ${SOURCES} ${INCLUDES} ${INTERNALS})
+add_subdirectory(dependencies)
 
-target_include_directories(Fizziks PUBLIC include/Fizziks
-                                   PRIVATE internal/Fizziks)
-
-add_library(eigen INTERFACE)
-target_include_directories(eigen INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/eigen)
-target_link_libraries(Fizziks PRIVATE eigen)
+add_subdirectory(engine)
