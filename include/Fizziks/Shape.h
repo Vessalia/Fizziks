@@ -14,9 +14,9 @@ struct AABB
     val_t halfHeight;
 };
 
-enum ShapeType
+enum class ShapeType
 {
-    CIRCLE, AABB_t
+    CIRCLE, AABB
 };
 
 struct Shape
@@ -33,14 +33,16 @@ struct Shape
 struct Contact 
 {
     Vector2p normal; 
-    val_t penetration; 
-    Vector2p contactPoint;   
+    Vector2p contactPoint;  
+    val_t penetration;  
 
     bool overlaps;
 };
 
 Shape createCircle(val_t radius);
 Shape createAABB(val_t width, val_t height);
+
+AABB getInscribingAABB(Shape s);
 
 bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2);
 Contact getShapeContact(Shape s1, Vector2p p1, Shape s2, Vector2p p2);

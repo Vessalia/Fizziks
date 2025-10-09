@@ -16,12 +16,25 @@ Shape createAABB(val_t width, val_t height)
 {
     Shape box;
 
-    box.type = ShapeType::AABB_t;
+    box.type = ShapeType::AABB;
     box.aabb.halfWidth  = width  / 2;
     box.aabb.halfHeight = height / 2;
     box.aabb;
 
     return box;
+}
+
+AABB getInscribingAABB(Shape s)
+{
+    AABB aabb;
+    if(s.type == ShapeType::AABB) aabb = s.aabb;
+    else if(s.type == ShapeType::CIRCLE)
+    {
+        aabb.halfWidth  = s.circle.radius;
+        aabb.halfHeight = s.circle.radius;
+    }
+
+    return aabb;
 }
 
 bool CircleOverlapsCircle(Circle c1, Vector2p p1, Circle c2, Vector2p p2)
@@ -84,7 +97,7 @@ Contact CircleContactsAABB(Circle c, Vector2p p1, AABB r, Vector2p p2)
     val_t closestY = std::clamp(p1.y(), p2.y() - r.halfHeight, p2.y() + r.halfHeight);
 
     Vector2p closest = Vector2p(closestX, closestY);
-    Vector2p sep = p1 - closest;
+    Vector2p sep = closest - p1;
     contact.normal = sep.normalized(); // this could cause issues if perfectly overlap
     contact.penetration = c.radius - sep.norm();
     contact.contactPoint = closest;
@@ -94,13 +107,13 @@ Contact CircleContactsAABB(Circle c, Vector2p p1, AABB r, Vector2p p2)
 
 bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
 {
-    if(s1.type == CIRCLE && s2.type == CIRCLE)
+    if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
         return CircleOverlapsCircle(s1.circle, p1, s2.circle, p2);
-    else if(s1.type == AABB_t && s2.type == AABB_t)
+    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::AABB)
         return AABBOverlapsAABB(s1.aabb, p1, s2.aabb, p2);
-    else if(s1.type == CIRCLE && s2.type == AABB_t)
+    else if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::AABB)
         return CircleOverlapsAABB(s1.circle, p1, s2.aabb, p2);
-    else if(s1.type == AABB_t && s2.type == CIRCLE)
+    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::CIRCLE)
         return CircleOverlapsAABB(s2.circle, p2, s1.aabb, p1);
 
     return false;
@@ -116,14 +129,17 @@ Contact getShapeContact(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
         return contact;
 
     contact.overlaps = true;
-    if(s1.type == CIRCLE && s2.type == CIRCLE)
+    if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
         contact = CircleContactsCircle(s1.circle, p1, s2.circle, p2);
-    else if(s1.type == AABB_t && s2.type == AABB_t)
+    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::AABB)
         contact = AABBContactsAABB(s1.aabb, p1, s2.aabb, p2);
-    else if(s1.type == CIRCLE && s2.type == AABB_t)
+    else if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::AABB)
         contact = CircleContactsAABB(s1.circle, p1, s2.aabb, p2);
-    else if(s1.type == AABB_t && s2.type == CIRCLE)
+    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::CIRCLE)
+    {
         contact = CircleContactsAABB(s2.circle, p2, s1.aabb, p1);
+        contact.normal *= -1; // keep normal direction consistent
+    }
 
     return contact;
 }

@@ -71,11 +71,6 @@ RigidBody& RigidBody::shape(Shape s)
 
 bool RigidBody::isStatic() const 
 { 
-    return world->body_isStatic(*this);
-}
-RigidBody& RigidBody::isStatic(bool is) 
-{ 
-    world->body_isStatic(*this, is);
-    return *this; 
+    return world->body_mass(*this);
 }
 };

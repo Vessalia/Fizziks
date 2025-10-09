@@ -17,12 +17,6 @@ private:
     RigidBody(Handle handle, FizzWorld* world);
     
 public:
-    RigidBody(const RigidBody& other) 
-    { 
-        handle = other.handle;
-        world = other.world; 
-    }
-
     RigidBody& setBody(const BodyDef& def);
 
     Vector2p position() const;
@@ -41,7 +35,6 @@ public:
     RigidBody& shape(Shape s);
 
     bool isStatic() const;
-    RigidBody& isStatic(bool is);
 
     RigidBody& applyForce(const Vector2p& force);
 };

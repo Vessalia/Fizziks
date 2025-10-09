@@ -10,10 +10,10 @@ namespace Fizziks
 class FizzWorld
 {
 public:
-    static const Vector2p Gravity;
+    Vector2p Gravity = {0, -9.81};
 
-    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale);
-    FizzWorld() : FizzWorld(20, 20, 2) { }
+    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution);
+    FizzWorld() : FizzWorld(20, 20, 2, 3) { }
 
     RigidBody createBody(const BodyDef& def);
     void destroyBody(RigidBody& body);
@@ -34,11 +34,9 @@ private:
         Vector2p position, velocity, angularVelocity, accumForce;
         val_t rotation, accumTorque;
 
-        val_t mass;
+        val_t invMass;
 
         Shape shape;
-
-        bool isStatic;
     };
 
     static const BodyData null_body;
@@ -46,19 +44,22 @@ private:
     size_t unitsX;
     size_t unitsY;
 
+    int collisionResolution;
+
     std::vector<Handle> activeHandles;
     std::vector<uint32_t> freeList;
 
     std::vector<uint32_t> activeList;
     std::vector<BodyData> activeBodies;
 
-    std::queue<RigidBody> destructionQueue;
     std::queue<CollisionInfo> collisionQueue;
+    std::queue<RigidBody> destructionQueue;
 
     UniformGrid2D grid;
 
     CollisionInfo check_collision(const BodyData& bodyA, size_t bodyAIndex, const BodyData& bodyB, size_t bodyBIndex) const;
     void detect_collisions(const BodyData& body, size_t bodyIndex);
+    void resolve_collisions();
     void simulate_bodies(val_t dt);
     void handle_collisions();
     void destroy_bodies();
