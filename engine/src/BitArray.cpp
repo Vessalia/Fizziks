@@ -87,7 +87,7 @@ BitArray& BitArray::operator|=(const BitArray& other)
 }
 BitArray& BitArray::operator&=(const BitArray& other)
 {
-    bytes.resize(std::max(bytes.size(), other.bytes.size()));
+    bytes.resize(std::min(bytes.size(), other.bytes.size()));
     bitCount = std::min(bitCount, other.bitCount);
 
     size_t i;
@@ -354,7 +354,7 @@ size_t BitArray::countBits() const
         {
             unsigned long mask = byte.to_ulong();
             unsigned long msb = MSB(mask);
-            count = i * BYTE_SIZE + msb + 1;
+            count = (i - 1) * BYTE_SIZE + msb + 1;
             break;
         }
     }

@@ -12,21 +12,42 @@
 
 using namespace Fizziks;
 
-FizzWorld world;
-
-const unsigned int SCREEN_WIDTH = 1280;
-const unsigned int SCREEN_HEIGHT = 720;
+const unsigned int SCREEN_WIDTH = 920;
+const unsigned int SCREEN_HEIGHT = 920;
 
 static SDL_Window* gWindow = nullptr;
+static SDL_Renderer* gRenderer = nullptr;
 
-Uint32 lastUpdateTime = SDL_GetTicks();
+static FizzWorld world = FizzWorld();
+
+static std::vector<RigidBody> bodies;
+
+Uint32 lt = SDL_GetTicks();
 
 void draw();
+Vector2p transformToScreenSpace(Vector2p pos);
 void close();
 
 int main(int argc, char** argv) 
 {
-    gWindow = SDL_CreateWindow("Fizziks Test", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+    gWindow = SDL_CreateWindow("Fizziks Test", SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+    gRenderer = SDL_CreateRenderer(gWindow, NULL);
+
+    BodyDef def = 
+    {
+        { 10, 10 },
+        { 0, 0 },
+        { 0, 0 },
+        0,
+        1,
+        createAABB(1, 1),
+        true
+    };
+
+    bodies.push_back(world.createBody(def));
+    def.initPosition += Vector2p(0, 2);
+    def.isStatic = false;
+    bodies.push_back(world.createBody(def));
     
     bool quit = false;
     while (!quit)
@@ -40,9 +61,13 @@ int main(int argc, char** argv)
             }
         }
 
-        float deltaTime = (SDL_GetTicks() - lastUpdateTime) / 1000.f;
-        lastUpdateTime = SDL_GetTicks();
+        float dt = (SDL_GetTicks() - lt) / 1000.f;
+        lt = SDL_GetTicks();
 
+        SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_RenderClear(gRenderer);
+
+        world.tick(dt / 20);
         draw();
     }
 
@@ -70,17 +95,44 @@ int main(int argc, char** argv)
     //     auto now = std::chrono::system_clock::now();
     //     dt = std::chrono::duration_cast<std::chrono::duration<val_t>>(now - lastTick).count();
     //     totalTime += dt;
-    //     world.tick(dt);
     //     lastTick = now;
     // }
 }
 
 void draw()
 {
+    SDL_SetRenderDrawColor(gRenderer, 100, 60, 150, SDL_ALPHA_OPAQUE);
+    for(int i = 0; i < bodies.size(); ++i)
+    {
+        auto body = bodies[i];
+        Vector2p pos = transformToScreenSpace(body.position());
+        if(body.shape().type == ShapeType::AABB)
+        {
+            Vector2p dim { body.shape().aabb.halfHeight, body.shape().aabb.halfWidth };
+            Vector2p tdim = transformToScreenSpace(dim);
+            SDL_FRect rect;
+            rect.x = pos.x() - tdim.x();
+            rect.y = SCREEN_HEIGHT - (pos.y() - tdim.y());
+            rect.w = 2 * tdim.x();
+            rect.h = 2 * tdim.y();
+            SDL_RenderFillRect(gRenderer, &rect);
+        }
+        else if(body.shape().type == ShapeType::CIRCLE)
+        {
+            
+        }
+    }
+    SDL_RenderPresent(gRenderer);
+}
 
+Vector2p transformToScreenSpace(Vector2p pos)
+{
+    Vector2p scale = world.worldScale();
+    return { pos.x() * SCREEN_WIDTH / scale.x(), pos.y() * SCREEN_HEIGHT / scale.y() };
 }
 
 void close()
 {
+    SDL_DestroyRenderer(gRenderer);
     SDL_DestroyWindow(gWindow);
 }

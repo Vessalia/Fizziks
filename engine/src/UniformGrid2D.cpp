@@ -100,7 +100,7 @@ bool UniformGrid2D::update(size_t entityID, Vector2p newPos, AABB dim)
 // equals (row[i] | row[i + 1] | ...) & (col[j] | col[j + 1] | ...)
 BitArray UniformGrid2D::neighbourhood(size_t entityID) const
 {
-    if(valid_ID(entityID)) return BitArray::Zero;
+    if(!valid_ID(entityID)) return BitArray::Zero;
 
     BitArray rowNeighbours;
     BitArray columnNeighbours;
@@ -108,7 +108,7 @@ BitArray UniformGrid2D::neighbourhood(size_t entityID) const
     for(const auto& column : columns)
     {
         if(column.read(entityID))
-            rowNeighbours |= column;
+            columnNeighbours |= column;
     }
 
     for(const auto& row : rows)

@@ -70,12 +70,12 @@ Contact AABBContactsAABB(AABB r1, Vector2p p1, AABB r2, Vector2p p2)
     if(overlapX < overlapY)
     {
         contact.penetration = overlapX;
-        contact.normal = { 0, sep.y() < 0 ? -1 : 1 }; // should default to reverse direction of motion
+        contact.normal = { sep.x() < 0 ? -1 : 1, 0 }; // should default to reverse direction of motion
     }
     else
     {
         contact.penetration = overlapY;
-        contact.normal = { sep.x() < 0 ? -1 : 1, 0 }; // should default to reverse direction of motion
+        contact.normal = { 0, sep.y() < 0 ? -1 : 1 }; // should default to reverse direction of motion
     }
 
     contact.contactPoint = p1 + contact.normal * (contact.penetration * 0.5);

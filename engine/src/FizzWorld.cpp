@@ -155,7 +155,7 @@ void FizzWorld::detect_collisions(const BodyData& body, size_t bodyIndex)
     auto msb = neighbourhood.getMSB();
     for(int i = 0; i <= msb; ++i)
     {
-        if (!neighbourhood[i]) continue;
+        if (!neighbourhood[i] || i == bodyIndex) continue;
 
         auto& neighbour = activeBodies[i];
         CollisionInfo collision = check_collision(body, bodyIndex, neighbour, i);
@@ -179,14 +179,18 @@ void FizzWorld::resolve_collisions()
         val_t m2 = other.invMass;
 
         // Baumgarte stabilization
-        val_t factor = m1 / (m1 + m2);
-        Vector2p correction = collision.contact.normal * std::max(collision.contact.penetration - slop, 0.f) * beta * factor;
+        val_t mass_factor = m1 / (m1 + m2);
+        Vector2p correction = collision.contact.normal * std::max(collision.contact.penetration - slop, 0.f) * beta * mass_factor;
         body.position -= correction;
 
         Vector2p rel_vel = other.velocity - body.velocity;
         val_t vel_factor = rel_vel.dot(collision.contact.normal);
-        Vector2p impulse = -(1 + elasticity) * collision.contact.normal * vel_factor / (m1 + m2);
-        body.velocity -= impulse * m1;
+        Vector2p impulsed_vel = -(1 + elasticity) * collision.contact.normal * vel_factor * mass_factor;
+        if (std::abs(collision.contact.normal.x()) > 0)
+        {
+            int x = 1;
+        }
+        body.velocity -= impulsed_vel;
     }
 }
 
@@ -208,8 +212,9 @@ void FizzWorld::simulate_bodies(val_t dt)
         body.accumForce += Gravity;
         if (!body.invMass) body.accumForce.setZero();
         body.velocity += body.accumForce * dt;
+        Vector2p prevPos = body.position;
         body.position += body.velocity * dt;
-        grid.update(i, body.position, getInscribingAABB(body.shape));
+        if(prevPos != body.position) grid.update(i, body.position, getInscribingAABB(body.shape));
         body.accumForce.setZero();
     }
 }
@@ -265,13 +270,18 @@ RigidBody FizzWorld::createBody(const BodyDef& def)
     RigidBody rb(handle, this);
     grid.insert(activeBodies.size(), def.initPosition, getInscribingAABB(def.shape));
     activeBodies.push_back(b);
-    set_body(rb, def);
+    set_body(&activeBodies[activeBodies.size() - 1], def);
     return rb;
 }
 
 void FizzWorld::destroyBody(RigidBody& rb)
 {
     destructionQueue.push(rb);
+}
+
+Vector2p FizzWorld::worldScale() const
+{
+    return { unitsX, unitsY };
 }
 
 void FizzWorld::tick(val_t dt)

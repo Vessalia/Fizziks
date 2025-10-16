@@ -18,6 +18,8 @@ public:
     RigidBody createBody(const BodyDef& def);
     void destroyBody(RigidBody& body);
 
+    Vector2p worldScale() const;
+
     void tick(val_t dt);
 
 private:
