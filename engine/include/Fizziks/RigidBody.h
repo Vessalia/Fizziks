@@ -35,6 +35,7 @@ public:
     RigidBody& shape(Shape s);
 
     bool isStatic() const;
+    RigidBody& isStatic(bool is);
 
     RigidBody& applyForce(const Vector2p& force);
 };

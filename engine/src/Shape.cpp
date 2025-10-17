@@ -62,20 +62,22 @@ bool AABBOverlapsAABB(AABB r1, Vector2p p1, AABB r2, Vector2p p2)
 Contact AABBContactsAABB(AABB r1, Vector2p p1, AABB r2, Vector2p p2)
 {
     Contact contact;
+    contact.normal = { 0, 0 };
 
     Vector2p sep = p2 - p1;
-    val_t overlapX = r1.halfWidth  + r2.halfWidth  - abs(p1.x() - p2.x());
-    val_t overlapY = r1.halfHeight + r2.halfHeight - abs(p1.y() - p2.y());
+    val_t overlapX = abs(r1.halfWidth  + r2.halfWidth  - abs(p1.x() - p2.x()));
+    val_t overlapY = abs(r1.halfHeight + r2.halfHeight - abs(p1.y() - p2.y()));
 
-    if(overlapX < overlapY)
+    if(overlapX <= overlapY)
     {
         contact.penetration = overlapX;
-        contact.normal = { sep.x() < 0 ? -1 : 1, 0 }; // should default to reverse direction of motion
+        contact.normal.x() = sep.x() < 0 ? -1 : 1; // should default to reverse direction of motion
     }
-    else
+
+    if(overlapY <= overlapX)
     {
         contact.penetration = overlapY;
-        contact.normal = { 0, sep.y() < 0 ? -1 : 1 }; // should default to reverse direction of motion
+        contact.normal.y() = sep.y() < 0 ? -1 : 1; // should default to reverse direction of motion
     }
 
     contact.contactPoint = p1 + contact.normal * (contact.penetration * 0.5);

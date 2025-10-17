@@ -73,4 +73,10 @@ bool RigidBody::isStatic() const
 { 
     return world->body_mass(*this);
 }
+
+RigidBody& RigidBody::isStatic(bool is)
+{
+    world->body_isStatic(*this, is);
+    return *this;
+}
 };

@@ -48,6 +48,9 @@ int main(int argc, char** argv)
     def.initPosition += Vector2p(0, 2);
     def.isStatic = false;
     bodies.push_back(world.createBody(def));
+    def.initVelocity = Vector2p(-2, 0);
+    def.initPosition += Vector2p(2, 2);
+    bodies.push_back(world.createBody(def));
     
     bool quit = false;
     while (!quit)
@@ -67,36 +70,11 @@ int main(int argc, char** argv)
         SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(gRenderer);
 
-        world.tick(dt / 20);
+        world.tick(dt / 10);
         draw();
     }
 
     close();
-    
-    // world = FizzWorld();
-    // BodyDef def = {
-    //     {1, 19},
-    //     {0, 0},
-    //     {0, 0},
-    //     0,
-    //     1,
-    //     createAABB(1, 1),
-    //     false
-    // };
-    // RigidBody body = world.createBody(def);
-    // def.initPosition = {3.5, 18};
-    // RigidBody b2 = world.createBody(def);
-
-    // val_t totalTime = 0;
-    // auto lastTick = std::chrono::system_clock::now();
-    // val_t dt = 0;
-    // while(true)
-    // {
-    //     auto now = std::chrono::system_clock::now();
-    //     dt = std::chrono::duration_cast<std::chrono::duration<val_t>>(now - lastTick).count();
-    //     totalTime += dt;
-    //     lastTick = now;
-    // }
 }
 
 void draw()

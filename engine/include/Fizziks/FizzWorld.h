@@ -12,8 +12,8 @@ class FizzWorld
 public:
     Vector2p Gravity = {0, -9.81};
 
-    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution);
-    FizzWorld() : FizzWorld(20, 20, 2, 3) { }
+    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution, val_t timeStep);
+    FizzWorld() : FizzWorld(20, 20, 2, 3, 1 / 200.f) { }
 
     RigidBody createBody(const BodyDef& def);
     void destroyBody(RigidBody& body);
@@ -39,9 +39,14 @@ private:
         val_t invMass;
 
         Shape shape;
+
+        bool isStatic;
     };
 
     static const BodyData null_body;
+
+    val_t timestep;
+    val_t accumulator;
 
     size_t unitsX;
     size_t unitsY;

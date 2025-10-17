@@ -15,9 +15,11 @@ const FizzWorld::BodyData FizzWorld::null_body =
     {}
 };
 
-FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution) 
+FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution, val_t timestep) 
     : unitsX(unitsX * worldScale)
     , unitsY(unitsY * worldScale)
+    , accumulator(0)
+    , timestep(timestep)
     , grid(UniformGrid2D(unitsX, unitsY, unitsX * worldScale, unitsY * worldScale))
     , collisionResolution(collisionResolution) { }
 
@@ -59,12 +61,14 @@ void FizzWorld::set_body(BodyData* body, const BodyDef& def)
 
     body->rotation = def.initRotation;
 
+    body->isStatic = def.isStatic;
+
     if(def.isStatic)
         body->invMass = 0;
     else if(def.mass == 0)
         body->invMass = fizzmax<val_t>();
     else
-        body->invMass = 1 / def.mass;
+        body->invMass = 1 / abs(def.mass);
 
     body->shape = def.shape;
 }
@@ -136,6 +140,12 @@ bool FizzWorld::body_isStatic(const RigidBody& rb) const
     else     return null_body.invMass == 0;
 }
 
+void FizzWorld::body_isStatic(const RigidBody& rb, bool is)
+{
+    auto* body = get_body(rb);
+    if(body) body->isStatic = is;
+}
+
 FizzWorld::CollisionInfo FizzWorld::check_collision(const BodyData& bodyA, size_t bodyAIndex, const BodyData& bodyB, size_t bodyBIndex) const
 {
     CollisionInfo collision;
@@ -147,6 +157,10 @@ FizzWorld::CollisionInfo FizzWorld::check_collision(const BodyData& bodyA, size_
     return collision;
 }
 
+val_t slop = 0.01;
+val_t contactEps = 2 * slop;
+val_t beta = 0.2;
+val_t elasticity = 0;
 void FizzWorld::detect_collisions(const BodyData& body, size_t bodyIndex)
 {
     auto neighbourhood = grid.neighbourhood(bodyIndex);
@@ -159,15 +173,12 @@ void FizzWorld::detect_collisions(const BodyData& body, size_t bodyIndex)
 
         auto& neighbour = activeBodies[i];
         CollisionInfo collision = check_collision(body, bodyIndex, neighbour, i);
-        if(!collision.contact.overlaps) continue;
+        if(!collision.contact.overlaps || collision.contact.penetration < contactEps) continue;
 
         collisionQueue.push(collision);
     }
 }
 
-val_t slop = 0.01;
-val_t beta = 0.2;
-val_t elasticity = 0;
 void FizzWorld::resolve_collisions()
 {
     while(!collisionQueue.empty())
@@ -186,10 +197,6 @@ void FizzWorld::resolve_collisions()
         Vector2p rel_vel = other.velocity - body.velocity;
         val_t vel_factor = rel_vel.dot(collision.contact.normal);
         Vector2p impulsed_vel = -(1 + elasticity) * collision.contact.normal * vel_factor * mass_factor;
-        if (std::abs(collision.contact.normal.x()) > 0)
-        {
-            int x = 1;
-        }
         body.velocity -= impulsed_vel;
     }
 }
@@ -209,11 +216,13 @@ void FizzWorld::simulate_bodies(val_t dt)
     for (size_t i = 0; i < activeBodies.size(); ++i)
     {
         auto& body = activeBodies[i];
-        body.accumForce += Gravity;
-        if (!body.invMass) body.accumForce.setZero();
-        body.velocity += body.accumForce * dt;
+
+        Vector2p accel = body.accumForce * body.invMass;
+        if(!body.isStatic) accel += Gravity;
+        body.velocity += accel * dt;
         Vector2p prevPos = body.position;
         body.position += body.velocity * dt;
+
         if(prevPos != body.position) grid.update(i, body.position, getInscribingAABB(body.shape));
         body.accumForce.setZero();
     }
@@ -286,9 +295,15 @@ Vector2p FizzWorld::worldScale() const
 
 void FizzWorld::tick(val_t dt)
 {
-    simulate_bodies(dt);
-    for(int i = 0; i < collisionResolution; ++i)
-        handle_collisions();
-    destroy_bodies();
+    accumulator += dt;
+    while (accumulator >= timestep)
+    {
+        accumulator -= timestep;
+
+        simulate_bodies(timestep);
+        for (int i = 0; i < collisionResolution; ++i)
+            handle_collisions();
+        destroy_bodies();
+    }
 }
 };
