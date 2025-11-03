@@ -25,22 +25,37 @@ public:
 private:
     friend class RigidBody;
 
-    struct CollisionInfo
-    {
-        size_t bodyAIndex, bodyBIndex;
-        Contact contact;
-    };
-
     struct BodyData
     {
         Vector2p position, velocity, angularVelocity, accumForce;
         val_t rotation, accumTorque;
 
         val_t invMass;
+        val_t invMoment;
+        val_t gravityScale;
+
+        val_t restitution = 0.2;
+        val_t staticFriction = 0.2;
+        val_t dynamicFriction = 0.1;
+        val_t linearDamping = 0.05;
+        val_t angularDamping = 0.05;
 
         Shape shape;
 
         bool isStatic;
+    };
+
+    struct CollisionInfo
+    {
+        size_t bodyAIndex, bodyBIndex;
+        Contact contact;
+    };
+
+    struct CollisionResolution
+    {
+        BodyData* body;
+        Vector2p correction;
+        Vector2p impulse;
     };
 
     static const BodyData null_body;
@@ -60,6 +75,7 @@ private:
     std::vector<BodyData> activeBodies;
 
     std::queue<CollisionInfo> collisionQueue;
+    std::queue<CollisionResolution> collisionResolveQueue;
     std::queue<RigidBody> destructionQueue;
 
     UniformGrid2D grid;
@@ -90,6 +106,9 @@ private:
 
     val_t body_mass(const RigidBody& rb) const;
     void body_mass(const RigidBody& rb, val_t m);
+
+    val_t body_gravityScale(const RigidBody& rb) const;
+    void body_gravityScale(const RigidBody& rb, val_t gs);
 
     Shape body_shape(const RigidBody& rb) const;
     void body_shape(const RigidBody& rb, Shape s);

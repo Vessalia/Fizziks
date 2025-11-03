@@ -13,6 +13,7 @@ struct BodyDef
     val_t initRotation;
 
     val_t mass;
+    val_t gravityScale;
 
     Shape shape;
 

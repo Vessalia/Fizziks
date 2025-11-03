@@ -59,6 +59,16 @@ RigidBody& RigidBody::mass(val_t m)
     return *this; 
 }
 
+val_t RigidBody::gravityScale() const
+{
+    return world->body_gravityScale(*this);
+}
+RigidBody& RigidBody::gravityScale(val_t gs)
+{
+    world->body_gravityScale(*this, gs);
+    return *this;
+}
+
 Shape RigidBody::shape() const 
 { 
     return world->body_shape(*this);
@@ -71,7 +81,7 @@ RigidBody& RigidBody::shape(Shape s)
 
 bool RigidBody::isStatic() const 
 { 
-    return world->body_mass(*this);
+    return world->body_isStatic(*this);
 }
 
 RigidBody& RigidBody::isStatic(bool is)

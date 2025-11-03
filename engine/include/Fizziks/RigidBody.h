@@ -31,6 +31,9 @@ public:
     val_t mass() const;
     RigidBody& mass(val_t m);
 
+    val_t gravityScale() const;
+    RigidBody& gravityScale(val_t gs);
+
     Shape shape() const;
     RigidBody& shape(Shape s);
 
