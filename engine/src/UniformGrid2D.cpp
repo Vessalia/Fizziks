@@ -189,7 +189,7 @@ AABB UniformGrid2D::compute_dim(size_t entityID) const
 
     int width  = endX - startX;
     int height = endY - startY;
-    return createAABB(width, height).aabb;
+    return createAABB(width, height);
 }
 
 BitArray UniformGrid2D::cast_ray(Vector2p from, Vector2p to) const

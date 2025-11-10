@@ -11,10 +11,10 @@ class UniformGrid2D
 public:
     UniformGrid2D(size_t unitsX, size_t unitsY, size_t worldUnitsX, size_t worldUnitsY);
 
-    bool insert(size_t entityID, Vector2p pos, AABB dim = createAABB(1, 1).aabb);
+    bool insert(size_t entityID, Vector2p pos, AABB dim = createAABB(1, 1));
     bool remove(size_t entityID);
     bool replace(size_t prevID, size_t newID);
-    bool update(size_t entityID, Vector2p newPos, AABB dim = createAABB(1, 1).aabb);
+    bool update(size_t entityID, Vector2p newPos, AABB dim = createAABB(1, 1));
     BitArray neighbourhood(size_t entityID) const;
      
     BitArray castRay(Vector2p pos, Vector2p ray) const;

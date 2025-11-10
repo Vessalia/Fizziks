@@ -1,148 +1,299 @@
 #include "Shape.h"
+#include <numbers>
 
 namespace Fizziks
 {
+val_t deg2rad(val_t deg)
+{
+    return deg * std::numbers::pi_v<val_t> / 180;
+}
+
+val_t rad2deg(val_t rad)
+{
+    return rad * 180 / std::numbers::pi_v<val_t>;
+}
+
+// https://en.wikipedia.org/wiki/Centroid @ Of a polygon
+Vector2p getCentroid(const std::vector<Vector2p>& vertices)
+{
+    Vector2p centroid = Vector2p::Zero();
+    val_t area = 0;
+
+    size_t n = vertices.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+        const Vector2p& v0 = vertices[i];
+        const Vector2p& v1 = vertices[(i + 1) % n];
+
+        val_t cross = crossproduct(v0, v1);
+        centroid += (v0 + v1) * cross;
+        area += cross;
+    }
+
+    return area != 0 ? (centroid / (3 * area)).eval() : Vector2p::Zero();
+}
+
 Shape createCircle(val_t radius)
 {
-    Shape circle;
-
-    circle.type = ShapeType::CIRCLE;
-    circle.circle.radius = radius;
-    
-    return circle;
+    return { ShapeType::CIRCLE, Circle{ radius } };
 }
 
-Shape createAABB(val_t width, val_t height)
+Shape createRect(val_t width, val_t height)
 {
-    Shape box;
-
-    box.type = ShapeType::AABB;
-    box.aabb.halfWidth  = width  / 2;
-    box.aabb.halfHeight = height / 2;
-    box.aabb;
-
-    return box;
+    std::vector<Vector2p> vertices 
+    {
+        { -width / 2,  height / 2 },
+        { -width / 2, -height / 2 },
+        {  width / 2, -height / 2 },
+        {  width / 2,  height / 2 }
+    };
+    return createPolygon(vertices);
 }
 
-AABB getInscribingAABB(Shape s)
+Shape createPolygon(const std::vector<Vector2p>& vertices)
+{
+    auto centroid = getCentroid(vertices);
+    auto verts = vertices;
+    for (auto& vert : verts)
+    {
+        vert -= centroid;
+    }
+    return { ShapeType::POLYGON, Polygon{ verts } };
+}
+
+AABB createAABB(val_t width, val_t height, const Vector2p& offset)
+{
+    return { width / 2, height / 2, offset };
+}
+
+AABB getInscribingAABB(const Shape& s, const Vector2p& centroid, val_t rot)
 {
     AABB aabb;
-    if(s.type == ShapeType::AABB) aabb = s.aabb;
+    Rotation2p rotation(rot);
+
+    if(s.type == ShapeType::POLYGON)
+    {
+        auto& polygon = std::get<Polygon>(s.data);
+
+        Vector2p min = fizzmax<Vector2p>(), max = fizzmin<Vector2p>();
+        for (const auto& vertex : polygon.vertices)
+        {
+            auto transformed = rotation * vertex;
+            min.x() = std::min(min.x(), transformed.x());
+            min.y() = std::min(min.y(), transformed.y());
+            max.x() = std::max(max.x(), transformed.x());
+            max.y() = std::max(max.y(), transformed.y());
+        }
+        
+        aabb.halfWidth  = (max.x() - min.x()) / 2;
+        aabb.halfHeight = (max.y() - min.y()) / 2;
+
+        aabb.offset = (min + max) / 2 - centroid;
+    }
     else if(s.type == ShapeType::CIRCLE)
     {
-        aabb.halfWidth  = s.circle.radius;
-        aabb.halfHeight = s.circle.radius;
+        auto& circle = std::get<Circle>(s.data);
+        aabb.halfWidth  = circle.radius;
+        aabb.halfHeight = circle.radius;
     }
 
     return aabb;
 }
 
-bool CircleOverlapsCircle(Circle c1, Vector2p p1, Circle c2, Vector2p p2)
-{
-    return (p2 - p1).squaredNorm() < ((c1.radius * c1.radius) + (c2.radius * c2.radius));
-}
-Contact CircleContactsCircle(Circle c1, Vector2p p1, Circle c2, Vector2p p2)
-{
-    Contact contact;
-
-    Vector2p sep = p2 - p1;
-    contact.normal = sep.normalized(); // this could cause issues if perfectly overlap
-    contact.penetration = (c1.radius + c2.radius) - sep.norm();
-    contact.contactPoint = p1 + contact.normal * c1.radius;
-
-    return contact;
-}
-
-bool AABBOverlapsAABB(AABB r1, Vector2p p1, AABB r2, Vector2p p2)
+bool AABBOverlapsAABB(const AABB& r1, const Vector2p& p1, const AABB& r2, const Vector2p& p2)
 {
     bool overlapX = abs(p1.x() - p2.x()) <= r1.halfWidth  + r2.halfWidth;
     bool overlapY = abs(p1.y() - p2.y()) <= r1.halfHeight + r2.halfHeight;
     return overlapX && overlapY;
 }
-Contact AABBContactsAABB(AABB r1, Vector2p p1, AABB r2, Vector2p p2)
+bool AABBContains(const AABB& aabb, const Vector2p& pos, const Vector2p& point)
 {
-    Contact contact;
-    contact.normal = { 0, 0 };
+    bool overlapX = abs(pos.x() - point.x()) <= aabb.halfWidth;
+    bool overlapY = abs(pos.y() - point.y()) <= aabb.halfHeight;
+    return overlapX && overlapY;
+}
 
-    Vector2p sep = p2 - p1;
-    val_t overlapX = abs(r1.halfWidth  + r2.halfWidth  - abs(p1.x() - p2.x()));
-    val_t overlapY = abs(r1.halfHeight + r2.halfHeight - abs(p1.y() - p2.y()));
+#pragma region CSO support
 
-    if(overlapX <= overlapY)
+Vector2p getSupport(const Shape& shape, val_t rot, const Vector2p& direction)
+{
+    Vector2p result = Vector2p::Zero();
+    Rotation2p rotation(-rot);
+    Vector2p dir = rotation * direction;
+
+    if(shape.type == ShapeType::CIRCLE)
     {
-        contact.penetration = overlapX;
-        contact.normal.x() = sep.x() < 0 ? -1 : 1; // should default to reverse direction of motion
+        const auto& c = std::get<Circle>(shape.data);
+        result = dir.normalized() * c.radius;
+    }
+    else if (shape.type == ShapeType::POLYGON)
+    {
+        const auto& p = std::get<Polygon>(shape.data);
+        val_t bestProj = -fizzmax<val_t>();
+        
+        for (const auto& v : p.vertices)
+        {
+            val_t proj = v.dot(dir);
+            if(proj > bestProj)
+            {
+                bestProj = proj;
+                result = v;
+            }
+        }
     }
 
-    if(overlapY <= overlapX)
+    return result;
+}
+
+Vector2p getCSOSupport(const Shape& s1, const Vector2p& p1, val_t r1, 
+                       const Shape& s2, const Vector2p& p2, val_t r2, 
+                       const Vector2p& dir)
+{
+    Rotation2p rot1(r1), rot2(r2);
+    Vector2p support1 = getSupport(s1, r1, dir);
+    Vector2p support2 = getSupport(s2, r2, -dir);
+    return rot1 * support1 + p1 - (rot2 * support2 + p2);
+}
+
+#pragma endregion
+
+#pragma region GJK
+
+Vector2p projToEdge (const Vector2p& P, const Vector2p& Q, const Vector2p& point) 
+{
+    Vector2p PQ = Q - P;
+    val_t t = (point - P).dot(PQ) / PQ.dot(PQ);
+    t = std::clamp(t, static_cast<val_t>(0), static_cast<val_t>(1));
+    if      (t == 0) return P;
+    else if (t == 1) return Q;
+    else             return P + t * PQ; // avoid dealing with all the float math stuff
+}
+
+Vector2p closestPoint(const std::vector<Vector2p>& simplex, const Vector2p& point)
+{
+    size_t count = simplex.size();
+    if (count == 0)
     {
-        contact.penetration = overlapY;
-        contact.normal.y() = sep.y() < 0 ? -1 : 1; // should default to reverse direction of motion
+        return fizzmax<Vector2p>(); // should never happen
+    }
+    if (count == 1)
+    {
+        return simplex[0];
+    }
+    else if (count == 2) 
+    {
+        return projToEdge(simplex[0], simplex[1], point);
+    }
+    else if (count >= 3)
+    {
+        bool inside = true;
+        Vector2p A = simplex[0];
+        Vector2p B = simplex[1];
+        Vector2p C = simplex[2];
+        bool winding = crossproduct(B - A, C - A) >= 0;
+        for (size_t i = 0; i < count; ++i)
+        {
+            Vector2p P = simplex[i];
+            Vector2p Q = simplex[(i + 1) % count];
+            if ((crossproduct(Q - P, point - P) >= 0) != winding)
+            {
+                inside = false;
+                break;
+            }
+        }
+        if (inside) return point;
+
+        Vector2p closest;
+        val_t bestDist = fizzmax<val_t>();
+        for (size_t i = 0; i < count; ++i)
+        {
+            Vector2p P = simplex[i];
+            Vector2p Q = simplex[(i + 1) % count];
+            Vector2p proj = projToEdge(P, Q, point);
+            val_t dist = (point - proj).squaredNorm();
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                closest = proj;
+            }
+        }
+        return closest;
+    }
+}
+
+std::vector<Vector2p> reduceSimplex(const std::vector<Vector2p>& simplex, const Vector2p& point)
+{
+    if(simplex.size() == 1) return simplex;
+
+    val_t bestDist = fizzmax<val_t>();
+    Vector2p P, Q;
+    Vector2p R;
+    bool onEdge = false;
+
+    for (size_t i = 0; i < simplex.size(); ++i)
+    {
+        Vector2p A = simplex[i];
+        Vector2p B = simplex[(i + 1) % simplex.size()];
+        Vector2p proj = projToEdge(A, B, point);
+        val_t dist = (point - proj).squaredNorm();
+        if (dist < bestDist)
+        {
+            P = A; Q = B; R = proj;
+            bestDist = dist;
+            onEdge = R != P && R != Q;
+        }
     }
 
-    contact.contactPoint = p1 + contact.normal * (contact.penetration * 0.5);
-
-    return contact;
+    if (onEdge) return { P, Q };
+    else        return { R };
 }
 
-bool CircleOverlapsAABB(Circle c, Vector2p p1, AABB r, Vector2p p2)
+const val_t epsilon = 0.0001; // should probably be tunable?
+const int maxIterations = 30;
+bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
+                   const Shape& s2, const Vector2p& p2, val_t r2)
 {
-    val_t closestX = std::clamp(p1.x(), p2.x() - r.halfWidth , p2.x() + r.halfWidth );
-    val_t closestY = std::clamp(p1.y(), p2.y() - r.halfHeight, p2.y() + r.halfHeight);
-    return Vector2p(closestX, closestY).squaredNorm() < c.radius * c.radius;
-}
-Contact CircleContactsAABB(Circle c, Vector2p p1, AABB r, Vector2p p2)
-{
-    Contact contact;
+    std::vector<Vector2p> simplex;
+    const Vector2p origin = Vector2p::Zero();
 
-    val_t closestX = std::clamp(p1.x(), p2.x() - r.halfWidth , p2.x() + r.halfWidth );
-    val_t closestY = std::clamp(p1.y(), p2.y() - r.halfHeight, p2.y() + r.halfHeight);
+    Vector2p direction = (origin - (p2 - p1));
+    if (direction.squaredNorm() <= epsilon)
+        direction = Vector2p(1, 0);
 
-    Vector2p closest = Vector2p(closestX, closestY);
-    Vector2p sep = closest - p1;
-    contact.normal = sep.normalized(); // this could cause issues if perfectly overlap
-    contact.penetration = c.radius - sep.norm();
-    contact.contactPoint = closest;
-
-    return contact;
-}
-
-bool shapesOverlap(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
-{
-    if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
-        return CircleOverlapsCircle(s1.circle, p1, s2.circle, p2);
-    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::AABB)
-        return AABBOverlapsAABB(s1.aabb, p1, s2.aabb, p2);
-    else if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::AABB)
-        return CircleOverlapsAABB(s1.circle, p1, s2.aabb, p2);
-    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::CIRCLE)
-        return CircleOverlapsAABB(s2.circle, p2, s1.aabb, p1);
+    Vector2p point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
+    simplex.push_back(point);
+    Vector2p closest;
+    int iterations = 0;
+    while(iterations++ < maxIterations)
+    {
+        closest = closestPoint(simplex, origin);
+        if (closest.squaredNorm() <= epsilon) return true;
+        simplex = reduceSimplex(simplex, origin); // still contains closest
+        direction = -closest; // -v = origin - v
+        point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
+        if (point.dot(direction) <= 0) return false; // didn't pass origin -> must be outside
+        simplex.push_back(point);
+    }
 
     return false;
 }
 
-// could use a template here to remove gross branching?
-Contact getShapeContact(Shape s1, Vector2p p1, Shape s2, Vector2p p2)
+#pragma endregion
+
+#pragma region EPA
+
+Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1, const Shape& s2, const Vector2p& p2, val_t r2)
 {
     Contact contact;
     contact.overlaps = false;
 
-    if(!shapesOverlap(s1, p1, s2, p2))
+    if(!shapesOverlap(s1, p1, r1, s2, p2, r2))
         return contact;
 
-    contact.overlaps = true;
-    if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
-        contact = CircleContactsCircle(s1.circle, p1, s2.circle, p2);
-    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::AABB)
-        contact = AABBContactsAABB(s1.aabb, p1, s2.aabb, p2);
-    else if(s1.type == ShapeType::CIRCLE && s2.type == ShapeType::AABB)
-        contact = CircleContactsAABB(s1.circle, p1, s2.aabb, p2);
-    else if(s1.type == ShapeType::AABB && s2.type == ShapeType::CIRCLE)
-    {
-        contact = CircleContactsAABB(s2.circle, p2, s1.aabb, p1);
-        contact.normal *= -1; // keep normal direction consistent
-    }
+
 
     return contact;
 }
+
+#pragma endregion
 };

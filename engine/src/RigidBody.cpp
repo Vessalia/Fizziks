@@ -7,15 +7,23 @@ RigidBody::RigidBody(Handle handle, FizzWorld* world)
     : handle(handle)
     , world(world) { }
 
+RigidBody::~RigidBody() { if (world) world->destroyBody(*this); }
+
 RigidBody& RigidBody::setBody(const BodyDef& def)
 {
     world->set_body(*this, def);
     return *this;
 }
 
-RigidBody& RigidBody::applyForce(const Vector2p& force) 
+RigidBody& RigidBody::applyForce(const Vector2p& force, const Vector2p& at) 
 {
-    world->apply_force(*this, force); 
+    world->apply_force(*this, force, at); 
+    return *this;
+}
+
+RigidBody& RigidBody::addCollider(const Collider& collider, const Vector2p& at)
+{
+    world->add_collider(*this, collider, at);
     return *this;
 }
 
@@ -39,11 +47,11 @@ RigidBody& RigidBody::velocity(const Vector2p& vel)
     return *this; 
 }
 
-Vector2p RigidBody::angularVelocity() const 
+val_t RigidBody::angularVelocity() const 
 { 
     return world->body_angularVelocity(*this);
 }
-RigidBody& RigidBody::angularVelocity(const Vector2p& angVel) 
+RigidBody& RigidBody::angularVelocity(val_t angVel) 
 { 
     world->body_angularVelocity(*this, angVel);
     return *this; 
@@ -67,16 +75,6 @@ RigidBody& RigidBody::gravityScale(val_t gs)
 {
     world->body_gravityScale(*this, gs);
     return *this;
-}
-
-Shape RigidBody::shape() const 
-{ 
-    return world->body_shape(*this);
-}
-RigidBody& RigidBody::shape(Shape s) 
-{ 
-    world->body_shape(*this, s);
-    return *this; 
 }
 
 bool RigidBody::isStatic() const 
