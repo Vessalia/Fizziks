@@ -37,7 +37,9 @@ int main(int argc, char** argv)
     Shape s3 = createCircle(1);
     bool t0 = shapesOverlap(s1, Vector2p(0, 0), 0, s2, Vector2p(-2, 0), 0); // no rotation, no overlap, no circle
     bool t1 = shapesOverlap(s2, Vector2p(0, 0), 0, s3, Vector2p(2, 0), 0); // no rotation, no overlap, circle
-    bool t2 = shapesOverlap(s2, Vector2p(0, 2.1), deg2rad(45), s2, Vector2p(0, 0), 0); // rotation, overlap, cirlce
+    Contact t2 = getShapeContact(s3, Vector2p(2, 0), deg2rad(90), s2, Vector2p(0, 0), 0);
+
+    std::cout << "Results are: " << t0 << t1;
     
     bool quit = false;
     while (!quit)

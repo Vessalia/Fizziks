@@ -42,8 +42,10 @@ struct AABB
 
 struct Contact 
 {
+    Vector2p contactPointWorldA, contactPointWorldB;
+    Vector2p contactPointLocalA, contactPointLocalB;  
     Vector2p normal; 
-    Vector2p contactPoint;  
+    Vector2p tangent;
     val_t penetration;  
 
     bool overlaps;
