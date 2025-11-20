@@ -261,7 +261,7 @@ Simplex reduceSimplex(const Simplex& simplex, const Vector2p& point)
             P = A; Q = B; 
             if      (proj == pA) R = A;
             else if (proj == pB) R = B;
-            onEdge = proj == pA || proj == pB;
+            onEdge = proj != pA && proj != pB;
             bestDist = dist;
         }
     }
@@ -308,7 +308,7 @@ bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
 #pragma region EPA
 
 std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vector2p& p1, val_t r1,
-                                                          const Shape& s2, const Vector2p& p2, val_t r2)
+                                       const Shape& s2, const Vector2p& p2, val_t r2)
 {
     Simplex simplex;
 
@@ -430,16 +430,17 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
 
     auto [vertIndex, _] = closestFacet(simplex, origin);
     size_t i0 = vertIndex, i1 = (vertIndex + 1) % simplex.size();
-    Vector2p A = simplex[i0].CSO;
-    Vector2p B = simplex[i1].CSO;
+    SupportVertex SA = simplex[i0];
+    SupportVertex SB = simplex[i1];
+    Vector2p A = SA.CSO, B = SB.CSO;
 
     Vector2p AB = B - A;
     float t = -(A.dot(AB)) / AB.dot(AB);
     t = std::clamp(t, 0.0f, 1.0f);
 
     SupportVertex vert = { A + t * AB,
-                           simplex[i0].A + t * (simplex[i1].A - simplex[i0].A),
-                           simplex[i0].B + t * (simplex[i1].B - simplex[i0].B) };
+                           SA.A + t * (SB.A - SA.A),
+                           SA.B + t * (SB.B - SA.B) };
 
     contact.penetration = (vert.CSO.norm());
     contact.normal = vert.CSO.normalized();
