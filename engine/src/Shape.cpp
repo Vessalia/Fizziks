@@ -321,7 +321,7 @@ bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
     Simplex simplex;
 
     Vector2p direction = p2 - p1; // doesn't really matter
-    if (direction.squaredNorm() <= epsilon)
+    if (direction.squaredNorm() <= epsilon2)
         direction = Vector2p(1, 0);
 
     auto point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
@@ -334,7 +334,8 @@ bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
         simplex = reduceSimplex(simplex, origin); // still contains closest
         direction = -closest; // -v = origin - v
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
-        if (point.CSO != origin && point.CSO.dot(direction) <= 0) return false; // didn't pass origin -> it must be outside
+        auto p = point.CSO;
+        if (p != origin && p.dot(direction) <= epsilon2) return false; // didn't pass origin -> it must be outside
         simplex.push_back(point);
         closest = closestPoint(simplex, origin);
         if (closest.squaredNorm() <= epsilon2) return true;
