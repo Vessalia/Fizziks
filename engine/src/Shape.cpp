@@ -450,9 +450,45 @@ std::pair<size_t, Vector2p> closestFacet(const Simplex& simplex, const Vector2p&
     return { insertIndex, dir };
 }
 
+Contact getCircleCircleContact(const Circle& c1, const Vector2p& p1, val_t r1,
+                               const Circle& c2, const Vector2p& p2, val_t r2)
+{
+    Contact contact;
+    contact.overlaps = false;
+
+    Vector2p d = p2 - p1;
+    val_t dist2 = d.squaredNorm();
+    val_t r = c1.radius + c2.radius;
+
+    if (dist2 >= r * r) return contact;
+
+    val_t dist = d.norm();
+    Vector2p norm = dist > epsilon ? d / dist : Vector2p(0, 1);
+
+    contact.overlaps = true;
+    contact.normal = norm;
+    contact.penetration = r - dist;
+    contact.tangent = { -norm.y(), norm.x() };
+
+    contact.contactPointWorldA = p1 + norm * c1.radius;
+    contact.contactPointWorldB = p2 - norm * c2.radius;
+
+    contact.contactPointLocalA = Rotation2p(-r1) * (contact.contactPointWorldA - p1);
+    contact.contactPointLocalB = Rotation2p(-r2) * (contact.contactPointWorldB - p2);
+
+    return contact;
+}
+
 Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
                         const Shape& s2, const Vector2p& p2, val_t r2)
 {
+    // circle-cirlce collision results in degenerate cases, handle this specially
+    if (s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
+    {
+        return getCircleCircleContact(std::get<Circle>(s1.data), p1, r1,
+                                      std::get<Circle>(s2.data), p2, r2);
+    }
+
     Contact contact;
 
     auto [overlaps, simplex] = getGJKSimplex(s1, p1, r1, s2, p2, r2);

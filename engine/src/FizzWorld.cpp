@@ -444,6 +444,7 @@ void FizzWorld::resolve_collisions(val_t dt)
             collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, contact, dt));
         }
     }
+    collisionManifolds.clear();
 
     for (int i = 0; i < collisionIterations; ++i)
     {
@@ -452,6 +453,7 @@ void FizzWorld::resolve_collisions(val_t dt)
             solve_contactConstraints(resolution);
         }
     }
+    collisionResolutions.clear();
 }
 
 void FizzWorld::handle_collisions(val_t dt)

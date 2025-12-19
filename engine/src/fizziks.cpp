@@ -36,9 +36,11 @@ int main(int argc, char** argv)
 
     BodyDef def = initBodyDef();
     def.initPosition = Vector2p(10, 10);
+    def.bodyType = BodyType::STATIC;
     def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero()});
     bodies.push_back(world.createBody(def));
     def.initPosition.y() += 3; def.initVelocity.y() -= 2;
+    def.bodyType = BodyType::DYNAMIC;
     bodies.push_back(world.createBody(def));
     
     bool quit = false;
