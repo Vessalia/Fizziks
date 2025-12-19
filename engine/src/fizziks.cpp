@@ -32,14 +32,11 @@ int main(int argc, char** argv)
     gWindow = SDL_CreateWindow("Fizziks Test", SCREEN_WIDTH, SCREEN_HEIGHT, 0);
     gRenderer = SDL_CreateRenderer(gWindow, NULL);
 
-    Shape s1 = createPolygon({Vector2p(0, 0), Vector2p{1, 0}, Vector2p(1, 1)});
-    Shape s2 = createRect(2, 2);
-    Shape s3 = createCircle(1);
-    bool t0 = shapesOverlap(s1, Vector2p(0, 0), 0, s2, Vector2p(-2, 0), 0); // no rotation, no overlap, no circle
-    bool t1 = shapesOverlap(s2, Vector2p(0, 0), 0, s3, Vector2p(2, 0), 0); // no rotation, no overlap, circle
-    Contact t2 = getShapeContact(s3, Vector2p(2, 0), deg2rad(90), s2, Vector2p(0, 0), 0);
-
-    std::cout << "Results are: " << t0 << t1;
+    BodyDef def = initBodyDef();
+    def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero() });
+    bodies.push_back(world.createBody(def));
+    def.initPosition.y() += 3; def.initVelocity.y() -= 0.5;
+    bodies.push_back(world.createBody(def));
     
     bool quit = false;
     while (!quit)
@@ -59,7 +56,7 @@ int main(int argc, char** argv)
         SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(gRenderer);
 
-        // world.tick(dt / 10);
+        world.tick(dt / 10);
         draw();
     }
 

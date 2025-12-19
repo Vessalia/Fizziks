@@ -59,6 +59,8 @@ Shape createRect(val_t width, val_t height);
 Shape createPolygon(const std::vector<Vector2p>& vertices);
 AABB createAABB(val_t width, val_t height, const Vector2p& offset = Vector2p::Zero());
 
+val_t getMoI(const Shape& shape, const val_t mass);
+
 AABB getInscribingAABB(const Shape& s, const Vector2p& centroid, val_t rot);
 bool AABBOverlapsAABB(const AABB& r1, const Vector2p& p1, const AABB& r2, const Vector2p& p2);
 bool AABBContains(const AABB& aabb, const Vector2p& pos, const Vector2p& point);

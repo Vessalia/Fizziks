@@ -12,7 +12,7 @@ class FizzWorld
 public:
     Vector2p Gravity = {0, -9.81};
 
-    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution, val_t timeStep);
+    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timeStep);
     FizzWorld() : FizzWorld(20, 20, 2, 3, 1 / 200.f) { }
     ~FizzWorld();
 
@@ -38,30 +38,36 @@ private:
 
         val_t gravityScale;
 
-        std::vector<std::pair<Collider, Vector2p>> colliders;
+        val_t restitution;
+        val_t staticFriction;
+        val_t dynamicFriction;
+        val_t linearDamping;
+        val_t angularDamping;
 
         AABB bounds;
 
-        bool isStatic;
+        std::vector<std::pair<Collider, Vector2p>> colliders;
 
-        val_t restitution = 0.2;
-        val_t staticFriction = 0.2;
-        val_t dynamicFriction = 0.1;
-        val_t linearDamping = 0.05;
-        val_t angularDamping = 0.05;
+        bool isStatic;
     };
 
-    struct CollisionInfo
+    struct CollisionManifold
     {
         size_t bodyAId, bodyBId;
-        Contact contact;
+        std::vector<Contact> contacts;
     };
 
     struct CollisionResolution
     {
-        BodyData* body;
-        Vector2p correction;
-        Vector2p impulse;
+        size_t bodyAId, bodyBId;
+        Contact contact;
+
+        val_t normalImpulse;
+        val_t tangentImpulse;
+
+        val_t invEffMass;
+        val_t invEffTangentMass;
+        val_t bias;
     };
 
     static const BodyData null_body;
@@ -72,7 +78,7 @@ private:
     size_t unitsX;
     size_t unitsY;
 
-    int collisionResolution;
+    int collisionIterations;
 
     std::vector<Handle> activeHandles;
     std::vector<uint32_t> freeList;
@@ -80,17 +86,26 @@ private:
     std::vector<uint32_t> activeList;
     std::vector<BodyData> activeBodies;
 
-    std::queue<CollisionInfo> collisionQueue;
-    std::queue<CollisionResolution> collisionResolveQueue;
+    std::vector<CollisionManifold> collisionManifolds;
+    std::vector<CollisionResolution> collisionResolutions;
+
     std::queue<RigidBody> destructionQueue;
 
     Broadphase* broadphase;
 
-    CollisionInfo check_collision(uint32_t idA, uint32_t idB) const;
+    Vector2p get_worldPos(const BodyData& body, const Vector2p& colliderPos) const;
+    val_t get_worldRotation(const BodyData& body, const Collider& collider) const;
+
+    CollisionManifold get_manifold(const size_t idA, const size_t idB) const;
     void detect_collisions();
-    void resolve_collisions();
+    CollisionResolution collision_preStep(const size_t idA, const size_t idB, const Contact& constact, val_t dt) const;
+    void solve_normalConstraint(CollisionResolution& resolution);
+    void solve_frictionConstraint(CollisionResolution& resultion);
+    void solve_contactConstraints(CollisionResolution& resolution);
+    void resolve_collisions(val_t dt);
+
     void simulate_bodies(val_t dt);
-    void handle_collisions();
+    void handle_collisions(val_t dt);
     void destroy_bodies();
 
     void set_body(const RigidBody& rb, const BodyDef& def);
@@ -101,8 +116,8 @@ private:
 
     void add_collider(const RigidBody& rb, const Collider& collider, const Vector2p& at);
     void add_collider(BodyData* body, const Collider& collider, const Vector2p& at);
-    const AABB getBounds(BodyData* body, bool compute) const;
-    const AABB computeBounds(BodyData* body) const;
+    const AABB get_bounds(BodyData* body, bool compute) const;
+    const AABB compute_bounds(BodyData* body) const;
 
     void apply_force(const RigidBody& rb, const Vector2p& force, const Vector2p& at);
 

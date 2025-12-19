@@ -17,13 +17,13 @@ const FizzWorld::BodyData FizzWorld::null_body =
     true
 };
 
-FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution, val_t timestep) 
+FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timestep) 
     : unitsX(unitsX * worldScale)
     , unitsY(unitsY * worldScale)
     , accumulator(0)
     , timestep(timestep)
     , broadphase(new SimpleBP())
-    , collisionResolution(collisionResolution) { }
+    , collisionIterations(collisionIterations) { }
 
 FizzWorld::~FizzWorld() { delete broadphase; }
 
@@ -74,13 +74,13 @@ void FizzWorld::add_collider(BodyData* body, const Collider& collider, const Vec
     body->invMoI = 1 / MoI;
 }
 
-const AABB FizzWorld::getBounds(BodyData* body, bool compute) const
+const AABB FizzWorld::get_bounds(BodyData* body, bool compute) const
 {
-    if (compute) return computeBounds(body);
+    if (compute) return compute_bounds(body);
     else         return body->bounds;
 }
 
-const AABB FizzWorld::computeBounds(BodyData* body) const
+const AABB FizzWorld::compute_bounds(BodyData* body) const
 {
     AABB bounds;
 
@@ -150,7 +150,7 @@ void FizzWorld::set_body(BodyData* body, const BodyDef& def)
         body->invMass = 0;
     }
 
-    computeBounds(body);
+    compute_bounds(body);
 }
 
 Vector2p FizzWorld::body_position(const RigidBody& rb) const 
@@ -226,19 +226,43 @@ void FizzWorld::body_isStatic(const RigidBody& rb, bool is)
     if(body) body->isStatic = is;
 }
 
-FizzWorld::CollisionInfo FizzWorld::check_collision(uint32_t idA, uint32_t idB) const
+Vector2p FizzWorld::get_worldPos(const BodyData& body, const Vector2p& colliderPos) const
 {
-    CollisionInfo collision;
-        
-    collision.bodyAId = idA; 
-    collision.bodyBId = idB;
-    //collision.contact = getShapeContact(bodyA.shape, bodyA.position, bodyB.shape, bodyB.position);
+    return body.position + body.centroid + Rotation2p(body.rotation) * colliderPos;
+}
 
-    return collision;
+val_t FizzWorld::get_worldRotation(const BodyData& body, const Collider& collider) const
+{
+    return body.rotation + collider.rotation;
 }
 
 val_t slop = 0.01;
 val_t contactEps = 2 * slop;
+FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const size_t idB) const
+{
+    CollisionManifold manifold;
+    manifold.bodyAId = idA;
+    manifold.bodyBId = idB;
+
+    const auto& bodyA = activeBodies[idA];
+    const auto& bodyB = activeBodies[idA];
+    for (const auto& [s1, p1] : bodyA.colliders)
+    {
+        Vector2p posA = get_worldPos(bodyA, p1);
+        val_t rotA = get_worldRotation(bodyA, s1);
+        for (const auto& [s2, p2] : bodyB.colliders)
+        {
+            Vector2p posB = get_worldPos(bodyB, p2);
+            val_t rotB = get_worldRotation(bodyB, s2);
+            Contact contact = getShapeContact(s1.shape, posA, rotA, s2.shape, posB, rotB);
+
+            if (contact.overlaps || contact.penetration >= contactEps) manifold.contacts.push_back(contact);
+        }
+    }
+
+    return manifold;
+}
+
 void FizzWorld::detect_collisions()
 {
     // broadphase detection
@@ -248,91 +272,160 @@ void FizzWorld::detect_collisions()
     // nearphase detection
     for (auto [idA, idB] : broadPairs)
     {
-        CollisionInfo collision = check_collision(idA, idB);
-        if(!collision.contact.overlaps || collision.contact.penetration < contactEps) continue;
-
-        collisionQueue.push(collision);
+        CollisionManifold manifold = get_manifold(idA, idB);
+        if (manifold.contacts.size() > 0) collisionManifolds.push_back(manifold);
     }
 }
 
 val_t beta = 0.2;
-val_t bounceThreshold = 0.5;
-val_t velEps = 0.05;
-val_t tangentEps = 0.001;
-void FizzWorld::resolve_collisions()
+// precompute inverse effective mass (JM^-1J^T)^-1 and bias term
+// J = [-n^T -(rA x n)^T n^T (rB x n)^T]
+// M^-1 = [Ma^-1 0 0 0]
+//        [0 Ia^-1 0 0]
+//        [0 0 Mb^-1 0]
+//        [0 0 0 Ib^-1]
+// JM^-1    = [-n^TMa^-1 -(rA x n)^TIa^-1 n^TMb^-1 (rB x n)^TIb^-1]
+// JM^-1J^T = |n|^2Ma^-1 + |rA x n|^2 Ia^-1 + |n|^2Mb^-1 + |rB x n|^2 Ib^-1
+//          = Ma^-1 + |rA x n|^2 Ia^-1 + Mb^-1 + |rB x n|^2 Ib^-1
+FizzWorld::CollisionResolution FizzWorld::collision_preStep(const size_t idA, const size_t idB, const Contact& contact, val_t dt) const
 {
-    while(!collisionQueue.empty())
+    CollisionResolution resolution;
+    resolution.bodyAId = idA;
+    resolution.bodyBId = idB;
+
+    const auto& bodyA = activeBodies[idA];
+    const auto& bodyB = activeBodies[idB];
+
+    Vector2p rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
+    Vector2p rB = contact.contactPointWorldB - (bodyB.position + bodyB.centroid);
+
+    val_t rnA = crossproduct(rA, contact.normal);
+    val_t rtA = crossproduct(rA, contact.tangent);
+    val_t rnB = crossproduct(rB, contact.normal);
+    val_t rtB = crossproduct(rB, contact.tangent);
+
+    val_t effMass        = bodyA.invMass + bodyA.invMoI * rnA * rnA +
+                           bodyB.invMass + bodyB.invMoI * rnB * rnB;
+    val_t effTangentMass = bodyA.invMass + bodyA.invMoI * rtA * rtA +
+                           bodyB.invMass + bodyB.invMoI * rtB * rtB;
+
+    resolution.invEffMass = effMass > 0 ? 1 / effMass : 0;
+    resolution.invEffTangentMass = effTangentMass > 0 ? 1 / effTangentMass : 0;
+
+    val_t baumgarte = -beta / dt * std::max(contact.penetration - slop, static_cast<val_t>(0));
+    Vector2p vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
+    Vector2p vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+    Vector2p dv = vB - vA;
+    val_t closingVel = contact.normal.dot(dv);
+    val_t restitution = std::min(bodyA.restitution, bodyB.restitution) * closingVel;
+    resolution.bias = baumgarte + restitution;
+
+    return resolution;
+}
+
+// dv  = vb + rb x wb - (va + ra x wa)
+// Jv  = n . (vb - va) + (rb x n)wb - (ra x n)wa
+//     = n . (dv)
+// lam = (-Jv + b)/effMass
+void FizzWorld::solve_normalConstraint(CollisionResolution& resolution)
+{
+    auto& bodyA = activeBodies[resolution.bodyAId];
+    auto& bodyB = activeBodies[resolution.bodyBId];
+    const auto& contact = resolution.contact;
+
+    Vector2p rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
+    Vector2p rB = contact.contactPointWorldB - (bodyB.position + bodyB.centroid);
+    Vector2p vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
+    Vector2p vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+    Vector2p dv = vB - vA;
+    val_t Jv = dv.dot(contact.normal);
+
+    val_t lambda = resolution.invEffMass * (-Jv + resolution.bias);
+
+    val_t oldImpulse = resolution.normalImpulse;
+    resolution.normalImpulse = std::max(static_cast<val_t>(0), oldImpulse + lambda);
+    lambda = resolution.normalImpulse - oldImpulse;
+    Vector2p impulse = lambda * contact.normal;
+
+    bodyA.velocity -= impulse * bodyA.invMass;
+    bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
+
+    bodyB.velocity += impulse * bodyA.invMass;
+    bodyB.angularVelocity -= crossproduct(rB, impulse) * bodyB.invMoI;
+}
+
+// recompute is intentional
+void FizzWorld::solve_frictionConstraint(CollisionResolution& resolution)
+{
+    auto& bodyA = activeBodies[resolution.bodyAId];
+    auto& bodyB = activeBodies[resolution.bodyBId];
+    const auto& contact = resolution.contact;
+
+    Vector2p rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
+    Vector2p rB = contact.contactPointWorldB - (bodyB.position + bodyB.centroid);
+    Vector2p vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
+    Vector2p vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+    Vector2p dv = vB - vA;
+    val_t Jvt = dv.dot(contact.tangent);
+
+    val_t lambdaT = resolution.invEffMass * (-Jvt);
+    val_t oldImpulse = resolution.tangentImpulse;
+    val_t newImpulse = resolution.tangentImpulse + lambdaT;
+
+    val_t maxStatic = std::min(bodyA.staticFriction, bodyB.staticFriction) * resolution.normalImpulse;
+    val_t maxDynamic = std::min(bodyA.dynamicFriction, bodyB.dynamicFriction) * resolution.normalImpulse;
+
+    if (std::abs(newImpulse) <= maxStatic)
     {
-        CollisionInfo collision = collisionQueue.front(); collisionQueue.pop();
-        auto& body  = activeBodies[collision.bodyAId];
-        auto& other = activeBodies[collision.bodyBId];
-        val_t m1 = body.invMass;
-        val_t m2 = other.invMass;
-        if (m1 + m2 == 0) continue;
+        // static case
+        resolution.tangentImpulse = newImpulse;
+    }
+    else
+    {
+        // sliding case
+        resolution.tangentImpulse = std::clamp(newImpulse, -maxDynamic, maxDynamic);
+    }
+    lambdaT = resolution.tangentImpulse - oldImpulse;
+    Vector2p impulse = lambdaT * contact.tangent;
 
-        Contact contact = collision.contact;
-        // Baumgarte stabilization
-        val_t mFactor = 1 / (m1 + m2);
-        Vector2p normal = contact.normal;
-        Vector2p correction = normal * std::max(contact.penetration - slop, 0.f) * beta * mFactor;
+    bodyA.velocity -= impulse * bodyA.invMass;
+    bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
 
-        Vector2p normalImpulse = Vector2p::Zero();
-        Vector2p frictionImpulse = Vector2p::Zero();
-        Vector2p relVel = other.velocity - body.velocity;
-        val_t velFactor = relVel.dot(contact.normal);
-        if (velFactor <= 0 /* should be an eps not 0 */) // only apply resolving forces if moving towards or tangent
+    bodyB.velocity += impulse * bodyA.invMass;
+    bodyB.angularVelocity -= crossproduct(rB, impulse) * bodyB.invMoI;
+}
+
+void FizzWorld::solve_contactConstraints(CollisionResolution& resolution)
+{
+    solve_normalConstraint(resolution);
+    solve_frictionConstraint(resolution);
+}
+
+void FizzWorld::resolve_collisions(val_t dt)
+{
+    for (auto& manifold : collisionManifolds)
+    {
+        const auto& bodyAId = manifold.bodyAId;
+        const auto& bodyBId = manifold.bodyBId;
+        for (auto& contact : manifold.contacts)
         {
-            // Restitution impulse
-            val_t restitution = std::min(body.restitution, other.restitution);
-            if (std::abs(relVel.norm()) < bounceThreshold)
-                restitution = 0;
-            val_t impulse = -(1 + restitution) * velFactor * mFactor;
-            normalImpulse = normal * impulse;
-
-            // Frictional impulse
-            Vector2p tangent = (relVel - contact.normal * velFactor);
-            if (tangent.norm() > tangentEps) // ignore tiny tangents
-            {
-                tangent = tangent.normalized();
-                val_t friction = -relVel.dot(tangent) * mFactor;
-                val_t muS = std::min(body.staticFriction, other.staticFriction);
-                val_t muD = std::min(body.dynamicFriction, other.dynamicFriction);
-
-                friction = std::clamp(friction, -impulse * muS, impulse * muS);
-                if (std::abs(friction) < impulse * muS) // not sliding yet
-                    frictionImpulse = friction * tangent;
-                else
-                    frictionImpulse = -impulse * muD * tangent;
-            }
+            collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, contact, dt));
         }
-
-        collisionResolveQueue.push(
-        {
-            &body,
-            -correction * m1,
-            -(normalImpulse + frictionImpulse) * m1
-        });
-        collisionResolveQueue.push(
-        {
-            &other,
-            correction * m2,
-            (normalImpulse + frictionImpulse) * m2
-        });
     }
 
-    while (!collisionResolveQueue.empty())
+    for (int i = 0; i < collisionIterations; ++i)
     {
-        CollisionResolution resolution = collisionResolveQueue.front(); collisionResolveQueue.pop();
-        auto& body = *resolution.body;
-        body.position += resolution.correction;
-        body.velocity += resolution.impulse;
+        for (auto& resolution : collisionResolutions)
+        {
+            solve_contactConstraints(resolution);
+        }
     }
 }
 
-void FizzWorld::handle_collisions()
+void FizzWorld::handle_collisions(val_t dt)
 {
     detect_collisions();
-    resolve_collisions();
+    resolve_collisions(dt);
 }
 
 void FizzWorld::simulate_bodies(val_t dt)
@@ -346,19 +439,19 @@ void FizzWorld::simulate_bodies(val_t dt)
         val_t prevRot = body.rotation;
 
         Vector2p accel = body.accumForce * body.invMass + Gravity * body.gravityScale;
-        body.velocity = body.velocity * std::max(0.f, (1 - body.linearDamping * dt)) + accel * dt;
+        body.velocity = body.velocity * std::max(static_cast<val_t>(0), (1 - body.linearDamping * dt)) + accel * dt;
         body.position += body.velocity * dt;
         body.accumForce.setZero();
 
         val_t angularAccel = body.accumTorque * body.invMoI;
-        body.angularVelocity = body.angularVelocity * std::max(0.f, (1 - body.angularDamping * dt)) + angularAccel * dt;
+        body.angularVelocity = body.angularVelocity * std::max(static_cast<val_t>(0), (1 - body.angularDamping * dt)) + angularAccel * dt;
         body.rotation += body.angularVelocity * dt;
         body.accumTorque = 0;
 
         bool posUpdate = prevPos != body.position;
         bool rotUpdate = prevRot != body.rotation; 
         if(posUpdate || rotUpdate) 
-            broadphase->update(ID, getBounds(&body, rotUpdate), body.position + body.centroid);
+            broadphase->update(ID, get_bounds(&body, rotUpdate), body.position + body.centroid);
     }
 }
 
@@ -414,7 +507,7 @@ RigidBody FizzWorld::createBody(const BodyDef& def)
     activeBodies.push_back(b);
     set_body(&activeBodies[ID], def);
 
-    broadphase->add(ID, computeBounds(&b), b.position + b.centroid);
+    broadphase->add(ID, compute_bounds(&b), b.position + b.centroid);
 
     return { handle, this };
 }
@@ -437,8 +530,7 @@ void FizzWorld::tick(val_t dt)
         accumulator -= timestep;
 
         simulate_bodies(timestep);
-        for (int i = 0; i < collisionResolution; ++i)
-            handle_collisions();
+        handle_collisions(timestep);
         destroy_bodies();
     }
 }

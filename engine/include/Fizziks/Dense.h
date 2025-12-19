@@ -25,17 +25,12 @@ namespace Fizziks
 #endif
 
 template<typename T>
-T fizzmax()
-{
-    return std::numeric_limits<T>::max();
-}
+T fizzmax() { return std::numeric_limits<T>::max(); }
 
 template<typename T>
-T fizzmin()
-{
-    return std::numeric_limits<T>::min();
-}
+T fizzmin() { return std::numeric_limits<T>::min(); }
 
 int mod(int a, int b);
 val_t crossproduct(const Vector2p& a, const Vector2p& b);
+Vector2p crossproduct(val_t w, const Vector2p& r);
 };

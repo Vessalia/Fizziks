@@ -66,6 +66,44 @@ AABB createAABB(val_t width, val_t height, const Vector2p& offset)
     return { width / 2, height / 2, offset };
 }
 
+val_t getMoI(const Shape& shape, const val_t mass)
+{
+    val_t MoI = 0;
+    if (shape.type == ShapeType::CIRCLE)
+    {
+        Circle c = std::get<Circle>(shape.data);
+        0.5 * mass * c.radius * c.radius;
+    }
+    else if (shape.type == ShapeType::POLYGON)
+    {
+        Polygon p = std::get<Polygon>(shape.data);
+
+        val_t area = 0;
+        val_t cx = 0, cy = 0;
+
+        for(int i = 0; i < p.vertices.size(); ++i)
+        {
+            const auto& v0 = p.vertices[i];
+            const auto& v1 = p.vertices[(i + 1) % p.vertices.size()];
+            const val_t cross = crossproduct(v0, v1);
+
+            area += cross;
+            cx += (v0.x() + v1.x()) * cross;
+            cy += (v0.y() + v1.y()) * cross;
+
+            MoI += (v0.x() * v0.x() + v0.x() * v1.x() + v1.x() * v1.x() + 
+                    v0.y() * v0.y() + v0.y() * v1.y() + v1.y() * v1.y()) * cross;
+        }
+
+        cx /= (3 * area);
+        cy /= (3 * area);
+
+        MoI = MoI / 12 - mass * (cx * cx + cy * cy);
+    }
+
+    return MoI;
+}
+
 AABB getInscribingAABB(const Shape& s, const Vector2p& centroid, val_t rot)
 {
     AABB aabb;
@@ -118,6 +156,11 @@ struct SupportVertex
 {
     Vector2p CSO;
     Vector2p A, B;
+
+    explicit operator Vector2p() const
+    {
+        return CSO;
+    }
 };
 
 typedef std::vector<SupportVertex> Simplex;
@@ -153,8 +196,8 @@ Vector2p getSupport(const Shape& shape, val_t rot, const Vector2p& direction)
 }
 
 SupportVertex getCSOSupport(const Shape& s1, const Vector2p& p1, val_t r1,
-                       const Shape& s2, const Vector2p& p2, val_t r2, 
-                       const Vector2p& dir)
+                            const Shape& s2, const Vector2p& p2, val_t r2, 
+                            const Vector2p& dir)
 {
     Rotation2p rot1(r1), rot2(r2);
     Vector2p support1 = getSupport(s1, r1,  dir);
@@ -179,10 +222,6 @@ Vector2p projToEdge (const Vector2p& P, const Vector2p& Q, const Vector2p& point
 Vector2p closestPoint(const std::vector<Vector2p>& simplex, const Vector2p& point)
 {
     size_t count = simplex.size();
-    if (count == 0)
-    {
-        return fizzmax<Vector2p>(); // should never happen
-    }
     if (count == 1)
     {
         return simplex[0];
@@ -226,6 +265,8 @@ Vector2p closestPoint(const std::vector<Vector2p>& simplex, const Vector2p& poin
         }
         return closest;
     }
+
+    return fizzmax<Vector2p>(); // should never happen
 }
 
 Vector2p closestPoint(const Simplex& simplex, const Vector2p& point)
@@ -270,7 +311,7 @@ Simplex reduceSimplex(const Simplex& simplex, const Vector2p& point)
     else        return { R };
 }
 
-const val_t epsilon = 0.00001; // should probably be tunable?
+const val_t epsilon = 0.0001; // should probably be tunable?
 const val_t epsilon2 = epsilon * epsilon;
 const Vector2p origin = Vector2p::Zero();
 const int maxIterations = 30;
@@ -293,8 +334,7 @@ bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
         simplex = reduceSimplex(simplex, origin); // still contains closest
         direction = -closest; // -v = origin - v
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
-        auto p = point.CSO;
-        if (p != origin && p.dot(direction) <= 0) return false; // didn't pass origin -> it must be outside
+        if (point.CSO != origin && point.CSO.dot(direction) <= 0) return false; // didn't pass origin -> it must be outside
         simplex.push_back(point);
         closest = closestPoint(simplex, origin);
         if (closest.squaredNorm() <= epsilon2) return true;
@@ -313,7 +353,7 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vector2p& p1, val_
     Simplex simplex;
 
     Vector2p direction = p2 - p1; // doesn't really matter
-    if (direction.squaredNorm() <= epsilon)
+    if (direction.squaredNorm() <= epsilon2)
         direction = Vector2p(1, 0);
 
     auto point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
@@ -327,7 +367,7 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vector2p& p1, val_
         direction = -closest; // -v = origin - v
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
         auto p = point.CSO;
-        if (p != origin && p.dot(direction) <= 0) return { false, {} }; // didn't pass origin -> it must be outside
+        if (p != origin && p.dot(direction) <= epsilon2) return { false, {} }; // didn't pass origin -> it must be outside
         simplex.push_back(point);
         closest = closestPoint(simplex, origin);
         if (closest.squaredNorm() <= epsilon2) return { true, simplex };
@@ -362,7 +402,8 @@ Simplex blowupSimplex(const Simplex& simplex,
                     break;
                 }
             }
-        } // intentional fall-through: point -> line -> triangle
+        [[fallthrough]];
+        } // fall-through: point -> line -> triangle
         case (2): // line
         {
             const Vector2p line = simplex[1].CSO - simplex[0].CSO;
@@ -420,12 +461,12 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     auto [insertIndex, dir] = closestFacet(simplex, origin);
     SupportVertex lastSupport = {fizzmax<Vector2p>(), {}, {}};
     SupportVertex support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
-    while ((support.CSO - lastSupport.CSO).squaredNorm() <= epsilon2)
+    while ((support.CSO - lastSupport.CSO).squaredNorm() > epsilon2)
     {
         simplex.insert(simplex.begin() + insertIndex, support);
-        auto [insertIndex, dir] = closestFacet(simplex, origin);
+        std::tie(insertIndex, dir) = closestFacet(simplex, origin);
         lastSupport = support;
-        SupportVertex support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
+        support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
     }
 
     auto [vertIndex, _] = closestFacet(simplex, origin);
@@ -435,15 +476,16 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     Vector2p A = SA.CSO, B = SB.CSO;
 
     Vector2p AB = B - A;
-    float t = -(A.dot(AB)) / AB.dot(AB);
-    t = std::clamp(t, 0.0f, 1.0f);
+    float denom = AB.dot(AB);
+    float t = denom > 0 ? -(A.dot(AB)) / denom : static_cast<val_t>(0);
+    t = std::clamp(t, static_cast<val_t>(0), static_cast<val_t>(1));
 
     SupportVertex vert = { A + t * AB,
                            SA.A + t * (SB.A - SA.A),
                            SA.B + t * (SB.B - SA.B) };
 
     contact.penetration = (vert.CSO.norm());
-    contact.normal = vert.CSO.normalized();
+    contact.normal = -vert.CSO.normalized();
     contact.tangent = { -contact.normal.y(), contact.normal.x() };
     contact.contactPointLocalA = vert.A;
     contact.contactPointLocalB = vert.B;

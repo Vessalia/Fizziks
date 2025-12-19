@@ -13,4 +13,9 @@ val_t crossproduct(const Vector2p& a, const Vector2p& b)
 {
     return a.x() * b.y() - a.y() * b.x();
 }
+
+Vector2p crossproduct(val_t w, const Vector2p& r)
+{
+    return Vector2p(-w * r.y(), w * r.x());
+}
 };
