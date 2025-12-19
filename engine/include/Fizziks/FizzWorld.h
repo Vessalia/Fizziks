@@ -48,7 +48,7 @@ private:
 
         std::vector<std::pair<Collider, Vector2p>> colliders;
 
-        bool isStatic;
+        BodyType bodyType;
     };
 
     struct CollisionManifold
@@ -100,7 +100,7 @@ private:
     void detect_collisions();
     CollisionResolution collision_preStep(const size_t idA, const size_t idB, const Contact& constact, val_t dt) const;
     void solve_normalConstraint(CollisionResolution& resolution);
-    void solve_frictionConstraint(CollisionResolution& resultion);
+    void solve_frictionConstraint(CollisionResolution& resolution);
     void solve_contactConstraints(CollisionResolution& resolution);
     void resolve_collisions(val_t dt);
 
@@ -116,6 +116,8 @@ private:
 
     void add_collider(const RigidBody& rb, const Collider& collider, const Vector2p& at);
     void add_collider(BodyData* body, const Collider& collider, const Vector2p& at);
+    std::vector<std::pair<Collider, Vector2p>> body_colliders(const RigidBody& rb) const;
+
     const AABB get_bounds(BodyData* body, bool compute) const;
     const AABB compute_bounds(BodyData* body) const;
 
@@ -123,6 +125,8 @@ private:
 
     Vector2p body_position(const RigidBody& rb) const;
     void body_position(const RigidBody& rb, const Vector2p& pos);
+
+    Vector2p body_centroidPosition(const RigidBody& rb) const;
 
     Vector2p body_velocity(const RigidBody& rb) const;
     void body_velocity(const RigidBody& rb, const Vector2p& vel);
@@ -136,7 +140,7 @@ private:
     val_t body_gravityScale(const RigidBody& rb) const;
     void body_gravityScale(const RigidBody& rb, val_t gs);
 
-    bool body_isStatic(const RigidBody& rb) const;
-    void body_isStatic(const RigidBody& rb, bool is);
+    BodyType body_bodyType(const RigidBody& rb) const;
+    void body_bodyType(const RigidBody& rb, BodyType type);
 };
 };

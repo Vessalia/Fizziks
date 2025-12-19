@@ -12,9 +12,10 @@ const FizzWorld::BodyData FizzWorld::null_body =
     fizzmax<val_t>(), fizzmax<val_t>(),
     fizzmax<val_t>(), fizzmax<val_t>(),
     fizzmax<val_t>(),
+    fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(),
     {},
     {},
-    true
+    BodyType::STATIC
 };
 
 FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timestep) 
@@ -48,13 +49,13 @@ void FizzWorld::add_collider(BodyData* body, const Collider& collider, const Vec
 {
     body->colliders.push_back({ collider, _at });
     
-    if(!body->isStatic)
+    if(body->bodyType != BodyType::STATIC)
     {
         body->mass += collider.mass;
         body->invMass = 1 / body->mass;
     }
 
-    Vector2p centroid;
+    Vector2p centroid = Vector2p::Zero();
     for(auto [coll, at] : body->colliders)
     {
         centroid += coll.mass * at;
@@ -74,6 +75,13 @@ void FizzWorld::add_collider(BodyData* body, const Collider& collider, const Vec
     body->invMoI = 1 / MoI;
 }
 
+std::vector<std::pair<Collider, Vector2p>> FizzWorld::body_colliders(const RigidBody& rb) const
+{
+    auto* body = get_body(rb);
+    if (body) return body->colliders;
+    else      return null_body.colliders;
+}
+
 const AABB FizzWorld::get_bounds(BodyData* body, bool compute) const
 {
     if (compute) return compute_bounds(body);
@@ -82,7 +90,8 @@ const AABB FizzWorld::get_bounds(BodyData* body, bool compute) const
 
 const AABB FizzWorld::compute_bounds(BodyData* body) const
 {
-    AABB bounds;
+    AABB bounds{ 0, 0, Vector2p::Zero() };
+    if (body->colliders.size() == 0) return bounds;
 
     Vector2p min = fizzmax<Vector2p>(), max = fizzmax<Vector2p>();
     for (auto [collider, at] : body->colliders)
@@ -137,20 +146,31 @@ void FizzWorld::set_body(BodyData* body, const BodyDef& def)
 
     body->gravityScale = def.gravityScale;
 
-    body->isStatic = def.isStatic;
+    body->bodyType = def.bodyType;
+
+    body->mass = 0;
+    body->MoI = 0;
 
     for(auto [collider, at] : def.colliderDefs)
     {
         add_collider(body, collider, at);
     }
 
-    if(def.isStatic)
+    if(def.bodyType == BodyType::STATIC)
     {
         body->mass = fizzmax<val_t>();
         body->invMass = 0;
+        body->MoI = fizzmax<val_t>();
+        body->invMoI = 0;
     }
 
-    compute_bounds(body);
+    body->restitution = def.restitution;
+    body->staticFriction = def.staticFrictionCoeff;
+    body->dynamicFriction = def.dynamicFrictionCoeff;
+    body->linearDamping = def.linearDamping;
+    body->angularDamping = def.angularDamping;
+
+    body->bounds = compute_bounds(body);
 }
 
 Vector2p FizzWorld::body_position(const RigidBody& rb) const 
@@ -163,6 +183,13 @@ void FizzWorld::body_position(const RigidBody& rb, const Vector2p& pos)
 { 
     auto* body = get_body(rb);
     if(body) body->position = pos;
+}
+
+Vector2p FizzWorld::body_centroidPosition(const RigidBody& rb) const
+{
+    auto* body = get_body(rb);
+    if(body) return body->position + body->centroid;
+    else     return null_body.position;
 }
 
 Vector2p FizzWorld::body_velocity(const RigidBody& rb) const 
@@ -213,17 +240,17 @@ void FizzWorld::body_gravityScale(const RigidBody& rb, val_t gs)
     if (body) body->gravityScale = gs;
 }
 
-bool FizzWorld::body_isStatic(const RigidBody& rb) const 
+BodyType FizzWorld::body_bodyType(const RigidBody& rb) const 
 { 
     auto* body = get_body(rb);
-    if(body) return body->isStatic;
-    else     return null_body.isStatic;
+    if(body) return body->bodyType;
+    else     return null_body.bodyType;
 }
 
-void FizzWorld::body_isStatic(const RigidBody& rb, bool is)
+void FizzWorld::body_bodyType(const RigidBody& rb, BodyType type)
 {
     auto* body = get_body(rb);
-    if(body) body->isStatic = is;
+    if(body) body->bodyType = type;
 }
 
 Vector2p FizzWorld::get_worldPos(const BodyData& body, const Vector2p& colliderPos) const
@@ -245,7 +272,7 @@ FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const siz
     manifold.bodyBId = idB;
 
     const auto& bodyA = activeBodies[idA];
-    const auto& bodyB = activeBodies[idA];
+    const auto& bodyB = activeBodies[idB];
     for (const auto& [s1, p1] : bodyA.colliders)
     {
         Vector2p posA = get_worldPos(bodyA, p1);
@@ -317,7 +344,7 @@ FizzWorld::CollisionResolution FizzWorld::collision_preStep(const size_t idA, co
     Vector2p vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
     Vector2p dv = vB - vA;
     val_t closingVel = contact.normal.dot(dv);
-    val_t restitution = std::min(bodyA.restitution, bodyB.restitution) * closingVel;
+    val_t restitution = std::min(bodyA.restitution, bodyB.restitution) * std::max(-closingVel, static_cast<val_t>(0)); // checkagain
     resolution.bias = baumgarte + restitution;
 
     return resolution;
@@ -350,7 +377,7 @@ void FizzWorld::solve_normalConstraint(CollisionResolution& resolution)
     bodyA.velocity -= impulse * bodyA.invMass;
     bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
 
-    bodyB.velocity += impulse * bodyA.invMass;
+    bodyB.velocity += impulse * bodyB.invMass;
     bodyB.angularVelocity -= crossproduct(rB, impulse) * bodyB.invMoI;
 }
 
@@ -368,7 +395,7 @@ void FizzWorld::solve_frictionConstraint(CollisionResolution& resolution)
     Vector2p dv = vB - vA;
     val_t Jvt = dv.dot(contact.tangent);
 
-    val_t lambdaT = resolution.invEffMass * (-Jvt);
+    val_t lambdaT = resolution.invEffTangentMass * (-Jvt);
     val_t oldImpulse = resolution.tangentImpulse;
     val_t newImpulse = resolution.tangentImpulse + lambdaT;
 
@@ -391,7 +418,7 @@ void FizzWorld::solve_frictionConstraint(CollisionResolution& resolution)
     bodyA.velocity -= impulse * bodyA.invMass;
     bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
 
-    bodyB.velocity += impulse * bodyA.invMass;
+    bodyB.velocity += impulse * bodyB.invMass;
     bodyB.angularVelocity -= crossproduct(rB, impulse) * bodyB.invMoI;
 }
 
@@ -403,6 +430,8 @@ void FizzWorld::solve_contactConstraints(CollisionResolution& resolution)
 
 void FizzWorld::resolve_collisions(val_t dt)
 {
+    if (collisionManifolds.size() == 0) return;
+
     for (auto& manifold : collisionManifolds)
     {
         const auto& bodyAId = manifold.bodyAId;
@@ -433,7 +462,7 @@ void FizzWorld::simulate_bodies(val_t dt)
     for (size_t ID = 0; ID < activeBodies.size(); ++ID)
     {
         auto& body = activeBodies[ID];
-        if (body.isStatic) continue;
+        if (body.bodyType == BodyType::STATIC) continue;
 
         Vector2p prevPos = body.position;
         val_t prevRot = body.rotation;
@@ -485,29 +514,30 @@ void FizzWorld::destroy_bodies()
 
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {
-    Handle handle{ static_cast<uint32_t>(activeHandles.size()), 0 }; // this will definitely not cause issues
-    if (freeList.size() > 0)
+    uint32_t ID = activeBodies.size();
+    BodyData b;
+    b.accumForce = Vector2p::Zero();
+    b.accumTorque = 0;
+    set_body(&b, def);
+
+    activeBodies.push_back(std::move(b));
+
+    Handle handle{ static_cast<uint32_t>(activeHandles.size()), 0 };
+    if (!freeList.empty()) 
     {
         uint32_t freeIndex = freeList.back(); freeList.pop_back();
         handle.index = freeIndex;
         handle.gen = activeHandles[freeIndex].gen;
-        activeHandles[freeIndex].index = activeBodies.size();
+        activeHandles[freeIndex].index = ID;
         activeList.push_back(freeIndex);
     }
-    else
+    else 
     {
-        activeList.push_back(activeHandles.size());
         activeHandles.push_back(handle);
+        activeList.push_back(handle.index);
     }
 
-    BodyData b;
-    b.accumForce = Vector2p::Zero();
-    b.accumTorque = 0;
-    uint32_t ID = activeBodies.size();
-    activeBodies.push_back(b);
-    set_body(&activeBodies[ID], def);
-
-    broadphase->add(ID, compute_bounds(&b), b.position + b.centroid);
+    broadphase->add(ID, b.bounds, b.position + b.centroid);
 
     return { handle, this };
 }

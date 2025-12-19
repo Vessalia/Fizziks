@@ -7,7 +7,14 @@ RigidBody::RigidBody(Handle handle, FizzWorld* world)
     : handle(handle)
     , world(world) { }
 
-RigidBody::~RigidBody() { if (world) world->destroyBody(*this); }
+void RigidBody::destroy() 
+{ 
+    if (world)
+    {
+        world->destroyBody(*this);
+        world = nullptr;
+    }
+}
 
 RigidBody& RigidBody::setBody(const BodyDef& def)
 {
@@ -27,6 +34,11 @@ RigidBody& RigidBody::addCollider(const Collider& collider, const Vector2p& at)
     return *this;
 }
 
+std::vector<std::pair<Collider, Vector2p>> RigidBody::colliders() const
+{
+    return world->body_colliders(*this);
+}
+
 Vector2p RigidBody::position() const 
 { 
     return world->body_position(*this);
@@ -35,6 +47,11 @@ RigidBody& RigidBody::position(const Vector2p& pos)
 { 
     world->body_position(*this, pos);
     return *this; 
+}
+
+Vector2p RigidBody::centroidPosition() const
+{
+    return world->body_centroidPosition(*this);
 }
 
 Vector2p RigidBody::velocity() const 
@@ -77,14 +94,14 @@ RigidBody& RigidBody::gravityScale(val_t gs)
     return *this;
 }
 
-bool RigidBody::isStatic() const 
+BodyType RigidBody::bodyType() const 
 { 
-    return world->body_isStatic(*this);
+    return world->body_bodyType(*this);
 }
 
-RigidBody& RigidBody::isStatic(bool is)
+RigidBody& RigidBody::bodyType(BodyType type)
 {
-    world->body_isStatic(*this, is);
+    world->body_bodyType(*this, type);
     return *this;
 }
 };

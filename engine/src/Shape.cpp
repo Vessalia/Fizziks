@@ -72,7 +72,7 @@ val_t getMoI(const Shape& shape, const val_t mass)
     if (shape.type == ShapeType::CIRCLE)
     {
         Circle c = std::get<Circle>(shape.data);
-        0.5 * mass * c.radius * c.radius;
+        MoI = 0.5 * mass * c.radius * c.radius;
     }
     else if (shape.type == ShapeType::POLYGON)
     {
@@ -133,6 +133,8 @@ AABB getInscribingAABB(const Shape& s, const Vector2p& centroid, val_t rot)
         auto& circle = std::get<Circle>(s.data);
         aabb.halfWidth  = circle.radius;
         aabb.halfHeight = circle.radius;
+
+        aabb.offset = Vector2p::Zero();
     }
 
     return aabb;
@@ -419,7 +421,7 @@ Simplex blowupSimplex(const Simplex& simplex,
     }
 
     // enforce CCW winding
-    Vector2p A = simplex[0].CSO, B = simplex[1].CSO, C = simplex[2].CSO;
+    Vector2p A = result[0].CSO, B = result[1].CSO, C = result[2].CSO;
     val_t cross = crossproduct(B - A, C - A);
     if (cross < 0) std::swap(result[0], result[1]);
 

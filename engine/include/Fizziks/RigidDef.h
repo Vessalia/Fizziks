@@ -15,6 +15,13 @@ struct Collider
     Shape shape;
 };
 
+enum class BodyType
+{
+    STATIC,
+    DYNAMIC,
+    KINEMATIC
+};
+
 struct BodyDef
 {
     Vector2p initPosition;
@@ -25,28 +32,18 @@ struct BodyDef
 
     val_t gravityScale;
 
+    // need to move this over to colliders
     val_t restitution;
     val_t staticFrictionCoeff;
     val_t dynamicFrictionCoeff;
     val_t linearDamping;
     val_t angularDamping;
 
-    bool isStatic;
+    BodyType bodyType;
 
     std::vector<std::pair<Collider, Vector2p>> colliderDefs;
 };
 
-BodyDef initBodyDef()
-{
-    return { 
-        Vector2p::Zero(), Vector2p::Zero(), 
-        0, 0, 
-        1, 
-        0.2, 0.2, 0.1, 0.05, 0.05,
-        false, 
-        {} 
-    };
-}
-
+BodyDef initBodyDef();
 Collider createCollider(const Shape& shape, const val_t mass, const val_t rotation);
 };
