@@ -283,7 +283,7 @@ FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const siz
             val_t rotB = get_worldRotation(bodyB, s2);
             Contact contact = getShapeContact(s1.shape, posA, rotA, s2.shape, posB, rotB);
 
-            if (contact.overlaps || contact.penetration >= contactEps) manifold.contacts.push_back(contact);
+            if (contact.overlaps && contact.penetration >= contactEps) manifold.contacts.push_back(contact);
         }
     }
 
@@ -319,6 +319,9 @@ FizzWorld::CollisionResolution FizzWorld::collision_preStep(const size_t idA, co
     CollisionResolution resolution;
     resolution.bodyAId = idA;
     resolution.bodyBId = idB;
+    resolution.contact = contact;
+    resolution.normalImpulse = 0;
+    resolution.tangentImpulse = 0;
 
     const auto& bodyA = activeBodies[idA];
     const auto& bodyB = activeBodies[idB];

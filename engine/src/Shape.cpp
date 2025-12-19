@@ -412,7 +412,7 @@ Simplex blowupSimplex(const Simplex& simplex,
             const Vector2p line = simplex[1].CSO - simplex[0].CSO;
             Vector2p perp = Vector2p(-line.y(), line.x()); // in 2D vs 3D, don't need to be careful about tangent vectors
             SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, perp);
-            if ((point.CSO - simplex[0].CSO).squaredNorm() >= epsilon2)
+            if ((point.CSO - simplex[0].CSO).squaredNorm() < epsilon2)
             {
                 point = getCSOSupport(s1, p1, r1, s2, p2, r2, -perp);
             }
@@ -462,8 +462,8 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     simplex = blowupSimplex(simplex, s1, p1, r1, s2, p2, r2);
 
     auto [insertIndex, dir] = closestFacet(simplex, origin);
-    SupportVertex lastSupport = {fizzmax<Vector2p>(), {}, {}};
     SupportVertex support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
+    SupportVertex lastSupport = simplex[insertIndex];
     while ((support.CSO - lastSupport.CSO).squaredNorm() > epsilon2)
     {
         simplex.insert(simplex.begin() + insertIndex, support);
@@ -472,24 +472,36 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
         support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
     }
 
+    // closest edge of final simplex to the origin
     auto [vertIndex, _] = closestFacet(simplex, origin);
     size_t i0 = vertIndex, i1 = (vertIndex + 1) % simplex.size();
     SupportVertex SA = simplex[i0];
     SupportVertex SB = simplex[i1];
     Vector2p A = SA.CSO, B = SB.CSO;
 
-    Vector2p AB = B - A;
-    float denom = AB.dot(AB);
-    float t = denom > 0 ? -(A.dot(AB)) / denom : static_cast<val_t>(0);
+    Vector2p edge = B - A;
+    Vector2p normal(-edge.y(), edge.x()); // normal is perp to edge
+    normal = normal.normalized();
+
+    // ensure the normal points towards the origin
+    if (normal.dot(A) > 0) normal = -normal;
+
+    // penetration is distance from origin to edge along normal
+    val_t penetration = std::abs(normal.dot(A));
+
+    // compute contact point via projection onto edge
+    float denom = edge.dot(edge);
+    float t = denom > 0 ? -(A.dot(edge)) / denom : static_cast<val_t>(0);
     t = std::clamp(t, static_cast<val_t>(0), static_cast<val_t>(1));
+    SupportVertex vert = {
+        A    + t * edge,
+        SA.A + t * (SB.A - SA.A),
+        SA.B + t * (SB.B - SA.B)
+    };
 
-    SupportVertex vert = { A + t * AB,
-                           SA.A + t * (SB.A - SA.A),
-                           SA.B + t * (SB.B - SA.B) };
-
-    contact.penetration = (vert.CSO.norm());
-    contact.normal = -vert.CSO.normalized();
-    contact.tangent = { -contact.normal.y(), contact.normal.x() };
+    contact.penetration = penetration;
+    contact.normal = normal;
+    contact.tangent = { -normal.y(), normal.x() };
     contact.contactPointLocalA = vert.A;
     contact.contactPointLocalB = vert.B;
     contact.contactPointWorldA = Rotation2p(r1) * vert.A + p1;
