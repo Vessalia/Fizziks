@@ -24,6 +24,8 @@ static std::vector<RigidBody> bodies;
 
 Uint32 lt = SDL_GetTicks();
 
+val_t timescale = 10;
+
 void draw();
 void close();
 
@@ -39,8 +41,10 @@ int main(int argc, char** argv)
     def.bodyType = BodyType::STATIC;
     def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero()});
     bodies.push_back(world.createBody(def));
-    def.initPosition.y() += 10; def.initVelocity.y() -= 2;
+    def.initPosition.y() += 25; def.initVelocity.y() -= 2;
     def.bodyType = BodyType::DYNAMIC;
+    bodies.push_back(world.createBody(def));
+    def.initPosition.x() += 3;  def.initVelocity.x() -= 1;
     bodies.push_back(world.createBody(def));
     
     bool quit = false;
@@ -61,7 +65,7 @@ int main(int argc, char** argv)
         SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(gRenderer);
 
-        world.tick(dt / 10);
+        world.tick(dt / timescale);
         draw();
     }
 
