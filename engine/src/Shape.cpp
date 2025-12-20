@@ -463,15 +463,15 @@ Contact getCircleCircleContact(const Circle& c1, const Vector2p& p1, val_t r1,
     if (dist2 >= r * r) return contact;
 
     val_t dist = d.norm();
-    Vector2p norm = dist > epsilon ? d / dist : Vector2p(0, 1);
+    Vector2p normal = dist > epsilon ? d / dist : Vector2p(0, 1);
 
     contact.overlaps = true;
-    contact.normal = norm;
+    contact.normal = normal;
     contact.penetration = r - dist;
-    contact.tangent = { -norm.y(), norm.x() };
+    contact.tangent = { -normal.y(), normal.x() };
 
-    contact.contactPointWorldA = p1 + norm * c1.radius;
-    contact.contactPointWorldB = p2 - norm * c2.radius;
+    contact.contactPointWorldA = p1 + normal * c1.radius;
+    contact.contactPointWorldB = p2 - normal * c2.radius;
 
     contact.contactPointLocalA = Rotation2p(-r1) * (contact.contactPointWorldA - p1);
     contact.contactPointLocalB = Rotation2p(-r2) * (contact.contactPointWorldB - p2);
@@ -526,6 +526,7 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     normal = normal.normalized();
 
     // ensure the normal points towards the origin
+    // since normal comes from BA, then AO dot normal should be negative
     if (normal.dot(A) > 0) normal = -normal;
 
     // penetration is distance from origin to edge along normal
