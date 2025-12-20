@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     def.bodyType = BodyType::STATIC;
     def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero()});
     bodies.push_back(world.createBody(def));
-    def.initPosition.y() += 3; def.initVelocity.y() -= 2;
+    def.initPosition.y() += 10; def.initVelocity.y() -= 2;
     def.bodyType = BodyType::DYNAMIC;
     bodies.push_back(world.createBody(def));
     

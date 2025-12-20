@@ -40,6 +40,15 @@ struct AABB
     Vector2p offset;
 };
 
+struct ContactKey
+{
+    uint32_t bodyAId, bodyBId;
+    uint32_t collIdA, collIdB;
+    uint32_t featureA, featureB;
+
+    bool operator==(const ContactKey&) const = default;
+};
+
 struct Contact 
 {
     Vector2p contactPointWorldA, contactPointWorldB;
@@ -47,6 +56,8 @@ struct Contact
     Vector2p normal; 
     Vector2p tangent;
     val_t penetration;  
+
+    uint32_t featureA, featureB; // for tracking specific collisions
 
     bool overlaps;
 };
@@ -67,4 +78,30 @@ bool AABBContains(const AABB& aabb, const Vector2p& pos, const Vector2p& point);
 
 bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1, const Shape& s2, const Vector2p& p2, val_t r2);
 Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1, const Shape& s2, const Vector2p& p2, val_t r2);
+};
+
+namespace std
+{
+template<>
+struct std::hash<Fizziks::ContactKey>
+{
+    std::size_t operator()(const Fizziks::ContactKey& ck) const
+    {
+        size_t h = 0;
+
+        auto hashCombine = [&](uint32_t v)
+            {
+                h ^= std::hash<uint32_t>{}(v)+0x9e3779b9 + (h << 6) + (h >> 2);
+            };
+
+        hashCombine(ck.bodyAId);
+        hashCombine(ck.bodyBId);
+        hashCombine(ck.collIdA);
+        hashCombine(ck.collIdB);
+        hashCombine(ck.featureA);
+        hashCombine(ck.featureB);
+
+        return h;
+    }
+};
 };

@@ -5,6 +5,9 @@
 #include <RigidDef.h>
 #include <Broadphase.h>
 
+#include <vector>
+#include <unordered_map>
+
 namespace Fizziks
 {
 class FizzWorld
@@ -54,12 +57,13 @@ private:
     struct CollisionManifold
     {
         size_t bodyAId, bodyBId;
-        std::vector<Contact> contacts;
+        std::vector<std::tuple<uint32_t, uint32_t, Contact>> contacts;
     };
 
     struct CollisionResolution
     {
-        size_t bodyAId, bodyBId;
+        uint32_t bodyAId, bodyBId;
+        uint32_t collIdA, collIdB;
         Contact contact;
 
         val_t normalImpulse;
@@ -88,6 +92,7 @@ private:
 
     std::vector<CollisionManifold> collisionManifolds;
     std::vector<CollisionResolution> collisionResolutions;
+    std::unordered_map<ContactKey, CollisionResolution> warmStartCache;
 
     std::queue<RigidBody> destructionQueue;
 
@@ -98,7 +103,8 @@ private:
 
     CollisionManifold get_manifold(const size_t idA, const size_t idB) const;
     void detect_collisions();
-    CollisionResolution collision_preStep(const size_t idA, const size_t idB, const Contact& constact, val_t dt) const;
+    ContactKey makeContactKey(const CollisionResolution& resolution) const;
+    CollisionResolution collision_preStep(const uint32_t idA, const uint32_t idB, const uint32_t collIdA, const uint32_t collIdB, const Contact& constact, const val_t dt);
     void solve_normalConstraint(CollisionResolution& resolution);
     void solve_frictionConstraint(CollisionResolution& resolution);
     void solve_contactConstraints(CollisionResolution& resolution);

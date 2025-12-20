@@ -476,6 +476,9 @@ Contact getCircleCircleContact(const Circle& c1, const Vector2p& p1, val_t r1,
     contact.contactPointLocalA = Rotation2p(-r1) * (contact.contactPointWorldA - p1);
     contact.contactPointLocalB = Rotation2p(-r2) * (contact.contactPointWorldB - p2);
 
+    contact.featureA = 0;
+    contact.featureB = 0;
+
     return contact;
 }
 
@@ -514,6 +517,9 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     SupportVertex SA = simplex[i0];
     SupportVertex SB = simplex[i1];
     Vector2p A = SA.CSO, B = SB.CSO;
+
+    contact.featureA = i0;
+    contact.featureB = i1;
 
     Vector2p edge = B - A;
     Vector2p normal(-edge.y(), edge.x()); // normal is perp to edge
