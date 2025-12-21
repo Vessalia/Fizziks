@@ -314,7 +314,6 @@ Simplex reduceSimplex(const Simplex& simplex, const Vector2p& point)
 }
 
 const val_t epsilon = 0.0001; // should probably be tunable?
-const val_t epsilon2 = epsilon * epsilon;
 const Vector2p origin = Vector2p::Zero();
 const int maxIterations = 30;
 bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
@@ -323,13 +322,13 @@ bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
     Simplex simplex;
 
     Vector2p direction = p2 - p1; // doesn't really matter
-    if (direction.squaredNorm() <= epsilon2)
+    if (direction.squaredNorm() <= epsilon)
         direction = Vector2p(1, 0);
 
     auto point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
     simplex.push_back(point);
     Vector2p closest = closestPoint(simplex, origin);
-    if (closest.squaredNorm() <= epsilon2) return true;
+    if (closest.squaredNorm() <= epsilon) return true;
     int iterations = 0;
     while(iterations++ < maxIterations)
     {
@@ -337,10 +336,10 @@ bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1,
         direction = -closest; // -v = origin - v
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
         auto p = point.CSO;
-        if (p != origin && p.dot(direction) <= epsilon2) return false; // didn't pass origin -> it must be outside
+        if (p != origin && p.dot(direction) <= epsilon) return false; // didn't pass origin -> it must be outside
         simplex.push_back(point);
         closest = closestPoint(simplex, origin);
-        if (closest.squaredNorm() <= epsilon2) return true;
+        if (closest.squaredNorm() <= epsilon) return true;
     }
 
     return false;
@@ -356,13 +355,13 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vector2p& p1, val_
     Simplex simplex;
 
     Vector2p direction = p2 - p1; // doesn't really matter
-    if (direction.squaredNorm() <= epsilon2)
+    if (direction.squaredNorm() <= epsilon)
         direction = Vector2p(1, 0);
 
     auto point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
     simplex.push_back(point);
     Vector2p closest = closestPoint(simplex, origin);
-    if (closest.squaredNorm() <= epsilon2) return { true, simplex };
+    if (closest.squaredNorm() <= epsilon) return { true, simplex };
     int iterations = 0;
     while (iterations++ < maxIterations)
     {
@@ -370,10 +369,10 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vector2p& p1, val_
         direction = -closest; // -v = origin - v
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
         auto p = point.CSO;
-        if (p != origin && p.dot(direction) <= epsilon2) return { false, {} }; // didn't pass origin -> it must be outside
+        if (p != origin && p.dot(direction) <= epsilon) return { false, {} }; // didn't pass origin -> it must be outside
         simplex.push_back(point);
         closest = closestPoint(simplex, origin);
-        if (closest.squaredNorm() <= epsilon2) return { true, simplex };
+        if (closest.squaredNorm() <= epsilon) return { true, simplex };
     }
 
     return { false, {} };
@@ -399,7 +398,7 @@ Simplex blowupSimplex(const Simplex& simplex,
             for (const Vector2p& dir : dirs)
             {
                 const SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
-                if ((point.CSO - simplex[0].CSO).squaredNorm() >= epsilon2)
+                if ((point.CSO - simplex[0].CSO).squaredNorm() >= epsilon)
                 {
                     result.push_back(point);
                     break;
@@ -412,7 +411,7 @@ Simplex blowupSimplex(const Simplex& simplex,
             const Vector2p line = simplex[1].CSO - simplex[0].CSO;
             Vector2p perp = Vector2p(-line.y(), line.x()); // in 2D vs 3D, don't need to be careful about tangent vectors
             SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, perp);
-            if ((point.CSO - simplex[0].CSO).squaredNorm() < epsilon2)
+            if ((point.CSO - simplex[0].CSO).squaredNorm() < epsilon)
             {
                 point = getCSOSupport(s1, p1, r1, s2, p2, r2, -perp);
             }
@@ -503,7 +502,7 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     auto [insertIndex, dir] = closestFacet(simplex, origin);
     SupportVertex support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
     SupportVertex lastSupport = simplex[insertIndex];
-    while ((support.CSO - lastSupport.CSO).squaredNorm() > epsilon2)
+    while ((support.CSO - lastSupport.CSO).squaredNorm() > epsilon)
     {
         simplex.insert(simplex.begin() + insertIndex, support);
         std::tie(insertIndex, dir) = closestFacet(simplex, origin);
@@ -522,15 +521,6 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     contact.featureB = i1;
 
     Vector2p edge = B - A;
-    Vector2p normal(-edge.y(), edge.x()); // normal is perp to edge
-    normal = normal.normalized();
-
-    // ensure the normal points towards the origin
-    // since normal comes from BA, then AO dot normal should be negative
-    if (normal.dot(A) > 0) normal = -normal;
-
-    // penetration is distance from origin to edge along normal
-    val_t penetration = std::abs(normal.dot(A));
 
     // compute contact point via projection onto edge
     float denom = edge.dot(edge);
@@ -542,9 +532,9 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
         SA.B + t * (SB.B - SA.B)
     };
 
-    contact.penetration = penetration;
-    contact.normal = normal;
-    contact.tangent = { -normal.y(), normal.x() };
+    contact.penetration = vert.CSO.norm();
+    contact.normal = vert.CSO.normalized();
+    contact.tangent = { -contact.normal.y(), contact.normal.x() };
     contact.contactPointLocalA = vert.A;
     contact.contactPointLocalB = vert.B;
     contact.contactPointWorldA = Rotation2p(r1) * vert.A + p1;

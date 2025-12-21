@@ -49,6 +49,16 @@ RigidBody& RigidBody::position(const Vector2p& pos)
     return *this; 
 }
 
+val_t RigidBody::rotation() const
+{
+    return world->body_rotation(*this);
+}
+RigidBody& RigidBody::rotation(const val_t rot)
+{
+    world->body_rotation(*this, rot);
+    return *this;
+}
+
 Vector2p RigidBody::centroidPosition() const
 {
     return world->body_centroidPosition(*this);
@@ -68,7 +78,7 @@ val_t RigidBody::angularVelocity() const
 { 
     return world->body_angularVelocity(*this);
 }
-RigidBody& RigidBody::angularVelocity(val_t angVel) 
+RigidBody& RigidBody::angularVelocity(const val_t angVel) 
 { 
     world->body_angularVelocity(*this, angVel);
     return *this; 
@@ -78,7 +88,7 @@ val_t RigidBody::mass() const
 { 
     return world->body_mass(*this);
 }
-RigidBody& RigidBody::mass(val_t m) 
+RigidBody& RigidBody::mass(const val_t m) 
 { 
     world->body_mass(*this, m);
     return *this; 
@@ -88,7 +98,7 @@ val_t RigidBody::gravityScale() const
 {
     return world->body_gravityScale(*this);
 }
-RigidBody& RigidBody::gravityScale(val_t gs)
+RigidBody& RigidBody::gravityScale(const val_t gs)
 {
     world->body_gravityScale(*this, gs);
     return *this;
@@ -99,7 +109,7 @@ BodyType RigidBody::bodyType() const
     return world->body_bodyType(*this);
 }
 
-RigidBody& RigidBody::bodyType(BodyType type)
+RigidBody& RigidBody::bodyType(const BodyType& type)
 {
     world->body_bodyType(*this, type);
     return *this;

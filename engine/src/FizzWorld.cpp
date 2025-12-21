@@ -34,7 +34,7 @@ void FizzWorld::apply_force(const RigidBody& rb, const Vector2p& force, const Ve
     if(body) 
     {
         body->accumForce += force;
-        Vector2p r = at - body->centroid;
+        Vector2p r = at - (body->position + body->centroid);
         body->accumTorque += r.x() * force.y() - r.y() * force.x();
     }
 }
@@ -176,56 +176,68 @@ void FizzWorld::set_body(BodyData* body, const BodyDef& def)
 Vector2p FizzWorld::body_position(const RigidBody& rb) const 
 {
     auto* body = get_body(rb);
-    if(body) return body->position;
-    else     return null_body.position;
+    if (body) return body->position;
+    else      return null_body.position;
 }
 void FizzWorld::body_position(const RigidBody& rb, const Vector2p& pos) 
 { 
     auto* body = get_body(rb);
-    if(body) body->position = pos;
+    if (body) body->position = pos;
+}
+
+val_t FizzWorld::body_rotation(const RigidBody& rb) const
+{
+    auto* body = get_body(rb);
+    if (body) return body->rotation;
+    else      return null_body.rotation;
+}
+void FizzWorld::body_rotation(const RigidBody& rb, const val_t rot)
+{
+    auto* body = get_body(rb);
+    if (body) body->rotation = rot;
 }
 
 Vector2p FizzWorld::body_centroidPosition(const RigidBody& rb) const
 {
     auto* body = get_body(rb);
-    if(body) return body->position + body->centroid;
-    else     return null_body.position;
+    if (body) return body->position + body->centroid;
+    else      return null_body.position;
 }
 
 Vector2p FizzWorld::body_velocity(const RigidBody& rb) const 
 { 
     auto* body = get_body(rb);
-    if(body) return body->velocity;
-    else     return null_body.velocity;
+    if (body) return body->velocity;
+    else      return null_body.velocity;
 }
 void FizzWorld::body_velocity(const RigidBody& rb, const Vector2p& vel) 
 { 
     auto* body = get_body(rb);
-    if(body) body->velocity = vel;
+    if (body) body->velocity = vel;
 }
 
 val_t FizzWorld::body_angularVelocity(const RigidBody& rb) const 
 { 
     auto* body = get_body(rb);
-    if(body) return body->angularVelocity;
-    else     return null_body.angularVelocity;
+    if (body) return body->angularVelocity;
+    else      return null_body.angularVelocity;
 }
 void FizzWorld::body_angularVelocity(const RigidBody& rb, const val_t& angVel) 
 { 
     auto* body = get_body(rb);
-    if(body) body->angularVelocity = angVel;
+    if (body) body->angularVelocity = angVel;
 }
 
 val_t FizzWorld::body_mass(const RigidBody& rb) const 
 { 
     auto* body = get_body(rb);
-    if(body) return 1 / body->invMass;
-    else     return 1 / null_body.invMass;
+    if (body) return 1 / body->invMass;
+    else      return 1 / null_body.invMass;
 }
 void FizzWorld::body_mass(const RigidBody& rb, val_t m) 
 { 
     auto* body = get_body(rb);
-    if(body) body->invMass = 1 / m;
+    if (body) body->invMass = 1 / m;
 }
 
 val_t FizzWorld::body_gravityScale(const RigidBody& rb) const
@@ -243,14 +255,14 @@ void FizzWorld::body_gravityScale(const RigidBody& rb, val_t gs)
 BodyType FizzWorld::body_bodyType(const RigidBody& rb) const 
 { 
     auto* body = get_body(rb);
-    if(body) return body->bodyType;
-    else     return null_body.bodyType;
+    if (body) return body->bodyType;
+    else      return null_body.bodyType;
 }
 
-void FizzWorld::body_bodyType(const RigidBody& rb, BodyType type)
+void FizzWorld::body_bodyType(const RigidBody& rb, const BodyType& type)
 {
     auto* body = get_body(rb);
-    if(body) body->bodyType = type;
+    if (body) body->bodyType = type;
 }
 
 Vector2p FizzWorld::get_worldPos(const BodyData& body, const Vector2p& colliderPos) const

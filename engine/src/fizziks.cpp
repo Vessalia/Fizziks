@@ -24,7 +24,7 @@ static std::vector<RigidBody> bodies;
 
 Uint32 lt = SDL_GetTicks();
 
-val_t timescale = 10;
+val_t timescale = 2;
 
 void draw();
 void close();
@@ -37,16 +37,29 @@ int main(int argc, char** argv)
     gRenderer = SDL_CreateRenderer(gWindow, NULL);
 
     BodyDef def = initBodyDef();
-    def.initPosition = Vector2p(10, 10);
+    def.initPosition = Vector2p(20, 10);
     def.bodyType = BodyType::STATIC;
     def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero()});
     bodies.push_back(world.createBody(def));
+
     def.initPosition.y() += 25; def.initVelocity.y() -= 2;
     def.bodyType = BodyType::DYNAMIC;
     bodies.push_back(world.createBody(def));
+
     def.initPosition.x() += 3;  def.initVelocity.x() -= 1;
     bodies.push_back(world.createBody(def));
-    
+
+    BodyDef def2 = initBodyDef();
+    def2.initPosition = Vector2p(20, 8);
+    def2.bodyType = BodyType::STATIC;
+    def2.colliderDefs.push_back({ createCollider(createRect(20, 1), 1, 0), Vector2p::Zero() });
+    bodies.push_back(world.createBody(def2));
+
+    BodyDef def3 = initBodyDef();
+    def3.initPosition = Vector2p(20, 40);
+    def3.colliderDefs.push_back({ createCollider(createRect(1, 2), 1, 0), Vector2p::Zero() });
+    bodies.push_back(world.createBody(def3));
+
     bool quit = false;
     while (!quit)
     {
@@ -92,8 +105,10 @@ void draw()
 
         const auto colliders = body.colliders();
         Vector2p bodyPos = body.centroidPosition();
+        val_t rot = body.rotation();
         for (auto [collider, colliderPos] : colliders)
         {
+            Rotation2p r(rot + collider.rotation);
             Vector2p localPos = bodyPos + colliderPos;
             Vector2p pos = transformToScreenSpace(localPos);
             Shape shape = collider.shape;
@@ -118,8 +133,9 @@ void draw()
                 std::vector<SDL_Vertex> sdlVerts;
                 sdlVerts.reserve(verts.size());
 
-                for (const auto& v : verts)
+                for (const auto& vert : verts)
                 {
+                    auto v = r * vert;
                     Vector2p screenV = transformToScreenSpace(localPos + v);
 
                     SDL_Vertex sdlVert;

@@ -16,7 +16,7 @@ public:
     Vector2p Gravity = {0, -9.81};
 
     FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timeStep);
-    FizzWorld() : FizzWorld(20, 20, 2, 3, 1 / 200.f) { }
+    FizzWorld() : FizzWorld(20, 20, 2, 5, 1 / 200.f) { }
     ~FizzWorld();
 
     RigidBody createBody(const BodyDef& def);
@@ -132,6 +132,9 @@ private:
     Vector2p body_position(const RigidBody& rb) const;
     void body_position(const RigidBody& rb, const Vector2p& pos);
 
+    val_t body_rotation(const RigidBody& rb) const;
+    void body_rotation(const RigidBody& rb, const val_t rot);
+
     Vector2p body_centroidPosition(const RigidBody& rb) const;
 
     Vector2p body_velocity(const RigidBody& rb) const;
@@ -147,6 +150,6 @@ private:
     void body_gravityScale(const RigidBody& rb, val_t gs);
 
     BodyType body_bodyType(const RigidBody& rb) const;
-    void body_bodyType(const RigidBody& rb, BodyType type);
+    void body_bodyType(const RigidBody& rb, const BodyType& type);
 };
 };
