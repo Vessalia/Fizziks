@@ -367,7 +367,7 @@ FizzWorld::CollisionResolution FizzWorld::collision_preStep(const uint32_t idA, 
         resolution.normalImpulse = warmStart * it->second.normalImpulse;
         resolution.tangentImpulse = warmStart * it->second.tangentImpulse;
 
-        // APPLY impulses immediately (this is the actual warm start)
+        // apply impulses immediately (this is the actual warm start)
         Vector2p normalImpulse = resolution.normalImpulse * contact.normal;
         Vector2p tangentImpulse = resolution.tangentImpulse * contact.tangent;
         Vector2p impulse = normalImpulse + tangentImpulse;
@@ -508,6 +508,11 @@ void FizzWorld::resolve_collisions(val_t dt)
 {
     if (collisionManifolds.size() == 0) return;
 
+    if (currstep == 493)
+    {
+        int x = 1;
+    }
+
     for (auto& manifold : collisionManifolds)
     {
         const auto& bodyAId = manifold.bodyAId;
@@ -646,6 +651,7 @@ void FizzWorld::tick(val_t dt)
         simulate_bodies(timestep);
         handle_collisions(timestep);
         destroy_bodies();
+        currstep++;
     }
 }
 };

@@ -38,27 +38,28 @@ int main(int argc, char** argv)
 
     BodyDef def = initBodyDef();
     def.initPosition = Vector2p(25, 10);
-    //def.bodyType = BodyType::STATIC;
+    def.bodyType = BodyType::STATIC;
     def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero()});
-    //bodies.push_back(world.createBody(def));
+    bodies.push_back(world.createBody(def));
 
     def.initPosition.y() += 25; def.initVelocity.y() -= 2;
     def.bodyType = BodyType::DYNAMIC;
     bodies.push_back(world.createBody(def));
 
     def.initPosition.x() += 3;  def.initVelocity.x() -= 1;
+    def.initAngularVelocity += 1;
     bodies.push_back(world.createBody(def));
 
-    //BodyDef def2 = initBodyDef();
-    //def2.initPosition = Vector2p(20, 8);
-    //def2.bodyType = BodyType::STATIC;
-    //def2.colliderDefs.push_back({ createCollider(createRect(20, 1), 1, 0), Vector2p::Zero() });
-    //bodies.push_back(world.createBody(def2));
+    BodyDef def2 = initBodyDef();
+    def2.initPosition = Vector2p(20, 8);
+    def2.bodyType = BodyType::STATIC;
+    def2.colliderDefs.push_back({ createCollider(createRect(20, 1), 1, 0), Vector2p::Zero() });
+    bodies.push_back(world.createBody(def2));
 
-    //BodyDef def3 = initBodyDef();
-    //def3.initPosition = Vector2p(20, 40);
-    //def3.colliderDefs.push_back({ createCollider(createRect(1, 2), 1, deg2rad(110)), Vector2p::Zero() });
-    //bodies.push_back(world.createBody(def3));
+    BodyDef def3 = initBodyDef();
+    def3.initPosition = Vector2p(20, 40);
+    def3.colliderDefs.push_back({ createCollider(createRect(1, 2), 1, deg2rad(110)), Vector2p::Zero() });
+    bodies.push_back(world.createBody(def3));
 
     bool quit = false;
     while (!quit)

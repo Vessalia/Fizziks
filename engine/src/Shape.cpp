@@ -298,7 +298,8 @@ Simplex reduceSimplex(const Simplex& simplex, Vector2p* dir)
 
 const val_t epsilon = 0.0001; // should probably be tunable?
 const Vector2p origin = Vector2p::Zero();
-const int maxIterations = 30;
+const int maxIterationsGJK = 30;
+const int maxIterationsEPA = 30;
 std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vector2p& p1, val_t r1,
                                        const Shape& s2, const Vector2p& p2, val_t r2)
 {
@@ -311,7 +312,7 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vector2p& p1, val_
     simplex.push_back(point);
     if (point.CSO.squaredNorm() == 0) return { true, simplex };
     direction = -point.CSO;
-    for (int i = 0; i < maxIterations; ++i)
+    for (int i = 0; i < maxIterationsGJK; ++i)
     {
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
         if (point.CSO.dot(direction) <= 0) return { false, {} }; // didn't pass origin -> it must be outside
@@ -427,7 +428,8 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     auto [closestEdge, dir] = closestFacet(simplex, origin);
     SupportVertex support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
     SupportVertex lastSupport = { vec_max(), vec_max(), vec_max() };
-    while ((support.CSO - lastSupport.CSO).squaredNorm() > epsilon)
+    int iterations = 0;
+    while (iterations++ < maxIterationsEPA && (support.CSO - lastSupport.CSO).squaredNorm() > epsilon)
     {
         simplex.insert(simplex.begin() + closestEdge[1], support);
         std::tie(closestEdge, dir) = closestFacet(simplex, origin);
@@ -442,8 +444,8 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     SupportVertex SB = simplex[i1];
     Vector2p A = SA.CSO, B = SB.CSO;
 
-    contact.featureA = i0;
-    contact.featureB = i1;
+    contact.featureA = s1.type == ShapeType::CIRCLE ? 0 : i0;
+    contact.featureB = s2.type == ShapeType::CIRCLE ? 0 : i1;
 
     Vector2p edge = B - A;
 

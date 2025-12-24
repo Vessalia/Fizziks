@@ -27,6 +27,7 @@ public:
     void tick(val_t dt);
 
 private:
+    size_t currstep = 0;
     friend class RigidBody;
 
     struct BodyData
