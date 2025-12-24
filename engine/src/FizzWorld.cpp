@@ -6,8 +6,8 @@ namespace Fizziks
 {
 const FizzWorld::BodyData FizzWorld::null_body = 
 {
-    fizzmax<Vector2p>(),
-    fizzmax<Vector2p>(), fizzmax<Vector2p>(), fizzmax<Vector2p>(),
+    vec_max(),
+    vec_max(), vec_max(), vec_max(),
     fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(),
     fizzmax<val_t>(), fizzmax<val_t>(),
     fizzmax<val_t>(), fizzmax<val_t>(),
@@ -93,7 +93,7 @@ const AABB FizzWorld::compute_bounds(BodyData* body) const
     AABB bounds{ 0, 0, Vector2p::Zero() };
     if (body->colliders.size() == 0) return bounds;
 
-    Vector2p min = fizzmax<Vector2p>(), max = fizzmax<Vector2p>();
+    Vector2p min = vec_max(), max = vec_max();
     for (auto [collider, at] : body->colliders)
     {
         AABB minorBounds = getInscribingAABB(collider.shape, at, body->rotation);
@@ -275,8 +275,15 @@ val_t FizzWorld::get_worldRotation(const BodyData& body, const Collider& collide
     return body.rotation + collider.rotation;
 }
 
-val_t slop = 0.01;
-val_t contactEps = 2 * slop;
+void FizzWorld::rotate_body(BodyData& body, const val_t rot)
+{
+    body.rotation += rot;
+    while (body.rotation >= 2 * EIGEN_PI)
+    {
+        body.rotation -= 2 * EIGEN_PI;
+    }
+}
+
 FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const size_t idB) const
 {
     CollisionManifold manifold;
@@ -297,7 +304,7 @@ FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const siz
             val_t rotB = get_worldRotation(bodyB, s2);
             Contact contact = getShapeContact(s1.shape, posA, rotA, s2.shape, posB, rotB);
 
-            if (contact.overlaps /* && contact.penetration >= contactEps */) manifold.contacts.push_back({ i, j, contact } );
+            if (contact.overlaps) manifold.contacts.push_back({ i, j, contact } );
         }
     }
 
@@ -325,6 +332,9 @@ ContactKey FizzWorld::makeContactKey(const CollisionResolution& resolution) cons
 
 val_t beta = 0.2;
 val_t restitutionThreshold = 0.001;
+val_t slopPen = 0.01;
+val_t slopRes = 0.01;
+val_t warmStart = 0.75;
 // precompute inverse effective mass (JM^-1J^T)^-1 and bias term
 // J = [-n^T -(rA x n)^T n^T (rB x n)^T]
 // M^-1 = [Ma^-1 0 0 0]
@@ -354,8 +364,8 @@ FizzWorld::CollisionResolution FizzWorld::collision_preStep(const uint32_t idA, 
     auto it = warmStartCache.find(key);
     if (it != warmStartCache.end())
     {
-        resolution.normalImpulse = it->second.normalImpulse;
-        resolution.tangentImpulse = it->second.tangentImpulse;
+        resolution.normalImpulse = warmStart * it->second.normalImpulse;
+        resolution.tangentImpulse = warmStart * it->second.tangentImpulse;
 
         // APPLY impulses immediately (this is the actual warm start)
         Vector2p normalImpulse = resolution.normalImpulse * contact.normal;
@@ -393,13 +403,12 @@ FizzWorld::CollisionResolution FizzWorld::collision_preStep(const uint32_t idA, 
     resolution.invEffMass = effMass > 0 ? 1 / effMass : fizzmax<val_t>();
     resolution.invEffTangentMass = effTangentMass > 0 ? 1 / effTangentMass : fizzmax<val_t>();
 
-    val_t baumgarte = -beta / dt * std::max(contact.penetration - slop, static_cast<val_t>(0));
+    val_t baumgarte = -beta / dt * std::max(contact.penetration - slopPen, static_cast<val_t>(0));
     Vector2p vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
     Vector2p vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
     Vector2p dv = vB - vA;
-    val_t closingVel = contact.normal.dot(dv);
-    val_t restitution = 0;
-    if (closingVel < -restitutionThreshold) restitution = -closingVel * std::min(bodyA.restitution, bodyB.restitution);
+    val_t closingVel = std::max(contact.normal.dot(dv) - slopRes, static_cast<val_t>(0));
+    val_t restitution = (closingVel > restitutionThreshold) ? closingVel * std::min(bodyA.restitution, bodyB.restitution) : 0;
     resolution.bias = baumgarte + restitution;
 
     return resolution;
@@ -438,7 +447,7 @@ void FizzWorld::solve_normalConstraint(CollisionResolution& resolution)
     if (bodyB.bodyType == BodyType::DYNAMIC)
     {
         bodyB.velocity += impulse * bodyB.invMass;
-        bodyB.angularVelocity -= crossproduct(rB, impulse) * bodyB.invMoI;
+        bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
     }
 }
 
@@ -485,7 +494,7 @@ void FizzWorld::solve_frictionConstraint(CollisionResolution& resolution)
     if (bodyB.bodyType == BodyType::DYNAMIC)
     {
         bodyB.velocity += impulse * bodyB.invMass;
-        bodyB.angularVelocity -= crossproduct(rB, impulse) * bodyB.invMoI;
+        bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
     }
 }
 
@@ -551,7 +560,7 @@ void FizzWorld::simulate_bodies(val_t dt)
 
         val_t angularAccel = body.accumTorque * body.invMoI;
         body.angularVelocity = body.angularVelocity * std::max(static_cast<val_t>(0), (1 - body.angularDamping * dt)) + angularAccel * dt;
-        body.rotation += body.angularVelocity * dt;
+        rotate_body(body, body.angularVelocity * dt);
         body.accumTorque = 0;
 
         bool posUpdate = prevPos != body.position;

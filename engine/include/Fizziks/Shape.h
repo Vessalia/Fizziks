@@ -88,11 +88,10 @@ struct std::hash<Fizziks::ContactKey>
     std::size_t operator()(const Fizziks::ContactKey& ck) const
     {
         size_t h = 0;
-
         auto hashCombine = [&](uint32_t v)
-            {
-                h ^= std::hash<uint32_t>{}(v)+0x9e3779b9 + (h << 6) + (h >> 2);
-            };
+        {
+            h ^= std::hash<uint32_t>{}(v) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        };
 
         hashCombine(ck.bodyAId);
         hashCombine(ck.bodyBId);

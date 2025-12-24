@@ -24,13 +24,33 @@ namespace Fizziks
     typedef Eigen::Rotation2Df Rotation2p;
 #endif
 
-template<typename T>
-T fizzmax() { return std::numeric_limits<T>::max(); }
+inline Vector2p vec_max() {
+    return Vector2p
+    (
+        std::numeric_limits<val_t>::max(),
+        std::numeric_limits<val_t>::max()
+    );
+}
+
+inline Vector2p vec_min() {
+    return Vector2p
+    (
+        std::numeric_limits<val_t>::min(),
+        std::numeric_limits<val_t>::min()
+    );
+}
 
 template<typename T>
-T fizzmin() { return std::numeric_limits<T>::min(); }
+T constexpr fizzmax() { return std::numeric_limits<T>::max(); }
+
+template<typename T>
+T constexpr fizzmin() { return std::numeric_limits<T>::min(); }
 
 int mod(int a, int b);
 val_t crossproduct(const Vector2p& a, const Vector2p& b);
 Vector2p crossproduct(val_t w, const Vector2p& r);
+// (a x b) x c = b(a.c) - a(b.c)
+Vector2p lefttriplecross(const Vector2p& a, const Vector2p& b, const Vector2p& c);
+// a x (b x c) = b(a.c) - c(a.b)
+Vector2p righttriplecross(const Vector2p& a, const Vector2p& b, const Vector2p& c);
 };
