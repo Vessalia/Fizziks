@@ -13,6 +13,6 @@ add_library(Fizziks STATIC ${FIZZIKS_SOURCES})
 target_include_directories(Fizziks PUBLIC include/Fizziks
                                    PRIVATE internal/Fizziks)
 
-target_link_libraries(Fizziks PRIVATE Eigen SDL3::SDL3)
+target_link_libraries(Fizziks PRIVATE Eigen)
 
 target_compile_features(Fizziks PUBLIC cxx_std_20)
