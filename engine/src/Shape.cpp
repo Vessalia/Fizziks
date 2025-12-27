@@ -386,7 +386,7 @@ Simplex blowupSimplex(const Simplex& simplex,
 }
 
 // undefined cases for when point is outside of the simplex
-std::pair<std::vector<size_t>, Vector2p> closestFacet(const Simplex& simplex, const Vector2p& point)
+std::tuple<std::vector<size_t>, Vector2p> closestFacet(const Simplex& simplex, const Vector2p& point)
 {
     if (simplex.size() < 3) return { { }, Vector2p::Zero() }; // should never happen, will crash EPA
 
@@ -410,13 +410,76 @@ std::pair<std::vector<size_t>, Vector2p> closestFacet(const Simplex& simplex, co
     Vector2p B = simplex[bestEdge[1]].CSO;
     Vector2p edge = B - A;
     Vector2p dir(edge.y(), -edge.x());   // perpendicular
+    if (dir.dot(-A) > 0) dir = -dir;
 
     return { bestEdge, dir };
+}
+
+Contact getCircleCircleContact(const Circle& c1, const Vector2p& p1, val_t r1,
+                               const Circle& c2, const Vector2p& p2, val_t r2)
+{
+    Contact contact;
+    contact.overlaps = false;
+
+    Vector2p d = p2 - p1;
+    val_t dist2 = d.squaredNorm();
+    val_t r = c1.radius + c2.radius;
+
+    if (dist2 >= r * r) return contact;
+
+    val_t dist = d.norm();
+    Vector2p norm = dist > epsilon ? d / dist : Vector2p(0, 1);
+
+    contact.overlaps = true;
+    contact.normal = norm;
+    contact.penetration = r - dist;
+    contact.tangent = { -norm.y(), norm.x() };
+
+    contact.contactPointWorldA = p1 + norm * c1.radius;
+    contact.contactPointWorldB = p2 - norm * c2.radius;
+
+    contact.contactPointLocalA = Rotation2p(-r1) * (contact.contactPointWorldA - p1);
+    contact.contactPointLocalB = Rotation2p(-r2) * (contact.contactPointWorldB - p2);
+
+    contact.featureA = 0;
+    contact.featureB = 0;
+
+    return contact;
+}
+
+uint32_t getFeature(const Shape& shape, const Vector2p& pos, const Vector2p& normal)
+{
+    if (shape.type == ShapeType::CIRCLE) return 0;
+
+    auto& vertices = std::get<Polygon>(shape.data).vertices;
+    for (int i = 0; i < vertices.size(); ++i)
+    {
+        Vector2p A = vertices[i];
+        Vector2p B = vertices[(i + 1) % vertices.size()];
+        Vector2p AB = B - A;
+        Vector2p AP = pos - A;
+
+        if (crossproduct(AB, AP) > epsilon) continue;
+        val_t dot = AP.dot(AB);
+        if (dot < 0) continue;
+        if (dot > AB.dot(AB)) continue;
+        if (std::abs(AB.dot(normal)) > epsilon) continue; // ensure feature has correct direction
+
+        return i;
+    }
+
+    return -1;
 }
 
 Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
                         const Shape& s2, const Vector2p& p2, val_t r2)
 {
+    if (s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
+    {
+        return getCircleCircleContact(std::get<Circle>(s1.data), p1, r1,
+                                      std::get<Circle>(s2.data), p2, r2);
+    }
+
     Contact contact;
 
     auto [overlaps, simplex] = getGJKSimplex(s1, p1, r1, s2, p2, r2);
@@ -431,7 +494,10 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     int iterations = 0;
     while (iterations++ < maxIterationsEPA && (support.CSO - lastSupport.CSO).squaredNorm() > epsilon)
     {
-        simplex.insert(simplex.begin() + closestEdge[1], support);
+        // since s1 and s2 is convex, so is their minkowski difference,
+        // so we don't need to remove any vertices
+        int insert = (closestEdge[0] + 1) % simplex.size();
+        simplex.insert(simplex.begin() + insert, support);
         std::tie(closestEdge, dir) = closestFacet(simplex, origin);
         lastSupport = support;
         support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
@@ -444,20 +510,20 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     SupportVertex SB = simplex[i1];
     Vector2p A = SA.CSO, B = SB.CSO;
 
-    contact.featureA = s1.type == ShapeType::CIRCLE ? 0 : i0;
-    contact.featureB = s2.type == ShapeType::CIRCLE ? 0 : i1;
-
     Vector2p edge = B - A;
 
     // compute contact point via projection onto edge
     val_t denom = edge.dot(edge);
     val_t t = denom > 0 ? -(A.dot(edge)) / denom : static_cast<val_t>(0);
     t = std::clamp(t, static_cast<val_t>(0), static_cast<val_t>(1));
-    SupportVertex vert = {
+    SupportVertex vert = 
+    {
         A    + t * edge,
         SA.A + t * (SB.A - SA.A),
         SA.B + t * (SB.B - SA.B)
     };
+
+    // this reinserted the boost bug?? When hitting the edge/a vertex, need a way to select one
 
     contact.penetration = vert.CSO.norm();
     contact.normal = vert.CSO.normalized();
@@ -466,6 +532,8 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
     contact.contactPointLocalB = vert.B;
     contact.contactPointWorldA = Rotation2p(r1) * vert.A + p1;
     contact.contactPointWorldB = Rotation2p(r2) * vert.B + p2;
+    contact.featureA = getFeature(s1, vert.A, contact.normal);
+    contact.featureB = getFeature(s2, vert.B, -contact.normal);
 
     return contact;
 }

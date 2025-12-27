@@ -101,7 +101,7 @@ private:
 
     Vector2p get_worldPos(const BodyData& body, const Vector2p& colliderPos) const;
     val_t get_worldRotation(const BodyData& body, const Collider& collider) const;
-    void rotate_body(BodyData& body, const val_t rot);
+    val_t clamp_angle(val_t rot) const;
 
     CollisionManifold get_manifold(const size_t idA, const size_t idB) const;
     void detect_collisions();

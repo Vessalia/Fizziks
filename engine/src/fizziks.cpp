@@ -24,7 +24,7 @@ static std::vector<RigidBody> bodies;
 
 Uint32 lt = SDL_GetTicks();
 
-val_t timescale = 2;
+val_t timescale = 1;
 
 void draw();
 void close();
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     gWindow = SDL_CreateWindow("Fizziks Test", SCREEN_WIDTH, SCREEN_HEIGHT, 0);
     gRenderer = SDL_CreateRenderer(gWindow, NULL);
 
-    BodyDef def = initBodyDef();
+    BodyDef def;
     def.initPosition = Vector2p(25, 10);
     def.bodyType = BodyType::STATIC;
     def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero()});
@@ -50,15 +50,15 @@ int main(int argc, char** argv)
     def.initAngularVelocity += 1;
     bodies.push_back(world.createBody(def));
 
-    BodyDef def2 = initBodyDef();
+    BodyDef def2;
     def2.initPosition = Vector2p(20, 8);
     def2.bodyType = BodyType::STATIC;
     def2.colliderDefs.push_back({ createCollider(createRect(20, 1), 1, 0), Vector2p::Zero() });
     bodies.push_back(world.createBody(def2));
 
-    BodyDef def3 = initBodyDef();
+    BodyDef def3;
     def3.initPosition = Vector2p(20, 40);
-    def3.colliderDefs.push_back({ createCollider(createRect(1, 2), 1, deg2rad(110)), Vector2p::Zero() });
+    def3.colliderDefs.push_back({ createCollider(createRect(1, 2), 1, deg2rad(150)), Vector2p::Zero() });
     bodies.push_back(world.createBody(def3));
 
     bool quit = false;
@@ -109,7 +109,8 @@ void draw()
         val_t rot = body.rotation();
         for (auto [collider, colliderPos] : colliders)
         {
-            Rotation2p r(rot + collider.rotation);
+            val_t angle = rot + collider.rotation;
+            Rotation2p rotation(angle);
             Vector2p localPos = bodyPos + colliderPos;
             Vector2p pos = transformToScreenSpace(localPos);
             Shape shape = collider.shape;
@@ -126,6 +127,18 @@ void draw()
                     int dx = (int)std::sqrt(sr * sr - i * i);
                     SDL_RenderLine(gRenderer, x - dx, y + i, x + dx, y + i);
                 }
+
+                float dx = std::cos(-angle);
+                float dy = std::sin(-angle);
+
+                // Endpoints of the diameter
+                int x1 = (int)(x - dx * sr);
+                int y1 = (int)(y - dy * sr);
+                int x2 = (int)(x + dx * sr);
+                int y2 = (int)(y + dy * sr);
+
+                SDL_SetRenderDrawColor(gRenderer, 60, 150, 100, SDL_ALPHA_OPAQUE);
+                SDL_RenderLine(gRenderer, x1, y1, x2, y2);
             }
             else if (shape.type == ShapeType::POLYGON)
             {
@@ -136,7 +149,7 @@ void draw()
 
                 for (const auto& vert : verts)
                 {
-                    auto v = r * vert;
+                    auto v = rotation * vert;
                     Vector2p screenV = transformToScreenSpace(localPos + v);
 
                     SDL_Vertex sdlVert;

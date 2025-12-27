@@ -24,6 +24,9 @@ namespace Fizziks
     typedef Eigen::Rotation2Df Rotation2p;
 #endif
 
+constexpr val_t PI = EIGEN_PI;
+constexpr val_t TWO_PI = 2 * PI;
+
 inline Vector2p vec_max() {
     return Vector2p
     (

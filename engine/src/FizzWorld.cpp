@@ -93,7 +93,7 @@ const AABB FizzWorld::compute_bounds(BodyData* body) const
     AABB bounds{ 0, 0, Vector2p::Zero() };
     if (body->colliders.size() == 0) return bounds;
 
-    Vector2p min = vec_max(), max = vec_max();
+    Vector2p min = vec_max(), max = vec_min();
     for (auto [collider, at] : body->colliders)
     {
         AABB minorBounds = getInscribingAABB(collider.shape, at, body->rotation);
@@ -194,7 +194,7 @@ val_t FizzWorld::body_rotation(const RigidBody& rb) const
 void FizzWorld::body_rotation(const RigidBody& rb, const val_t rot)
 {
     auto* body = get_body(rb);
-    if (body) body->rotation = rot;
+    if (body) body->rotation = clamp_angle(rot);
 }
 
 Vector2p FizzWorld::body_centroidPosition(const RigidBody& rb) const
@@ -272,16 +272,13 @@ Vector2p FizzWorld::get_worldPos(const BodyData& body, const Vector2p& colliderP
 
 val_t FizzWorld::get_worldRotation(const BodyData& body, const Collider& collider) const
 {
-    return body.rotation + collider.rotation;
+    return clamp_angle(body.rotation + collider.rotation);
 }
 
-void FizzWorld::rotate_body(BodyData& body, const val_t rot)
+val_t FizzWorld::clamp_angle(val_t rot) const
 {
-    body.rotation += rot;
-    while (body.rotation >= 2 * EIGEN_PI)
-    {
-        body.rotation -= 2 * EIGEN_PI;
-    }
+    rot -= TWO_PI * std::floor(rot / TWO_PI);
+    return rot;
 }
 
 FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const size_t idB) const
@@ -508,11 +505,6 @@ void FizzWorld::resolve_collisions(val_t dt)
 {
     if (collisionManifolds.size() == 0) return;
 
-    if (currstep == 493)
-    {
-        int x = 1;
-    }
-
     for (auto& manifold : collisionManifolds)
     {
         const auto& bodyAId = manifold.bodyAId;
@@ -544,6 +536,11 @@ void FizzWorld::resolve_collisions(val_t dt)
 
 void FizzWorld::handle_collisions(val_t dt)
 {
+    if (currstep == 493)
+    {
+        int x = 1;
+    }
+
     detect_collisions();
     resolve_collisions(dt);
 }
@@ -565,7 +562,7 @@ void FizzWorld::simulate_bodies(val_t dt)
 
         val_t angularAccel = body.accumTorque * body.invMoI;
         body.angularVelocity = body.angularVelocity * std::max(static_cast<val_t>(0), (1 - body.angularDamping * dt)) + angularAccel * dt;
-        rotate_body(body, body.angularVelocity * dt);
+        body.rotation = clamp_angle(body.rotation + body.angularVelocity * dt);
         body.accumTorque = 0;
 
         bool posUpdate = prevPos != body.position;
