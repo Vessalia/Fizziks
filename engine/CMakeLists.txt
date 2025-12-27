@@ -2,7 +2,11 @@ file(GLOB_RECURSE FIZZIKS_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 file(GLOB_RECURSE FIZZIKS_INCLUDES CONFIGURE_DEPENDS include/Fizziks/*.h)
 file(GLOB_RECURSE FIZZIKS_INTERNALS CONFIGURE_DEPENDS internal/Fizziks/*.h)
 
-add_library(Fizziks STATIC ${FIZZIKS_SOURCES})
+if(FIZZIKS_STATIC)
+    add_library(Fizziks STATIC ${FIZZIKS_SOURCES})
+else()
+    add_library(Fizziks SHARED ${FIZZIKS_SOURCES})
+endif()
 
 target_include_directories(Fizziks PUBLIC include/Fizziks
                                    PRIVATE internal/Fizziks)
