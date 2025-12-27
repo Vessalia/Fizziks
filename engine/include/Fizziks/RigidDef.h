@@ -1,10 +1,10 @@
 #pragma once
-#include <Dense.h>
+#include <Fizziks.h>
 #include <Shape.h>
 
 namespace Fizziks
 {
-struct Collider
+struct FIZZIKS_API Collider
 {
     // Physics-related part
     val_t mass;
@@ -15,14 +15,14 @@ struct Collider
     Shape shape;
 };
 
-enum class BodyType
+enum class FIZZIKS_API BodyType
 {
     STATIC,
     DYNAMIC,
     KINEMATIC
 };
 
-struct BodyDef
+struct FIZZIKS_API BodyDef
 {
     uint32_t layermask = 0;
 
@@ -46,5 +46,5 @@ struct BodyDef
     std::vector<std::pair<Collider, Vector2p>> colliderDefs = {};
 };
 
-Collider createCollider(const Shape& shape, const val_t mass, const val_t rotation);
+FIZZIKS_API Collider createCollider(const Shape& shape, const val_t mass, const val_t rotation);
 };

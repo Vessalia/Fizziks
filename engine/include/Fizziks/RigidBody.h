@@ -1,12 +1,12 @@
 #pragma once
-#include <Dense.h>
+#include <Fizziks.h>
 #include <RigidDef.h>
 #include <Handle.h>
 #include <Shape.h>
 
 namespace Fizziks
 {
-class RigidBody
+class FIZZIKS_API RigidBody
 {
 private:
     friend class FizzWorld;

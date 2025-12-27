@@ -1,16 +1,16 @@
 #pragma once
-#include <Dense.h>
+#include <Fizziks.h>
 #include <RigidDef.h>
 
 namespace Fizziks
 {
-struct Ray
+struct FIZZIKS_API Ray
 {
     Vector2p pos;
     Vector2p dir;
 };
 
-struct RaycastResult
+struct FIZZIKS_API RaycastResult
 {
     bool hit;
     uint32_t ID;

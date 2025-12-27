@@ -1,5 +1,5 @@
 #pragma once
-#include <Dense.h>
+#include <Fizziks.h>
 #include <Pool.h>
 #include <RigidBody.h>
 #include <RigidDef.h>
@@ -10,7 +10,7 @@
 
 namespace Fizziks
 {
-class FizzWorld
+class FIZZIKS_API FizzWorld
 {
 public:
     Vector2p Gravity = {0, -9.81};

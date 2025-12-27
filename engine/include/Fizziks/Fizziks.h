@@ -6,6 +6,16 @@
 #define FIZZIKS_DEFINED
 #endif
 
+#if defined(_WIN32)
+    #if defined(FIZZIKS_BUILDING_DLL)
+        #define FIZZIKS_API __declspec(dllexport)
+    #else
+        #define FIZZIKS_API __declspec(dllimport)
+    #endif
+#else  
+    #define FIZZIKS_API __attribute__((visibility("default")))
+#endif
+
 namespace Fizziks
 {
 #ifdef FIZZIKS_PRECISION_MODE
@@ -23,6 +33,13 @@ namespace Fizziks
     typedef Eigen::Matrix3f Matrix3p;
     typedef Eigen::Rotation2Df Rotation2p;
 #endif
+
+#define ASSERT_AND_CRASH(msg)\
+do {\
+    assert(false && msg);\
+    int* crash = nullptr;\
+    *crash;\
+} while(0)\
 
 constexpr val_t PI = EIGEN_PI;
 constexpr val_t TWO_PI = 2 * PI;

@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <Dense.h>
+#include <Fizziks.h>
 #include <BitArray.h>
 #include <Shape.h>
 

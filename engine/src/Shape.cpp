@@ -253,7 +253,6 @@ Simplex reduceSimplex(const Simplex& simplex, Vector2p* dir)
         Vector2p A = simplex[2].CSO;
         Vector2p AB = B - A;
         Vector2p AC = C - A;
-        bool inside = false;
         // AB x AC -> into the page, so (AB x AC) x AC is perp to AC and outside the triangle
         if (lefttriplecross(AB, AC, AC).dot(-A) > 0)
         {
@@ -293,6 +292,11 @@ Simplex reduceSimplex(const Simplex& simplex, Vector2p* dir)
             *dir = Vector2p::Zero();
             return simplex;
         }
+    }
+    else
+    {
+        ASSERT_AND_CRASH("invalid state reached in GJK");
+        return simplex;
     }
 }
 
