@@ -6,7 +6,7 @@
 #include "Dense.h"
 #include "FizzWorld.h"
 #include "RigidBody.h"
-#include "BodyDef.h"
+#include "RigidDef.h"
 #include "Shape.h"
 #include "BitArray.h"
 
@@ -24,9 +24,12 @@ static std::vector<RigidBody> bodies;
 
 Uint32 lt = SDL_GetTicks();
 
+val_t timescale = 1;
+
 void draw();
-Vector2p transformToScreenSpace(Vector2p pos);
 void close();
+
+Vector2p transformToScreenSpace(Vector2p pos);
 
 int main(int argc, char** argv) 
 {
@@ -34,24 +37,30 @@ int main(int argc, char** argv)
     gRenderer = SDL_CreateRenderer(gWindow, NULL);
 
     BodyDef def;
-    def.initPosition = { 5, 10 };
-    def.initVelocity = { 0, 0 };
-    def.initAngularVelocity = { 0, 0 };
-    def.initRotation = 0;
-    def.mass = 1;
-    def.gravityScale = 1;
-    def.shape = createAABB(10, 1);
-    def.isStatic = true;
+    def.initPosition = Vector2p(25, 10);
+    def.bodyType = BodyType::STATIC;
+    def.colliderDefs.push_back({ createCollider(createCircle(1), 1, 0), Vector2p::Zero()});
+    bodies.push_back(world.createBody(def));
 
+    def.initPosition.y() += 25; def.initVelocity.y() -= 2;
+    def.bodyType = BodyType::DYNAMIC;
     bodies.push_back(world.createBody(def));
-    def.initPosition += Vector2p(-3, 2);
-    def.isStatic = false;
-    def.shape = createAABB(1, 1);
+
+    def.initPosition.x() += 3;  def.initVelocity.x() -= 1;
+    def.initAngularVelocity += 1;
     bodies.push_back(world.createBody(def));
-    def.initVelocity = Vector2p(-2, 0);
-    def.initPosition += Vector2p(6, 0);
-    bodies.push_back(world.createBody(def));
-    
+
+    BodyDef def2;
+    def2.initPosition = Vector2p(20, 8);
+    def2.bodyType = BodyType::STATIC;
+    def2.colliderDefs.push_back({ createCollider(createRect(20, 1), 1, 0), Vector2p::Zero() });
+    bodies.push_back(world.createBody(def2));
+
+    BodyDef def3;
+    def3.initPosition = Vector2p(20, 40);
+    def3.colliderDefs.push_back({ createCollider(createRect(1, 2), 1, deg2rad(150)), Vector2p::Zero() });
+    bodies.push_back(world.createBody(def3));
+
     bool quit = false;
     while (!quit)
     {
@@ -70,7 +79,7 @@ int main(int argc, char** argv)
         SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(gRenderer);
 
-        world.tick(dt / 10);
+        world.tick(dt / timescale);
         draw();
     }
 
@@ -82,30 +91,93 @@ void draw()
     for(int i = 0; i < bodies.size(); ++i)
     {
         auto body = bodies[i];
-        if (body.isStatic())
+        if (body.bodyType() == BodyType::STATIC)
         {
             SDL_SetRenderDrawColor(gRenderer, 160, 150, 30, SDL_ALPHA_OPAQUE);
         }
-        else
+        else if (body.bodyType() == BodyType::DYNAMIC)
         {
             SDL_SetRenderDrawColor(gRenderer, 100, 60, 150, SDL_ALPHA_OPAQUE);
         }
-
-        Vector2p pos = transformToScreenSpace(body.position());
-        if(body.shape().type == ShapeType::AABB)
+        else
         {
-            Vector2p dim { body.shape().aabb.halfWidth, body.shape().aabb.halfHeight };
-            Vector2p tdim = transformToScreenSpace(dim);
-            SDL_FRect rect;
-            rect.x = pos.x() - tdim.x();
-            rect.y = SCREEN_HEIGHT - (pos.y() - tdim.y());
-            rect.w = 2 * tdim.x();
-            rect.h = 2 * tdim.y();
-            SDL_RenderFillRect(gRenderer, &rect);
+            SDL_SetRenderDrawColor(gRenderer, 60, 150, 100, SDL_ALPHA_OPAQUE);
         }
-        else if(body.shape().type == ShapeType::CIRCLE)
+
+        const auto colliders = body.colliders();
+        Vector2p bodyPos = body.centroidPosition();
+        val_t rot = body.rotation();
+        for (auto [collider, colliderPos] : colliders)
         {
-            
+            val_t angle = rot + collider.rotation;
+            Rotation2p rotation(angle);
+            Vector2p localPos = bodyPos + colliderPos;
+            Vector2p pos = transformToScreenSpace(localPos);
+            Shape shape = collider.shape;
+            if (shape.type == ShapeType::CIRCLE)
+            {
+                val_t r = std::get<Circle>(shape.data).radius;
+                int sr = (int)transformToScreenSpace(Vector2p{r, 0}).x();
+
+                int x = (int)pos.x();
+                int y = SCREEN_HEIGHT - (int)pos.y();
+
+                for (int i = -sr; i <= sr; ++i)
+                {
+                    int dx = (int)std::sqrt(sr * sr - i * i);
+                    SDL_RenderLine(gRenderer, x - dx, y + i, x + dx, y + i);
+                }
+
+                float dx = std::cos(-angle);
+                float dy = std::sin(-angle);
+
+                // Endpoints of the diameter
+                int x1 = (int)(x - dx * sr);
+                int y1 = (int)(y - dy * sr);
+                int x2 = (int)(x + dx * sr);
+                int y2 = (int)(y + dy * sr);
+
+                SDL_SetRenderDrawColor(gRenderer, 60, 150, 100, SDL_ALPHA_OPAQUE);
+                SDL_RenderLine(gRenderer, x1, y1, x2, y2);
+            }
+            else if (shape.type == ShapeType::POLYGON)
+            {
+                const auto& verts = std::get<Polygon>(shape.data).vertices;
+
+                std::vector<SDL_Vertex> sdlVerts;
+                sdlVerts.reserve(verts.size());
+
+                for (const auto& vert : verts)
+                {
+                    auto v = rotation * vert;
+                    Vector2p screenV = transformToScreenSpace(localPos + v);
+
+                    SDL_Vertex sdlVert;
+                    sdlVert.position = SDL_FPoint{ screenV.x(), SCREEN_HEIGHT - screenV.y() };
+                    sdlVert.color = SDL_FColor{ 255, 255, 255, 255 };
+                    sdlVert.tex_coord = SDL_FPoint{ 0, 0 };
+                    sdlVerts.push_back(sdlVert);
+                }
+
+                // Build triangle fan indices
+                std::vector<int> indices;
+                indices.reserve((verts.size() - 2) * 3);
+
+                for (size_t i = 1; i + 1 < sdlVerts.size(); ++i)
+                {
+                    indices.push_back(0);
+                    indices.push_back(static_cast<int>(i));
+                    indices.push_back(static_cast<int>(i + 1));
+                }
+
+                // Single draw call
+                SDL_RenderGeometry(
+                    gRenderer,
+                    nullptr,
+                    sdlVerts.data(), static_cast<int>(sdlVerts.size()),
+                    indices.data(), static_cast<int>(indices.size())
+                );
+            }
         }
     }
     SDL_RenderPresent(gRenderer);

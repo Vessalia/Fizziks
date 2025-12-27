@@ -2,8 +2,11 @@
 #include <Dense.h>
 #include <Pool.h>
 #include <RigidBody.h>
-#include <BodyDef.h>
-#include <UniformGrid2D.h>
+#include <RigidDef.h>
+#include <Broadphase.h>
+
+#include <vector>
+#include <unordered_map>
 
 namespace Fizziks
 {
@@ -12,8 +15,9 @@ class FizzWorld
 public:
     Vector2p Gravity = {0, -9.81};
 
-    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionResolution, val_t timeStep);
-    FizzWorld() : FizzWorld(20, 20, 2, 3, 1 / 200.f) { }
+    FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timeStep);
+    FizzWorld() : FizzWorld(20, 20, 2, 5, 1 / 200.f) { }
+    ~FizzWorld();
 
     RigidBody createBody(const BodyDef& def);
     void destroyBody(RigidBody& body);
@@ -23,39 +27,52 @@ public:
     void tick(val_t dt);
 
 private:
+    size_t currstep = 0;
     friend class RigidBody;
 
     struct BodyData
     {
-        Vector2p position, velocity, angularVelocity, accumForce;
-        val_t rotation, accumTorque;
+        Vector2p centroid;
 
-        val_t invMass;
-        val_t invMoment;
+        Vector2p position, velocity, accumForce;
+        val_t rotation, angularVelocity, accumTorque;
+
+        val_t mass, invMass;
+        val_t MoI, invMoI;
+
         val_t gravityScale;
 
-        val_t restitution = 0.2;
-        val_t staticFriction = 0.2;
-        val_t dynamicFriction = 0.1;
-        val_t linearDamping = 0.05;
-        val_t angularDamping = 0.05;
+        val_t restitution;
+        val_t staticFriction;
+        val_t dynamicFriction;
+        val_t linearDamping;
+        val_t angularDamping;
 
-        Shape shape;
+        AABB bounds;
 
-        bool isStatic;
+        std::vector<std::pair<Collider, Vector2p>> colliders;
+
+        BodyType bodyType;
     };
 
-    struct CollisionInfo
+    struct CollisionManifold
     {
-        size_t bodyAIndex, bodyBIndex;
-        Contact contact;
+        size_t bodyAId, bodyBId;
+        std::vector<std::tuple<uint32_t, uint32_t, Contact>> contacts;
     };
 
     struct CollisionResolution
     {
-        BodyData* body;
-        Vector2p correction;
-        Vector2p impulse;
+        uint32_t bodyAId, bodyBId;
+        uint32_t collIdA, collIdB;
+        Contact contact;
+
+        val_t normalImpulse;
+        val_t tangentImpulse;
+
+        val_t invEffMass;
+        val_t invEffTangentMass;
+        val_t bias;
     };
 
     static const BodyData null_body;
@@ -66,7 +83,7 @@ private:
     size_t unitsX;
     size_t unitsY;
 
-    int collisionResolution;
+    int collisionIterations;
 
     std::vector<Handle> activeHandles;
     std::vector<uint32_t> freeList;
@@ -74,17 +91,29 @@ private:
     std::vector<uint32_t> activeList;
     std::vector<BodyData> activeBodies;
 
-    std::queue<CollisionInfo> collisionQueue;
-    std::queue<CollisionResolution> collisionResolveQueue;
+    std::vector<CollisionManifold> collisionManifolds;
+    std::vector<CollisionResolution> collisionResolutions;
+    std::unordered_map<ContactKey, CollisionResolution> warmStartCache;
+
     std::queue<RigidBody> destructionQueue;
 
-    UniformGrid2D grid;
+    Broadphase* broadphase;
 
-    CollisionInfo check_collision(const BodyData& bodyA, size_t bodyAIndex, const BodyData& bodyB, size_t bodyBIndex) const;
-    void detect_collisions(const BodyData& body, size_t bodyIndex);
-    void resolve_collisions();
+    Vector2p get_worldPos(const BodyData& body, const Vector2p& colliderPos) const;
+    val_t get_worldRotation(const BodyData& body, const Collider& collider) const;
+    val_t clamp_angle(val_t rot) const;
+
+    CollisionManifold get_manifold(const size_t idA, const size_t idB) const;
+    void detect_collisions();
+    ContactKey makeContactKey(const CollisionResolution& resolution) const;
+    CollisionResolution collision_preStep(const uint32_t idA, const uint32_t idB, const uint32_t collIdA, const uint32_t collIdB, const Contact& constact, const val_t dt);
+    void solve_normalConstraint(CollisionResolution& resolution);
+    void solve_frictionConstraint(CollisionResolution& resolution);
+    void solve_contactConstraints(CollisionResolution& resolution);
+    void resolve_collisions(val_t dt);
+
     void simulate_bodies(val_t dt);
-    void handle_collisions();
+    void handle_collisions(val_t dt);
     void destroy_bodies();
 
     void set_body(const RigidBody& rb, const BodyDef& def);
@@ -93,16 +122,28 @@ private:
     const BodyData* get_body(const RigidBody& handle) const;
     BodyData* get_body(const RigidBody& handle);
 
-    void apply_force(const RigidBody& rb, const Vector2p& force);
+    void add_collider(const RigidBody& rb, const Collider& collider, const Vector2p& at);
+    void add_collider(BodyData* body, const Collider& collider, const Vector2p& at);
+    std::vector<std::pair<Collider, Vector2p>> body_colliders(const RigidBody& rb) const;
+
+    const AABB get_bounds(BodyData* body, bool compute) const;
+    const AABB compute_bounds(BodyData* body) const;
+
+    void apply_force(const RigidBody& rb, const Vector2p& force, const Vector2p& at);
 
     Vector2p body_position(const RigidBody& rb) const;
     void body_position(const RigidBody& rb, const Vector2p& pos);
 
+    val_t body_rotation(const RigidBody& rb) const;
+    void body_rotation(const RigidBody& rb, const val_t rot);
+
+    Vector2p body_centroidPosition(const RigidBody& rb) const;
+
     Vector2p body_velocity(const RigidBody& rb) const;
     void body_velocity(const RigidBody& rb, const Vector2p& vel);
 
-    Vector2p body_angularVelocity(const RigidBody& rb) const;
-    void body_angularVelocity(const RigidBody& rb, const Vector2p& angVel);
+    val_t body_angularVelocity(const RigidBody& rb) const;
+    void body_angularVelocity(const RigidBody& rb, const val_t& angVel);
 
     val_t body_mass(const RigidBody& rb) const;
     void body_mass(const RigidBody& rb, val_t m);
@@ -110,10 +151,7 @@ private:
     val_t body_gravityScale(const RigidBody& rb) const;
     void body_gravityScale(const RigidBody& rb, val_t gs);
 
-    Shape body_shape(const RigidBody& rb) const;
-    void body_shape(const RigidBody& rb, Shape s);
-
-    bool body_isStatic(const RigidBody& rb) const;
-    void body_isStatic(const RigidBody& rb, bool is);
+    BodyType body_bodyType(const RigidBody& rb) const;
+    void body_bodyType(const RigidBody& rb, const BodyType& type);
 };
 };
