@@ -536,7 +536,7 @@ void FizzWorld::resolve_collisions(val_t dt)
 
 void FizzWorld::handle_collisions(val_t dt)
 {
-    if (currstep == 493)
+    if (currstep == 952)
     {
         int x = 1;
     }

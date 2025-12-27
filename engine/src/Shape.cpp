@@ -459,11 +459,10 @@ uint32_t getFeature(const Shape& shape, const Vector2p& pos, const Vector2p& nor
         Vector2p AB = B - A;
         Vector2p AP = pos - A;
 
-        if (crossproduct(AB, AP) > epsilon) continue;
         val_t dot = AP.dot(AB);
-        if (dot < 0) continue;
-        if (dot > AB.dot(AB)) continue;
-        if (std::abs(AB.dot(normal)) > epsilon) continue; // ensure feature has correct direction
+        if (crossproduct(AB, AP) > epsilon                // make sure point is on feature edge
+         || dot < 0 || dot > AB.dot(AB)                   // make sure point is between A and B
+         || std::abs(AB.dot(normal)) > epsilon) continue; // normal check picks dominant feature at vertices
 
         return i;
     }
@@ -522,8 +521,6 @@ Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1,
         SA.A + t * (SB.A - SA.A),
         SA.B + t * (SB.B - SA.B)
     };
-
-    // this reinserted the boost bug?? When hitting the edge/a vertex, need a way to select one
 
     contact.penetration = vert.CSO.norm();
     contact.normal = vert.CSO.normalized();
