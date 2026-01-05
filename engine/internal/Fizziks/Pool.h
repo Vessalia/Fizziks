@@ -3,7 +3,7 @@
 #include <queue>
 #include <Handle.h>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 template<typename T>
 class Pool

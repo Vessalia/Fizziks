@@ -1,14 +1,166 @@
-#include "Shape.h"
+#include <Shape.h>
+#include <ShapeP.h>
+#include <VectorP.h>
 #include <numbers>
 
 namespace Fizziks
 {
-val_t deg2rad(val_t deg)
+internal::Shape map(const Shape& shape)
+{
+    internal::Shape internalShape;
+    if (shape.type == ShapeType::CIRCLE)
+    {
+        Circle c = std::get<Circle>(shape.data);
+        internalShape = internal::createCircle(c.radius);
+    }
+    else if (shape.type == ShapeType::POLYGON)
+    {
+        Polygon p = std::get<Polygon>(shape.data);
+        std::vector<internal::Vector2p> verts;
+        for (const auto& v : p.vertices)
+        {
+            verts.emplace_back(internal::map(v));
+        }
+        internalShape = internal::createPolygon(verts);
+    }
+
+    return internalShape;
+} 
+
+Shape map(const internal::Shape& shape)
+{
+    Shape userShape;
+    if (shape.type == internal::ShapeType::CIRCLE)
+    {
+        internal::Circle c = std::get<internal::Circle>(shape.data);
+        userShape = { ShapeType::CIRCLE, Circle{ c.radius } };
+    }
+    else if (shape.type == internal::ShapeType::POLYGON)
+    {
+        internal::Polygon p = std::get<internal::Polygon>(shape.data);
+        std::vector<Vec2> verts;
+        for (const auto& v : p.vertices)
+        {
+            verts.emplace_back(internal::map(v));
+        }
+        userShape = { ShapeType::POLYGON, Polygon{ verts } };
+    }
+
+    return userShape;
+} 
+
+val_t deg2rad(const val_t deg)
+{
+    return internal::deg2rad(deg);
+}
+val_t rad2deg(const val_t rad)
+{
+    return internal::rad2deg(rad);
+}
+
+Shape createCircle(const val_t radius)
+{
+    return map(internal::createCircle(radius));
+}
+
+Shape createRect(const val_t width, const val_t height)
+{
+    return map(internal::createRect(width, height));
+}
+
+Shape createPolygon(const std::vector<Vec2>& vertices)
+{
+    std::vector<internal::Vector2p> verts;
+    for (const auto& v : vertices)
+    {
+        verts.emplace_back(internal::map(v));
+    }
+
+    return map(internal::createPolygon(verts));
+}
+
+AABB createAABB(const val_t width, const val_t height, const Vec2& offset)
+{
+    internal::Vector2p internalOffset = internal::map(offset);
+    internal::AABB internalAABB = internal::createAABB(width, height, internal::map(offset));
+    return { internalAABB.halfWidth, internalAABB.halfHeight, offset };
+}
+
+val_t getMoI(const Shape& shape, const val_t mass)
+{
+    return internal::getMoI(map(shape), mass);
+}
+
+AABB getInscribingAABB(const Shape& s, const Vec2& centroid, val_t rot)
+{
+    internal::AABB internalAABB = internal::getInscribingAABB(map(s), internal::map(centroid), rot);
+    return { internalAABB.halfWidth, internalAABB.halfHeight, internal::map(internalAABB.offset) };
+}
+
+bool AABBOverlapsAABB(const AABB& r1, const Vec2& p1, const AABB& r2, const Vec2& p2)
+{
+    return internal::AABBOverlapsAABB
+    (
+        { r1.halfWidth, r1.halfHeight, internal::map(r1.offset) }, 
+        internal::map(p1),
+        { r2.halfWidth, r2.halfHeight, internal::map(r2.offset) }, 
+        internal::map(p2)
+    );
+}
+
+bool AABBContains(const AABB& aabb, const Vec2& pos, const Vec2& point)
+{
+    return internal::AABBContains
+    (
+        { aabb.halfWidth, aabb.halfHeight, internal::map(aabb.offset) },
+        internal::map(pos),
+        internal::map(point)
+    );
+}
+
+bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t r1,
+                   const Shape& s2, const Vec2& p2, val_t r2)
+{
+    return internal::shapesOverlap
+    (
+        map(s1), internal::map(p1), r1,
+        map(s2), internal::map(p2), r2
+    );
+}
+
+Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t r1,
+                        const Shape& s2, const Vec2& p2, val_t r2)
+{
+    internal::Contact internalContact = internal::getShapeContact
+    (
+        map(s1), internal::map(p1), r1,
+        map(s2), internal::map(p2), r2
+    );
+
+    Contact contact;
+    contact.contactPointWorldA = internal::map(internalContact.contactPointWorldA);
+    contact.contactPointWorldB = internal::map(internalContact.contactPointWorldB);
+    contact.contactPointLocalA = internal::map(internalContact.contactPointLocalA);
+    contact.contactPointLocalB = internal::map(internalContact.contactPointLocalB);
+    contact.normal             = internal::map(internalContact.normal);
+    contact.tangent            = internal::map(internalContact.tangent);
+    contact.penetration        = internalContact.penetration;
+    contact.featureA           = internalContact.featureA;
+    contact.featureB           = internalContact.featureB;
+    contact.overlaps           = internalContact.overlaps;
+
+    return contact;
+}
+}
+
+namespace Fizziks::internal
+{
+val_t deg2rad(const val_t deg)
 {
     return deg * std::numbers::pi_v<val_t> / 180;
 }
 
-val_t rad2deg(val_t rad)
+val_t rad2deg(const val_t rad)
 {
     return rad * 180 / std::numbers::pi_v<val_t>;
 }
@@ -16,7 +168,7 @@ val_t rad2deg(val_t rad)
 // https://en.wikipedia.org/wiki/Centroid @ Of a polygon
 Vector2p getCentroid(const std::vector<Vector2p>& vertices)
 {
-    Vector2p centroid = Vector2p::Zero();
+    Vector2p centroid = vec_zero();
     val_t area = 0;
 
     size_t n = vertices.size();
@@ -30,10 +182,10 @@ Vector2p getCentroid(const std::vector<Vector2p>& vertices)
         area += cross;
     }
 
-    return area != 0 ? (centroid / (3 * area)).eval() : Vector2p::Zero();
+    return area != 0 ? (centroid / (3 * area)).eval() : vec_zero();
 }
 
-Shape createCircle(val_t radius)
+Shape createCircle(const val_t radius)
 {
     return { ShapeType::CIRCLE, Circle{ radius } };
 }
@@ -47,6 +199,7 @@ Shape createRect(val_t width, val_t height)
         {  width / 2, -height / 2 },
         {  width / 2,  height / 2 }
     };
+
     return createPolygon(vertices);
 }
 

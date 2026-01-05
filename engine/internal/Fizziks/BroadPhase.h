@@ -3,7 +3,7 @@
 #include <RigidDef.h>
 #include <Ray.h>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 // more readable
 typedef std::pair<uint32_t, uint32_t> CollisionPair;

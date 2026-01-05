@@ -1,20 +1,20 @@
 #pragma once
 #include <Fizziks.h>
-#include <RigidDef.h>
+#include <Types.h>
 
 namespace Fizziks
 {
 struct FIZZIKS_API Ray
 {
-    Vector2p pos;
-    Vector2p dir;
+    Vec2 pos;
+    Vec2 dir;
 };
 
 struct FIZZIKS_API RaycastResult
 {
     bool hit;
     uint32_t ID;
-    Vector2p point;
-    Vector2p normal;
+    Vec2 point;
+    Vec2 normal;
 };
 };

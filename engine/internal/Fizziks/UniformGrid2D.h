@@ -4,7 +4,7 @@
 #include <BitArray.h>
 #include <Shape.h>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 class UniformGrid2D
 {

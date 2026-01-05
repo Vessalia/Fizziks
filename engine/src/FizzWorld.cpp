@@ -1,13 +1,15 @@
 #include <FizzWorld.h>
-#include <Shape.h>
+#include <FizzWorldImpl.h>
+
 #include <SimpleBP.h>
 
 namespace Fizziks
 {
-const FizzWorld::BodyData FizzWorld::null_body = 
+const FizzWorld::Impl::BodyData FizzWorld::Impl::null_body = 
 {
-    vec_max(),
-    vec_max(), vec_max(), vec_max(),
+    fizzmax<uint32_t>(),
+    map(vec_max()),
+    map(vec_max()), map(vec_max()), map(vec_max()),
     fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(),
     fizzmax<val_t>(), fizzmax<val_t>(),
     fizzmax<val_t>(), fizzmax<val_t>(),
@@ -19,33 +21,35 @@ const FizzWorld::BodyData FizzWorld::null_body =
 };
 
 FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timestep) 
+    : impl(std::make_unique<FizzWorld::Impl>(unitsX, unitsY, worldScale, collisionIterations, timestep)) { }
+FizzWorld::Impl::Impl(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timestep)
     : unitsX(unitsX * worldScale)
     , unitsY(unitsY * worldScale)
     , accumulator(0)
     , timestep(timestep)
-    , broadphase(new SimpleBP())
+    , broadphase(new internal::SimpleBP())
     , collisionIterations(collisionIterations) { }
 
-FizzWorld::~FizzWorld() { delete broadphase; }
+FizzWorld::Impl::~Impl() { delete broadphase; }
 
-void FizzWorld::apply_force(const RigidBody& rb, const Vector2p& force, const Vector2p& at)
+void FizzWorld::Impl::apply_force(const RigidBody::Impl& rb, const Vector2p& force, const Vector2p& at)
 {
     BodyData* body = get_body(rb);
     if(body) 
     {
         body->accumForce += force;
         Vector2p r = at - (body->position + body->centroid);
-        body->accumTorque += r.x() * force.y() - r.y() * force.x();
+        body->accumTorque += r[0] * force[1] - r[1] * force[0];
     }
 }
 
-void FizzWorld::add_collider(const RigidBody& rb, const Collider& collider, const Vector2p& at)
+void FizzWorld::Impl::add_collider(const RigidBody::Impl& rb, const Collider& collider, const Vector2p& at)
 {
     BodyData* body = get_body(rb);
     if(body) add_collider(body, collider, at);
 }
 
-void FizzWorld::add_collider(BodyData* body, const Collider& collider, const Vector2p& _at)
+void FizzWorld::Impl::add_collider(BodyData* body, const Collider& collider, const Vector2p& _at)
 {
     body->colliders.push_back({ collider, _at });
     
@@ -75,29 +79,29 @@ void FizzWorld::add_collider(BodyData* body, const Collider& collider, const Vec
     body->invMoI = 1 / MoI;
 }
 
-std::vector<std::pair<Collider, Vector2p>> FizzWorld::body_colliders(const RigidBody& rb) const
+std::vector<std::pair<Collider, Vector2p>> FizzWorld::Impl::body_colliders(const RigidBody::Impl& rb) const
 {
     auto* body = get_body(rb);
     if (body) return body->colliders;
     else      return null_body.colliders;
 }
 
-const AABB FizzWorld::get_bounds(BodyData* body, bool compute) const
+const AABB FizzWorld::Impl::get_bounds(const BodyData* body, bool compute) const
 {
     if (compute) return compute_bounds(body);
     else         return body->bounds;
 }
 
-const AABB FizzWorld::compute_bounds(BodyData* body) const
+const AABB FizzWorld::Impl::compute_bounds(const BodyData* body) const
 {
-    AABB bounds{ 0, 0, Vector2p::Zero() };
+    AABB bounds{ 0, 0, internal::vec_zero() };
     if (body->colliders.size() == 0) return bounds;
 
     Vector2p min = vec_max(), max = vec_min();
     for (auto [collider, at] : body->colliders)
     {
         AABB minorBounds = getInscribingAABB(collider.shape, at, body->rotation);
-        Vector2p pos = body->position + at + minorBounds.offset;
+        Vector2p pos = body->position + at + map(minorBounds.offset);
 
         min.x() = std::min(min.x(), pos.x() - minorBounds.halfWidth);
         min.y() = std::min(min.y(), pos.y() - minorBounds.halfHeight);
@@ -112,7 +116,7 @@ const AABB FizzWorld::compute_bounds(BodyData* body) const
     return bounds;
 }
 
-const FizzWorld::BodyData* FizzWorld::get_body(const RigidBody& rb) const
+const FizzWorld::Impl::BodyData* FizzWorld::Impl::get_body(const RigidBody::Impl& rb) const
 {
     if (rb.handle.index >= activeHandles.size()) return nullptr;
     Handle activeHandle = activeHandles[rb.handle.index];
@@ -121,7 +125,7 @@ const FizzWorld::BodyData* FizzWorld::get_body(const RigidBody& rb) const
     return &activeBodies[activeHandle.index];
 }
 
-FizzWorld::BodyData* FizzWorld::get_body(const RigidBody& rb)
+FizzWorld::Impl::BodyData* FizzWorld::Impl::get_body(const RigidBody::Impl& rb)
 {
     if (rb.handle.index >= activeHandles.size()) return nullptr;
     Handle activeHandle = activeHandles[rb.handle.index];
@@ -130,16 +134,16 @@ FizzWorld::BodyData* FizzWorld::get_body(const RigidBody& rb)
     return &activeBodies[activeHandle.index];
 }
 
-void FizzWorld::set_body(const RigidBody& rb, const BodyDef& def)
+void FizzWorld::Impl::set_body(const RigidBody::Impl& rb, const BodyDef& def)
 {
     BodyData* body = get_body(rb);
     if(body) set_body(body, def);
 }
 
-void FizzWorld::set_body(BodyData* body, const BodyDef& def)
+void FizzWorld::Impl::set_body(BodyData* body, const BodyDef& def)
 {
-    body->position = def.initPosition;
-    body->velocity = def.initVelocity;
+    body->position = map(def.initPosition);
+    body->velocity = map(def.initVelocity);
 
     body->rotation = def.initRotation;
     body->angularVelocity = def.initAngularVelocity;
@@ -153,7 +157,7 @@ void FizzWorld::set_body(BodyData* body, const BodyDef& def)
 
     for(auto [collider, at] : def.colliderDefs)
     {
-        add_collider(body, collider, at);
+        add_collider(body, collider, map(at));
     }
 
     if(def.bodyType == BodyType::STATIC)
@@ -173,115 +177,127 @@ void FizzWorld::set_body(BodyData* body, const BodyDef& def)
     body->bounds = compute_bounds(body);
 }
 
-Vector2p FizzWorld::body_position(const RigidBody& rb) const 
+Vector2p FizzWorld::Impl::body_position(const RigidBody::Impl& rb) const 
 {
     auto* body = get_body(rb);
     if (body) return body->position;
     else      return null_body.position;
 }
-void FizzWorld::body_position(const RigidBody& rb, const Vector2p& pos) 
+void FizzWorld::Impl::body_position(const RigidBody::Impl& rb, const Vector2p& pos) 
 { 
     auto* body = get_body(rb);
     if (body) body->position = pos;
 }
 
-val_t FizzWorld::body_rotation(const RigidBody& rb) const
+val_t FizzWorld::Impl::body_rotation(const RigidBody::Impl& rb) const
 {
     auto* body = get_body(rb);
     if (body) return body->rotation;
     else      return null_body.rotation;
 }
-void FizzWorld::body_rotation(const RigidBody& rb, const val_t rot)
+void FizzWorld::Impl::body_rotation(const RigidBody::Impl& rb, const val_t rot)
 {
     auto* body = get_body(rb);
     if (body) body->rotation = clamp_angle(rot);
 }
 
-Vector2p FizzWorld::body_centroidPosition(const RigidBody& rb) const
+Vector2p FizzWorld::Impl::body_centroidPosition(const RigidBody::Impl& rb) const
 {
     auto* body = get_body(rb);
     if (body) return body->position + body->centroid;
     else      return null_body.position;
 }
 
-Vector2p FizzWorld::body_velocity(const RigidBody& rb) const 
+Vector2p FizzWorld::Impl::body_velocity(const RigidBody::Impl& rb) const 
 { 
     auto* body = get_body(rb);
     if (body) return body->velocity;
     else      return null_body.velocity;
 }
-void FizzWorld::body_velocity(const RigidBody& rb, const Vector2p& vel) 
+void FizzWorld::Impl::body_velocity(const RigidBody::Impl& rb, const Vector2p& vel) 
 { 
     auto* body = get_body(rb);
     if (body) body->velocity = vel;
 }
 
-val_t FizzWorld::body_angularVelocity(const RigidBody& rb) const 
+val_t FizzWorld::Impl::body_angularVelocity(const RigidBody::Impl& rb) const 
 { 
     auto* body = get_body(rb);
     if (body) return body->angularVelocity;
     else      return null_body.angularVelocity;
 }
-void FizzWorld::body_angularVelocity(const RigidBody& rb, const val_t& angVel) 
+void FizzWorld::Impl::body_angularVelocity(const RigidBody::Impl& rb, const val_t& angVel) 
 { 
     auto* body = get_body(rb);
     if (body) body->angularVelocity = angVel;
 }
 
-val_t FizzWorld::body_mass(const RigidBody& rb) const 
+val_t FizzWorld::Impl::body_mass(const RigidBody::Impl& rb) const 
 { 
     auto* body = get_body(rb);
     if (body) return 1 / body->invMass;
     else      return 1 / null_body.invMass;
 }
-void FizzWorld::body_mass(const RigidBody& rb, val_t m) 
+void FizzWorld::Impl::body_mass(const RigidBody::Impl& rb, val_t m) 
 { 
     auto* body = get_body(rb);
     if (body) body->invMass = 1 / m;
 }
 
-val_t FizzWorld::body_gravityScale(const RigidBody& rb) const
+val_t FizzWorld::Impl::body_gravityScale(const RigidBody::Impl& rb) const
 {
     auto* body = get_body(rb);
     if (body) return body->gravityScale;
     else      return null_body.gravityScale;
 }
-void FizzWorld::body_gravityScale(const RigidBody& rb, val_t gs)
+void FizzWorld::Impl::body_gravityScale(const RigidBody::Impl& rb, val_t gs)
 {
     auto* body = get_body(rb);
     if (body) body->gravityScale = gs;
 }
 
-BodyType FizzWorld::body_bodyType(const RigidBody& rb) const 
+BodyType FizzWorld::Impl::body_bodyType(const RigidBody::Impl& rb) const 
 { 
     auto* body = get_body(rb);
     if (body) return body->bodyType;
     else      return null_body.bodyType;
 }
 
-void FizzWorld::body_bodyType(const RigidBody& rb, const BodyType& type)
+void FizzWorld::Impl::body_bodyType(const RigidBody::Impl& rb, const BodyType& type)
 {
     auto* body = get_body(rb);
     if (body) body->bodyType = type;
 }
 
-Vector2p FizzWorld::get_worldPos(const BodyData& body, const Vector2p& colliderPos) const
+uint32_t FizzWorld::Impl::body_layerMask(const RigidBody::Impl& rb) const
+{
+    auto* body = get_body(rb);
+    if (body) return body->layermask;
+    else      return null_body.layermask;
+}
+void FizzWorld::Impl::body_layerMask(const RigidBody::Impl& rb, const uint32_t mask)
+{
+    auto* body = get_body(rb);
+    if (body) body->layermask = mask;
+}
+
+Vector2p FizzWorld::Impl::get_worldPos(const BodyData& body, const Vector2p& colliderPos) const
 {
     return body.position + body.centroid + Rotation2p(body.rotation) * colliderPos;
 }
 
-val_t FizzWorld::get_worldRotation(const BodyData& body, const Collider& collider) const
+val_t FizzWorld::Impl::get_worldRotation(const BodyData& body, const Collider& collider) const
 {
     return clamp_angle(body.rotation + collider.rotation);
 }
 
-val_t FizzWorld::clamp_angle(val_t rot) const
+val_t FizzWorld::Impl::clamp_angle(const val_t rot) const
 {
-    rot -= TWO_PI * std::floor(rot / TWO_PI);
-    return rot;
+    val_t r = rot - TWO_PI * std::floor(rot / TWO_PI);
+    return r;
 }
 
-FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const size_t idB) const
+FizzWorld::Impl::CollisionManifold FizzWorld::Impl::get_manifold(const size_t idA, const size_t idB) const
 {
     CollisionManifold manifold;
     manifold.bodyAId = idA;
@@ -308,7 +324,7 @@ FizzWorld::CollisionManifold FizzWorld::get_manifold(const size_t idA, const siz
     return manifold;
 }
 
-void FizzWorld::detect_collisions()
+void FizzWorld::Impl::detect_collisions()
 {
     // broadphase detection
     auto broadPairs = broadphase->computePairs();
@@ -322,7 +338,7 @@ void FizzWorld::detect_collisions()
     }
 }
 
-ContactKey FizzWorld::makeContactKey(const CollisionResolution& resolution) const
+ContactKey FizzWorld::Impl::makeContactKey(const CollisionResolution& resolution) const
 {
     return { resolution.bodyAId, resolution.bodyBId, resolution.collIdA, resolution.collIdB, resolution.contact.featureA, resolution.contact.featureB };
 }
@@ -341,7 +357,7 @@ val_t warmStart = 0.75;
 // JM^-1    = [-n^TMa^-1 -(rA x n)^TIa^-1 n^TMb^-1 (rB x n)^TIb^-1]
 // JM^-1J^T = |n|^2Ma^-1 + |rA x n|^2 Ia^-1 + |n|^2Mb^-1 + |rB x n|^2 Ib^-1
 //          = Ma^-1 + |rA x n|^2 Ia^-1 + Mb^-1 + |rB x n|^2 Ib^-1
-FizzWorld::CollisionResolution FizzWorld::collision_preStep(const uint32_t idA, const uint32_t idB, const uint32_t collIdA, const uint32_t collIdB, const Contact& contact, const val_t dt)
+FizzWorld::Impl::CollisionResolution FizzWorld::Impl::collision_preStep(const uint32_t idA, const uint32_t idB, const uint32_t collIdA, const uint32_t collIdB, const Contact& contact, const val_t dt)
 {
     CollisionResolution resolution;
     resolution.bodyAId = idA;
@@ -415,7 +431,7 @@ FizzWorld::CollisionResolution FizzWorld::collision_preStep(const uint32_t idA, 
 // Jv  = n . (vb - va) + (rb x n)wb - (ra x n)wa
 //     = n . (dv)
 // lam = (-Jv + b)/effMass
-void FizzWorld::solve_normalConstraint(CollisionResolution& resolution)
+void FizzWorld::Impl::solve_normalConstraint(CollisionResolution& resolution)
 {
     auto& bodyA = activeBodies[resolution.bodyAId];
     auto& bodyB = activeBodies[resolution.bodyBId];
@@ -449,7 +465,7 @@ void FizzWorld::solve_normalConstraint(CollisionResolution& resolution)
 }
 
 // recompute is intentional
-void FizzWorld::solve_frictionConstraint(CollisionResolution& resolution)
+void FizzWorld::Impl::solve_frictionConstraint(CollisionResolution& resolution)
 {
     auto& bodyA = activeBodies[resolution.bodyAId];
     auto& bodyB = activeBodies[resolution.bodyBId];
@@ -495,13 +511,13 @@ void FizzWorld::solve_frictionConstraint(CollisionResolution& resolution)
     }
 }
 
-void FizzWorld::solve_contactConstraints(CollisionResolution& resolution)
+void FizzWorld::Impl::solve_contactConstraints(CollisionResolution& resolution)
 {
     solve_normalConstraint(resolution);
     solve_frictionConstraint(resolution);
 }
 
-void FizzWorld::resolve_collisions(val_t dt)
+void FizzWorld::Impl::resolve_collisions(const val_t dt)
 {
     if (collisionManifolds.size() == 0) return;
 
@@ -534,7 +550,7 @@ void FizzWorld::resolve_collisions(val_t dt)
     collisionResolutions.clear();
 }
 
-void FizzWorld::handle_collisions(val_t dt)
+void FizzWorld::Impl::handle_collisions(const val_t dt)
 {
     if (currstep == 952)
     {
@@ -545,7 +561,7 @@ void FizzWorld::handle_collisions(val_t dt)
     resolve_collisions(dt);
 }
 
-void FizzWorld::simulate_bodies(val_t dt)
+void FizzWorld::Impl::simulate_bodies(const val_t dt, const Vector2p& gravity)
 {
     for (size_t ID = 0; ID < activeBodies.size(); ++ID)
     {
@@ -555,7 +571,7 @@ void FizzWorld::simulate_bodies(val_t dt)
         Vector2p prevPos = body.position;
         val_t prevRot = body.rotation;
 
-        Vector2p accel = body.accumForce * body.invMass + Gravity * body.gravityScale;
+        Vector2p accel = body.accumForce * body.invMass + gravity * body.gravityScale;
         body.velocity = body.velocity * std::max(static_cast<val_t>(0), (1 - body.linearDamping * dt)) + accel * dt;
         body.position += body.velocity * dt;
         body.accumForce.setZero();
@@ -572,11 +588,11 @@ void FizzWorld::simulate_bodies(val_t dt)
     }
 }
 
-void FizzWorld::destroy_bodies()
+void FizzWorld::Impl::destroy_bodies()
 {
     while (!destructionQueue.empty())
     {
-        RigidBody rb = destructionQueue.front(); destructionQueue.pop();
+        RigidBody::Impl rb = destructionQueue.front(); destructionQueue.pop();
 
         Handle* activeHandle = &activeHandles[rb.handle.index];
         if (activeHandle->gen == rb.handle.gen)
@@ -602,6 +618,12 @@ void FizzWorld::destroy_bodies()
 
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {
+    RigidBody rb;
+    *rb.impl = impl->createBody(def, this);
+    return rb;
+}
+RigidBody::Impl FizzWorld::Impl::createBody(const BodyDef& def, FizzWorld* parent)
+{
     uint32_t ID = activeBodies.size();
     BodyData b;
     b.accumForce = Vector2p::Zero();
@@ -625,27 +647,32 @@ RigidBody FizzWorld::createBody(const BodyDef& def)
         activeList.push_back(handle.index);
     }
 
-    return { handle, this };
+    return { handle, parent };
 }
 
 void FizzWorld::destroyBody(RigidBody& rb)
 {
-    destructionQueue.push(rb);
+    impl->destructionQueue.push(*rb.impl);
 }
 
-Vector2p FizzWorld::worldScale() const
+Vec2 FizzWorld::worldScale() const
 {
-    return { unitsX, unitsY };
+    return { (val_t)impl->unitsX, (val_t)impl->unitsY };
 }
 
-void FizzWorld::tick(val_t dt)
+void FizzWorld::tick(const val_t dt)
+{
+    impl->tick(dt, map(Gravity));
+}
+
+void FizzWorld::Impl::tick(const val_t dt, const Vector2p& gravity)
 {
     accumulator += dt;
     while (accumulator >= timestep)
     {
         accumulator -= timestep;
 
-        simulate_bodies(timestep);
+        simulate_bodies(timestep, gravity);
         handle_collisions(timestep);
         destroy_bodies();
         currstep++;

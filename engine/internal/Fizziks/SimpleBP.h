@@ -2,7 +2,7 @@
 #include <Fizziks.h>
 #include <Broadphase.h>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 class SimpleBP : public Broadphase
 {

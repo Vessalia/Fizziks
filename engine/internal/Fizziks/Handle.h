@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 struct Handle 
 {
