@@ -610,7 +610,6 @@ void FizzWorldImpl::destroy_bodies()
     }
 }
 
-
 RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
 {
     uint32_t ID = activeBodies.size();
