@@ -70,4 +70,4 @@ public:
         for (uint32_t i = 0; i < slots.size(); ++i) free_indices.push(i);
     }
 };
-};
+}

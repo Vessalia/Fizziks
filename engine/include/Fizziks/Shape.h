@@ -1,5 +1,6 @@
 #pragma once
 #include <Fizziks.h>
+#include <Vec.h>
 #include <variant>
 
 // NOTE: positions and rotations here are relative to world-space, and about the centroid, not the user-based position
@@ -53,8 +54,8 @@ struct FIZZIKS_API Contact
     bool overlaps;
 };
 
-FIZZIKS_API val_t deg2rad(const val_t deg);
-FIZZIKS_API val_t rad2deg(const val_t rad);
+FIZZIKS_API constexpr val_t deg2rad(const val_t deg);
+FIZZIKS_API constexpr val_t rad2deg(const val_t rad);
 
 FIZZIKS_API Shape createCircle(const val_t radius);
 FIZZIKS_API Shape createRect(const val_t width, const val_t height);
@@ -69,4 +70,4 @@ FIZZIKS_API bool AABBContains(const AABB& aabb, const Vec2& pos, const Vec2& poi
 
 FIZZIKS_API bool shapesOverlap(const Shape& s1, const Vec2& p1, const val_t r1, const Shape& s2, const Vec2& p2, const val_t r2);
 FIZZIKS_API Contact getShapeContact(const Shape& s1, const Vec2& p1, const val_t r1, const Shape& s2, const Vec2& p2, const val_t r2);
-};
+}

@@ -2,7 +2,6 @@
 #include <FizzWorld.h>
 #include <RigidBodyImpl.h>
 #include <FizzWorldImpl.h>
-#include <Vectorp.h>
 
 #define THIS (impl)
 #define WORLD (impl->world->impl)
@@ -10,6 +9,7 @@
 namespace Fizziks
 {
 RigidBody::RigidBody() : impl(nullptr) { } // impl constructed by FizzWorld
+RigidBody::~RigidBody() { if (impl) { delete impl; } impl = nullptr; }
 
 void RigidBody::destroy() 
 { 
@@ -30,34 +30,28 @@ RigidBody& RigidBody::setBody(const BodyDef& def)
 
 RigidBody& RigidBody::applyForce(const Vec2& force, const Vec2& at) 
 {
-    WORLD->apply_force(*THIS, map(force), map(at)); 
+    WORLD->apply_force(*THIS, force, at); 
     return *this;
 }
 
 RigidBody& RigidBody::addCollider(const Collider& collider, const Vec2& at)
 {
-    WORLD->add_collider(*THIS, collider, map(at));
+    WORLD->add_collider(*THIS, collider, at);
     return *this;
 }
 
 std::vector<std::pair<Collider, Vec2>> RigidBody::colliders() const
 {
-    std::vector<std::pair<Collider, Vec2>> result;
-    for (const auto& [collider, at] : WORLD->body_colliders(*THIS))
-    {
-        result.push_back({ collider, map(at) });
-    }
-
-    return result;
+    return WORLD->body_colliders(*THIS);
 }
 
 Vec2 RigidBody::position() const 
 { 
-    return map(WORLD->body_position(*THIS));
+    return WORLD->body_position(*THIS);
 }
 RigidBody& RigidBody::position(const Vec2& pos) 
 { 
-    WORLD->body_position(*THIS, map(pos));
+    WORLD->body_position(*THIS, pos);
     return *this; 
 }
 
@@ -73,16 +67,16 @@ RigidBody& RigidBody::rotation(const val_t rot)
 
 Vec2 RigidBody::centroidPosition() const
 {
-    return map(WORLD->body_centroidPosition(*THIS));
+    return WORLD->body_centroidPosition(*THIS);
 }
 
 Vec2 RigidBody::velocity() const 
 { 
-    return map(WORLD->body_velocity(*THIS));
+    return WORLD->body_velocity(*THIS);
 }
 RigidBody& RigidBody::velocity(const Vec2& vel) 
 { 
-    WORLD->body_velocity(*THIS, map(vel));
+    WORLD->body_velocity(*THIS, vel);
     return *this; 
 }
 

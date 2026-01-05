@@ -1,7 +1,12 @@
 #pragma once
 #include <Fizziks.h>
 #include <RigidDef.h>
-#include <Handle.h>
+#include <Vec.h>
+
+namespace Fizziks::internal
+{
+class RigidBodyImpl;
+}
 
 namespace Fizziks
 {
@@ -53,8 +58,8 @@ private:
     friend class FizzWorld;
 
     RigidBody();
+    ~RigidBody();
 
-    class Impl;
-    std::unique_ptr<Impl> impl;
+    internal::RigidBodyImpl* impl;
 };
-};
+}

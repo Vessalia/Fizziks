@@ -37,4 +37,4 @@ namespace std
             return h;
         }
     };
-};
+}

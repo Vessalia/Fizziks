@@ -47,4 +47,4 @@ struct FIZZIKS_API BodyDef
 };
 
 FIZZIKS_API Collider createCollider(const Shape& shape, const val_t mass, const val_t rotation);
-};
+}

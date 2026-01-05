@@ -2,12 +2,16 @@
 #include <Fizziks.h>
 #include <RigidBody.h>
 #include <RigidDef.h>
-#include <Broadphase.h>
-#include <VectorP.h>
+#include <Vec.h>
 
 #include <vector>
 #include <queue>
 #include <unordered_map>
+
+namespace Fizziks::internal
+{
+class FizzWorldImpl;
+}
 
 namespace Fizziks
 {
@@ -18,7 +22,7 @@ public:
 
     FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timeStep);
     FizzWorld() : FizzWorld(20, 20, 2, 5, 1 / 200.f) { }
-    ~FizzWorld() = default;
+    ~FizzWorld();
 
     RigidBody createBody(const BodyDef& def);
     void destroyBody(RigidBody& body);
@@ -30,7 +34,6 @@ public:
 private:
     friend class RigidBody;
 
-    class Impl;
-    std::unique_ptr<Impl> impl;
+    internal::FizzWorldImpl* impl;
 };
-};
+}

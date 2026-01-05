@@ -1,6 +1,6 @@
 #pragma once
 #include <Fizziks.h>
-#include <Types.h>
+#include <Vec.h>
 
 namespace Fizziks
 {
@@ -17,4 +17,4 @@ struct FIZZIKS_API RaycastResult
     Vec2 point;
     Vec2 normal;
 };
-};
+}

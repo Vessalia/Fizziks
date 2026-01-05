@@ -1,22 +1,19 @@
 #pragma once
-#include <RigidBody.h>
-#include <FizzWorld.h>
-#include <FizzWorldImpl.h>
 #include <Handle.h>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
-class RigidBody::Impl 
+class RigidBodyImpl 
 {
     friend class RigidBody;
     friend class FizzWorld;
-    friend class FizzWorld::Impl;
+    friend class FizzWorldImpl;
 
 private:
     Handle handle;
     FizzWorld* world;
 
-    RigidBody::Impl(Handle handle, FizzWorld* world);
+    RigidBodyImpl(Handle handle, FizzWorld* world);
 };
 }
 

@@ -9,4 +9,4 @@ struct Handle
 
     bool operator==(const Handle& other) const { return index == other.index && gen == other.gen; }
 };
-};
+}

@@ -1,8 +1,7 @@
-#include "BitArray.h"
+#include <BitArray.h>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
-
 const BitArray BitArray::Zero = BitArray(0);
 
 BitArray::BitArray(size_t val)
@@ -361,4 +360,4 @@ size_t BitArray::countBits() const
 
     return count;
 }
-};
+}

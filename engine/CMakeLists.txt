@@ -3,9 +3,9 @@ file(GLOB_RECURSE FIZZIKS_INCLUDES CONFIGURE_DEPENDS include/Fizziks/*.h)
 file(GLOB_RECURSE FIZZIKS_INTERNALS CONFIGURE_DEPENDS internal/Fizziks/*.h)
 
 if(FIZZIKS_STATIC)
-    add_library(Fizziks STATIC ${FIZZIKS_SOURCES})
+    add_library(Fizziks STATIC ${FIZZIKS_SOURCES} ${FIZZIKS_INCLUDES} ${FIZZIKS_INTERNALS})
 else()
-    add_library(Fizziks SHARED ${FIZZIKS_SOURCES})
+    add_library(Fizziks SHARED ${FIZZIKS_SOURCES} ${FIZZIKS_INCLUDES} ${FIZZIKS_INTERNALS})
 endif()
 
 target_include_directories(Fizziks PUBLIC include/Fizziks
