@@ -50,7 +50,7 @@ struct FIZZIKS_API Mat2
         return mat;
     }
 
-    static constexpr Mat2 Rotation(const val_t angle)
+    static Mat2 Rotation(const val_t angle)
     {
         Mat2 mat;
         val_t c = std::cos(angle);
