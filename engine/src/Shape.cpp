@@ -3,18 +3,6 @@
 
 namespace Fizziks
 {
-constexpr val_t deg2rad(const val_t deg)
-{
-    constexpr val_t factor = PI / 180;
-    return deg * factor;
-}
-
-constexpr val_t rad2deg(const val_t rad)
-{
-    constexpr val_t factor = 180 / PI;
-    return rad * factor;
-}
-
 // https://en.wikipedia.org/wiki/Centroid @ Of a polygon
 Vec2 getCentroid(const std::vector<Vec2>& vertices)
 {
@@ -222,11 +210,40 @@ Vec2 projToEdge (const Vec2& P, const Vec2& Q, const Vec2& point)
     else             return P + t * PQ; // avoid dealing with all the float math stuff
 }
 
+void enforceCCWWinding(Simplex& simplex)
+{
+    if (simplex.size() < 3) return;
+    else if (simplex.size() == 3) // need 3rd point to be the newest one (don't move) for GJK simplex reduction alg
+    {
+        Vec2 A = simplex[0].CSO, B = simplex[1].CSO, C = simplex[2].CSO;
+        val_t cross = crossproduct(B - A, C - A);
+        if (cross < 0) std::swap(simplex[0], simplex[1]);
+    }
+    else
+    {
+        val_t signedArea = 0;
+
+        // Shoelace formula (signed area * 2)
+        for (size_t i = 0; i < simplex.size(); ++i)
+        {
+            const Vec2& a = simplex[i].CSO;
+            const Vec2& b = simplex[(i + 1) % simplex.size()].CSO;
+
+            signedArea += crossproduct(a, b);
+        }
+
+        // If clockwise, reverse to make CCW
+        if (signedArea < 0)
+        {
+            std::reverse(simplex.begin(), simplex.end());
+        }
+    }
+}
+
 Simplex reduceSimplex(const Simplex& simplex, Vec2* dir)
 {
     if (simplex.size() == 1) return simplex;
-
-    if (simplex.size() == 2)
+    else if (simplex.size() == 2)
     {
         // B can't be the closest to the origin, we just tried to get closer
         // AB is closest if angle between it and A to origin is positive
@@ -320,7 +337,8 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, val_t r1
     {
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
         if (point.CSO.dot(direction) <= 0) return { false, {} }; // didn't pass origin -> it must be outside
-        simplex.push_back(point);
+        simplex.push_back(point); // need to insert at correct index
+        enforceCCWWinding(simplex);
         simplex = reduceSimplex(simplex, &direction);
         if (direction == Vec2::Zero()) return { true, simplex };
     }
@@ -382,10 +400,7 @@ Simplex blowupSimplex(const Simplex& simplex,
     }
 
     // enforce CCW winding
-    Vec2 A = result[0].CSO, B = result[1].CSO, C = result[2].CSO;
-    val_t cross = crossproduct(B - A, C - A);
-    if (cross < 0) std::swap(result[0], result[1]);
-
+    enforceCCWWinding(result);
     return result;
 }
 
@@ -531,8 +546,8 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t r1,
     contact.tangent = { -contact.normal.y, contact.normal.x };
     contact.contactPointLocalA = vert.A;
     contact.contactPointLocalB = vert.B;
-    contact.contactPointWorldA = (vert.A + p1).rotated(r1);
-    contact.contactPointWorldB = (vert.B + p2).rotated(r2);
+    contact.contactPointWorldA = vert.A.rotated(r1) + p1;
+    contact.contactPointWorldB = vert.B.rotated(r2) + p2;
     contact.featureA = getFeature(s1, vert.A, contact.normal);
     contact.featureB = getFeature(s2, vert.B, -contact.normal);
 

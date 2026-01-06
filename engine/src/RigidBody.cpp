@@ -8,9 +8,6 @@
 
 namespace Fizziks
 {
-RigidBody::RigidBody() : impl(nullptr) { } // impl constructed by FizzWorld
-RigidBody::~RigidBody() { if (impl) { delete impl; } impl = nullptr; }
-
 void RigidBody::destroy() 
 { 
     if (!THIS || !WORLD) return;

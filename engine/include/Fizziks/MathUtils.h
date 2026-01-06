@@ -37,11 +37,23 @@ T constexpr fizzmax() { return std::numeric_limits<T>::max(); }
 template<typename T>
 T constexpr fizzmin() { return std::numeric_limits<T>::min(); }
 
-int mod(int a, int b);
-val_t crossproduct(const Vec2& a, const Vec2& b);
-Vec2 crossproduct(val_t w, const Vec2& r);
+inline constexpr val_t deg2rad(const val_t deg)
+{
+    constexpr val_t factor = PI / 180;
+    return deg * factor;
+}
+
+inline constexpr val_t rad2deg(const val_t rad)
+{
+    constexpr val_t factor = 180 / PI;
+    return rad * factor;
+}
+
+FIZZIKS_API int mod(int a, int b);
+FIZZIKS_API val_t crossproduct(const Vec2& a, const Vec2& b);
+FIZZIKS_API Vec2 crossproduct(val_t w, const Vec2& r);
 // (a x b) x c = b(a.c) - a(b.c)
-Vec2 lefttriplecross(const Vec2& a, const Vec2& b, const Vec2& c);
+FIZZIKS_API Vec2 lefttriplecross(const Vec2& a, const Vec2& b, const Vec2& c);
 // a x (b x c) = b(a.c) - c(a.b)
-Vec2 righttriplecross(const Vec2& a, const Vec2& b, const Vec2& c);
+FIZZIKS_API Vec2 righttriplecross(const Vec2& a, const Vec2& b, const Vec2& c);
 }

@@ -3,7 +3,7 @@
 
 namespace Fizziks
 {    
-struct Vec2
+struct FIZZIKS_API Vec2
 {
     val_t x = 0;
     val_t y = 0;
@@ -25,19 +25,18 @@ struct Vec2
 
     Vec2 operator+(const Vec2& other) const;
     Vec2 operator-(const Vec2& other) const;
+    Vec2 operator/(const val_t scalar) const;
     Vec2& operator+=(const Vec2& other);
     Vec2& operator-=(const Vec2& other);
     Vec2& operator*=(const val_t scalar);
     Vec2& operator/=(const val_t scalar);
 };
 
-Vec2 operator-(const Vec2& v);
-Vec2 operator*(const val_t scalar, const Vec2& v);
-Vec2 operator*(const Vec2& v, const val_t scalar);
-Vec2 operator/(const val_t scalar, const Vec2& v);
-Vec2 operator/(const Vec2& v, const val_t scalar);
+FIZZIKS_API Vec2 operator-(const Vec2& v);
+FIZZIKS_API Vec2 operator*(const val_t scalar, const Vec2& v);
+FIZZIKS_API Vec2 operator*(const Vec2& v, const val_t scalar);
 
-struct Mat2
+struct FIZZIKS_API Mat2
 {
     val_t m00 = 0, m01 = 0;
     val_t m10 = 0, m11 = 0;

@@ -2,6 +2,7 @@
 #include <Fizziks.h>
 #include <RigidDef.h>
 #include <Vec.h>
+#include <memory>
 
 namespace Fizziks::internal
 {
@@ -57,8 +58,7 @@ public:
 private:
     friend class FizzWorld;
 
-    RigidBody();
-    ~RigidBody();
+    RigidBody() : impl(nullptr) { }
 
     internal::RigidBodyImpl* impl;
 };

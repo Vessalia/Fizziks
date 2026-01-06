@@ -13,6 +13,7 @@ private:
     Handle handle;
     FizzWorld* world;
 
+    RigidBodyImpl() : handle({ 0, 0 }), world(nullptr) { }
     RigidBodyImpl(Handle handle, FizzWorld* world) : handle(handle), world(world) { }
 };
 }

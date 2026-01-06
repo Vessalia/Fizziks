@@ -142,6 +142,8 @@ void FizzWorldImpl::set_body(const RigidBodyImpl& rb, const BodyDef& def)
 
 void FizzWorldImpl::set_body(BodyData* body, const BodyDef& def)
 {
+    body->layermask = def.layermask;
+
     body->position = def.initPosition;
     body->velocity = def.initVelocity;
 
@@ -546,7 +548,7 @@ void FizzWorldImpl::resolve_collisions(const val_t dt)
 
 void FizzWorldImpl::handle_collisions(const val_t dt)
 {
-    if (currstep == 952)
+    if (currstep == 789)
     {
         int x = 1;
     }
@@ -663,6 +665,7 @@ FizzWorld::~FizzWorld() { if (impl) { delete impl; } impl = nullptr;  }
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {
     RigidBody rb;
+    rb.impl = new internal::RigidBodyImpl();
     *rb.impl = impl->createBody(def, this);
     return rb;
 }

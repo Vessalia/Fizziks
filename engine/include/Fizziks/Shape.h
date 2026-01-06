@@ -54,9 +54,6 @@ struct FIZZIKS_API Contact
     bool overlaps;
 };
 
-FIZZIKS_API constexpr val_t deg2rad(const val_t deg);
-FIZZIKS_API constexpr val_t rad2deg(const val_t rad);
-
 FIZZIKS_API Shape createCircle(const val_t radius);
 FIZZIKS_API Shape createRect(const val_t width, const val_t height);
 FIZZIKS_API Shape createPolygon(const std::vector<Vec2>& vertices);
