@@ -50,6 +50,11 @@ Vec2 Vec2::operator-(const Vec2& other) const
     return internal::map((internal::map(*this) - internal::map(other)).eval());
 }
 
+Vec2 Vec2::operator*(const val_t scalar) const
+{
+    return internal::map((internal::map(*this) * scalar).eval());
+}
+
 Vec2 Vec2::operator/(const val_t scalar) const
 {
     return internal::map((internal::map(*this) / scalar).eval());
@@ -86,12 +91,7 @@ Vec2 operator-(const Vec2& v)
 
 Vec2 operator*(const val_t scalar, const Vec2& v)
 {
-    return internal::map((internal::map(v) * scalar).eval());
-}
-
-Vec2 operator*(const Vec2& v, const val_t scalar)
-{
-    return scalar * v;
+    return v * scalar;
 }
 
 Vec2 Mat2::operator*(const Vec2& vec) const

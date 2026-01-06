@@ -5,6 +5,8 @@
 
 #include <SimpleBP.h>
 
+#include <algorithm>
+
 namespace Fizziks::internal
 {
 const FizzWorldImpl::BodyData FizzWorldImpl::null_body = 

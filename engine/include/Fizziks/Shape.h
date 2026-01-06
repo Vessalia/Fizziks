@@ -1,6 +1,7 @@
 #pragma once
 #include <Fizziks.h>
 #include <Vec.h>
+#include <vector>
 #include <variant>
 
 // NOTE: positions and rotations here are relative to world-space, and about the centroid, not the user-based position

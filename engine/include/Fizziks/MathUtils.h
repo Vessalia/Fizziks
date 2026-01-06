@@ -2,6 +2,7 @@
 
 #include <Vec.h>
 #include <limits>
+#include <cmath>
 
 namespace Fizziks
 {
@@ -32,10 +33,10 @@ inline Vec2 vec_min()
 }
 
 template<typename T>
-T constexpr fizzmax() { return std::numeric_limits<T>::max(); }
+T inline constexpr fizzmax() { return std::numeric_limits<T>::max(); }
 
 template<typename T>
-T constexpr fizzmin() { return std::numeric_limits<T>::min(); }
+T inline constexpr fizzmin() { return std::numeric_limits<T>::min(); }
 
 inline constexpr val_t deg2rad(const val_t deg)
 {
