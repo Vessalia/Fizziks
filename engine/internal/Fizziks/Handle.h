@@ -1,12 +1,12 @@
 #pragma once
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 struct Handle 
 {
     uint32_t index;
     uint32_t gen;
 
-    bool operator==(const Handle& other) const { return index == other.index && gen == other.gen; }
+    bool operator==(const Handle&) const = default;
 };
-};
+}

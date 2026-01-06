@@ -1,36 +1,40 @@
 #pragma once
-#include <Fizziks.h>
-#include <RigidDef.h>
-#include <Handle.h>
-#include <Shape.h>
+#include "Fizziks.h"
+#include "RigidDef.h"
+#include "Vec.h"
+
+#include <memory>
+
+namespace Fizziks::internal
+{
+class RigidBodyImpl;
+}
 
 namespace Fizziks
 {
 class FIZZIKS_API RigidBody
 {
-private:
-    friend class FizzWorld;
-
-    Handle handle;
-    FizzWorld* world;
-
-    RigidBody(Handle handle, FizzWorld* world);
-    
 public:
+    RigidBody(const RigidBody&) = delete;
+    RigidBody& operator=(const RigidBody&) = delete;
+
+    RigidBody(RigidBody&&) noexcept = default;
+    RigidBody& operator=(RigidBody&&) noexcept = default;
+
     void destroy();
 
     RigidBody& setBody(const BodyDef& def);
 
-    Vector2p position() const;
-    RigidBody& position(const Vector2p& pos);
+    Vec2 position() const;
+    RigidBody& position(const Vec2& pos);
 
     val_t rotation() const;
     RigidBody& rotation(const val_t rot);
 
-    Vector2p centroidPosition() const;
+    Vec2 centroidPosition() const;
 
-    Vector2p velocity() const;
-    RigidBody& velocity(const Vector2p& vel);
+    Vec2 velocity() const;
+    RigidBody& velocity(const Vec2& vel);
 
     val_t angularVelocity() const;
     RigidBody& angularVelocity(const val_t angVel);
@@ -44,9 +48,19 @@ public:
     BodyType bodyType() const;
     RigidBody& bodyType(const BodyType& type);
 
-    RigidBody& applyForce(const Vector2p& force, const Vector2p& at = Vector2p::Zero());
-    RigidBody& addCollider(const Collider& collider, const Vector2p& at = Vector2p::Zero());
+    uint32_t layerMask() const;
+    RigidBody& layerMask(const uint32_t mask);
 
-    std::vector<std::pair<Collider, Vector2p>> colliders() const;
+    RigidBody& applyForce(const Vec2& force, const Vec2& at = { 0, 0 });
+    RigidBody& addCollider(const Collider& collider, const Vec2& at = { 0, 0 });
+
+    std::vector<std::pair<Collider, Vec2>> colliders() const;
+
+private:
+    friend class FizzWorld;
+
+    RigidBody() : impl(nullptr) { }
+
+    internal::RigidBodyImpl* impl;
 };
-};
+}

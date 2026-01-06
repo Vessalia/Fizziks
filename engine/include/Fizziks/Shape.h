@@ -1,5 +1,8 @@
 #pragma once
-#include <Fizziks.h>
+#include "Fizziks.h"
+#include "Vec.h"
+
+#include <vector>
 #include <variant>
 
 // NOTE: positions and rotations here are relative to world-space, and about the centroid, not the user-based position
@@ -12,7 +15,7 @@ struct FIZZIKS_API Circle
 
 struct FIZZIKS_API Polygon
 {
-    std::vector<Vector2p> vertices;
+    std::vector<Vec2> vertices;
 };
 
 enum class FIZZIKS_API ShapeType
@@ -37,15 +40,15 @@ struct FIZZIKS_API AABB
     val_t halfWidth;
     val_t halfHeight;
     
-    Vector2p offset;
+    Vec2 offset;
 };
 
 struct FIZZIKS_API Contact 
 {
-    Vector2p contactPointWorldA, contactPointWorldB;
-    Vector2p contactPointLocalA, contactPointLocalB;  
-    Vector2p normal; 
-    Vector2p tangent;
+    Vec2 contactPointWorldA, contactPointWorldB;
+    Vec2 contactPointLocalA, contactPointLocalB;  
+    Vec2 normal; 
+    Vec2 tangent;
     val_t penetration;  
 
     uint32_t featureA, featureB; // for tracking specific collisions
@@ -53,54 +56,17 @@ struct FIZZIKS_API Contact
     bool overlaps;
 };
 
-struct ContactKey
-{
-    uint32_t bodyAId, bodyBId;
-    uint32_t collIdA, collIdB;
-    uint32_t featureA, featureB;
-
-    bool operator==(const ContactKey&) const = default;
-};
-
-FIZZIKS_API val_t deg2rad(val_t deg);
-FIZZIKS_API val_t rad2deg(val_t rad);
-
-FIZZIKS_API Shape createCircle(val_t radius);
-FIZZIKS_API Shape createRect(val_t width, val_t height);
-FIZZIKS_API Shape createPolygon(const std::vector<Vector2p>& vertices);
-FIZZIKS_API AABB createAABB(val_t width, val_t height, const Vector2p& offset = Vector2p::Zero());
+FIZZIKS_API Shape createCircle(const val_t radius);
+FIZZIKS_API Shape createRect(const val_t width, const val_t height);
+FIZZIKS_API Shape createPolygon(const std::vector<Vec2>& vertices);
+FIZZIKS_API AABB createAABB(const val_t width, const val_t height, const Vec2& offset = { 0, 0 });
 
 FIZZIKS_API val_t getMoI(const Shape& shape, const val_t mass);
 
-FIZZIKS_API AABB getInscribingAABB(const Shape& s, const Vector2p& centroid, val_t rot);
-FIZZIKS_API bool AABBOverlapsAABB(const AABB& r1, const Vector2p& p1, const AABB& r2, const Vector2p& p2);
-FIZZIKS_API bool AABBContains(const AABB& aabb, const Vector2p& pos, const Vector2p& point);
+FIZZIKS_API AABB getInscribingAABB(const Shape& s, const Vec2& centroid, const val_t rot);
+FIZZIKS_API bool AABBOverlapsAABB(const AABB& r1, const Vec2& p1, const AABB& r2, const Vec2& p2);
+FIZZIKS_API bool AABBContains(const AABB& aabb, const Vec2& pos, const Vec2& point);
 
-FIZZIKS_API bool shapesOverlap(const Shape& s1, const Vector2p& p1, val_t r1, const Shape& s2, const Vector2p& p2, val_t r2);
-FIZZIKS_API Contact getShapeContact(const Shape& s1, const Vector2p& p1, val_t r1, const Shape& s2, const Vector2p& p2, val_t r2);
-};
-
-namespace std
-{
-    template<>
-    struct std::hash<Fizziks::ContactKey>
-    {
-        std::size_t operator()(const Fizziks::ContactKey& ck) const
-        {
-            size_t h = 0;
-            auto hashCombine = [&](uint32_t v)
-                {
-                    h ^= std::hash<uint32_t>{}(v)+0x9e3779b9 + (h << 6) + (h >> 2);
-                };
-
-            hashCombine(ck.bodyAId);
-            hashCombine(ck.bodyBId);
-            hashCombine(ck.collIdA);
-            hashCombine(ck.collIdB);
-            hashCombine(ck.featureA);
-            hashCombine(ck.featureB);
-
-            return h;
-        }
-    };
-};
+FIZZIKS_API bool shapesOverlap(const Shape& s1, const Vec2& p1, const val_t r1, const Shape& s2, const Vec2& p2, const val_t r2);
+FIZZIKS_API Contact getShapeContact(const Shape& s1, const Vec2& p1, const val_t r1, const Shape& s2, const Vec2& p2, const val_t r2);
+}

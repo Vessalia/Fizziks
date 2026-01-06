@@ -1,117 +1,131 @@
 #include "RigidBody.h"
 #include "FizzWorld.h"
+#include "RigidBodyImpl.h"
+#include "FizzWorldImpl.h"
+
+#define THIS (impl)
+#define WORLD (impl->world->impl)
 
 namespace Fizziks
 {
-RigidBody::RigidBody(Handle handle, FizzWorld* world) 
-    : handle(handle)
-    , world(world) { }
-
 void RigidBody::destroy() 
 { 
-    if (world)
+    if (!THIS || !WORLD) return;
+
+    if (THIS->world)
     {
-        world->destroyBody(*this);
-        world = nullptr;
+        THIS->world->destroyBody(*this);
+        THIS->world = nullptr;
     }
 }
 
 RigidBody& RigidBody::setBody(const BodyDef& def)
 {
-    world->set_body(*this, def);
+    WORLD->set_body(*THIS, def);
     return *this;
 }
 
-RigidBody& RigidBody::applyForce(const Vector2p& force, const Vector2p& at) 
+RigidBody& RigidBody::applyForce(const Vec2& force, const Vec2& at) 
 {
-    world->apply_force(*this, force, at); 
+    WORLD->apply_force(*THIS, force, at); 
     return *this;
 }
 
-RigidBody& RigidBody::addCollider(const Collider& collider, const Vector2p& at)
+RigidBody& RigidBody::addCollider(const Collider& collider, const Vec2& at)
 {
-    world->add_collider(*this, collider, at);
+    WORLD->add_collider(*THIS, collider, at);
     return *this;
 }
 
-std::vector<std::pair<Collider, Vector2p>> RigidBody::colliders() const
+std::vector<std::pair<Collider, Vec2>> RigidBody::colliders() const
 {
-    return world->body_colliders(*this);
+    return WORLD->body_colliders(*THIS);
 }
 
-Vector2p RigidBody::position() const 
+Vec2 RigidBody::position() const 
 { 
-    return world->body_position(*this);
+    return WORLD->body_position(*THIS);
 }
-RigidBody& RigidBody::position(const Vector2p& pos) 
+RigidBody& RigidBody::position(const Vec2& pos) 
 { 
-    world->body_position(*this, pos);
+    WORLD->body_position(*THIS, pos);
     return *this; 
 }
 
 val_t RigidBody::rotation() const
 {
-    return world->body_rotation(*this);
+    return WORLD->body_rotation(*THIS);
 }
 RigidBody& RigidBody::rotation(const val_t rot)
 {
-    world->body_rotation(*this, rot);
+    WORLD->body_rotation(*THIS, rot);
     return *this;
 }
 
-Vector2p RigidBody::centroidPosition() const
+Vec2 RigidBody::centroidPosition() const
 {
-    return world->body_centroidPosition(*this);
+    return WORLD->body_centroidPosition(*THIS);
 }
 
-Vector2p RigidBody::velocity() const 
+Vec2 RigidBody::velocity() const 
 { 
-    return world->body_velocity(*this);
+    return WORLD->body_velocity(*THIS);
 }
-RigidBody& RigidBody::velocity(const Vector2p& vel) 
+RigidBody& RigidBody::velocity(const Vec2& vel) 
 { 
-    world->body_velocity(*this, vel);
+    WORLD->body_velocity(*THIS, vel);
     return *this; 
 }
 
 val_t RigidBody::angularVelocity() const 
 { 
-    return world->body_angularVelocity(*this);
+    return WORLD->body_angularVelocity(*THIS);
 }
 RigidBody& RigidBody::angularVelocity(const val_t angVel) 
 { 
-    world->body_angularVelocity(*this, angVel);
+    WORLD->body_angularVelocity(*THIS, angVel);
     return *this; 
 }
 
 val_t RigidBody::mass() const 
 { 
-    return world->body_mass(*this);
+    return WORLD->body_mass(*THIS);
 }
 RigidBody& RigidBody::mass(const val_t m) 
 { 
-    world->body_mass(*this, m);
+    WORLD->body_mass(*THIS, m);
     return *this; 
 }
 
 val_t RigidBody::gravityScale() const
 {
-    return world->body_gravityScale(*this);
+    return WORLD->body_gravityScale(*THIS);
 }
 RigidBody& RigidBody::gravityScale(const val_t gs)
 {
-    world->body_gravityScale(*this, gs);
+    WORLD->body_gravityScale(*THIS, gs);
     return *this;
 }
 
 BodyType RigidBody::bodyType() const 
 { 
-    return world->body_bodyType(*this);
+    return WORLD->body_bodyType(*THIS);
 }
 
 RigidBody& RigidBody::bodyType(const BodyType& type)
 {
-    world->body_bodyType(*this, type);
+    WORLD->body_bodyType(*THIS, type);
     return *this;
 }
-};
+
+uint32_t RigidBody::layerMask() const
+{
+    return WORLD->body_layerMask(*THIS);
+}
+
+RigidBody& RigidBody::layerMask(const uint32_t mask)
+{
+    WORLD->body_layerMask(*THIS, mask);
+    return *this;
+}
+}

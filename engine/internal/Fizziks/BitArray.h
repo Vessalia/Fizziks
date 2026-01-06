@@ -3,7 +3,7 @@
 #include <ostream>
 #include <bitset>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 static constexpr uint8_t BYTE_SIZE = 8;
 
@@ -89,4 +89,4 @@ inline std::ostream& operator<<(std::ostream& os, const BitArray& ba)
     }
     return os;
 };
-};
+}

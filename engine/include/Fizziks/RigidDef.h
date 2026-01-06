@@ -1,6 +1,6 @@
 #pragma once
-#include <Fizziks.h>
-#include <Shape.h>
+#include "Fizziks.h"
+#include "Shape.h"
 
 namespace Fizziks
 {
@@ -26,8 +26,8 @@ struct FIZZIKS_API BodyDef
 {
     uint32_t layermask = 0;
 
-    Vector2p initPosition = Vector2p::Zero();
-    Vector2p initVelocity = Vector2p::Zero();
+    Vec2 initPosition = { 0, 0 };
+    Vec2 initVelocity = { 0, 0 };
 
     val_t initRotation = 0;
     val_t initAngularVelocity = 0;
@@ -43,8 +43,8 @@ struct FIZZIKS_API BodyDef
 
     BodyType bodyType = BodyType::DYNAMIC;
 
-    std::vector<std::pair<Collider, Vector2p>> colliderDefs = {};
+    std::vector<std::pair<Collider, Vec2>> colliderDefs = {};
 };
 
 FIZZIKS_API Collider createCollider(const Shape& shape, const val_t mass, const val_t rotation);
-};
+}

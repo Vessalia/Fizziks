@@ -1,9 +1,10 @@
 #pragma once
+#include "Handle.h"
+
 #include <cstdint>
 #include <queue>
-#include <Handle.h>
 
-namespace Fizziks
+namespace Fizziks::internal
 {
 template<typename T>
 class Pool
@@ -70,4 +71,4 @@ public:
         for (uint32_t i = 0; i < slots.size(); ++i) free_indices.push(i);
     }
 };
-};
+}
