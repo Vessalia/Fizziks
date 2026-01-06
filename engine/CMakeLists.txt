@@ -13,5 +13,5 @@ target_include_directories(Fizziks PUBLIC include/Fizziks
 
 target_link_libraries(Fizziks PRIVATE Eigen)
 
-target_compile_features(Fizziks PUBLIC cxx_std_20)
+target_compile_features(Fizziks PRIVATE cxx_std_20)
 target_compile_definitions(Fizziks PRIVATE FIZZIKS_BUILDING_DLL)
