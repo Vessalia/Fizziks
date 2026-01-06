@@ -1,7 +1,8 @@
 #pragma once
+#include "Handle.h"
+
 #include <cstdint>
 #include <queue>
-#include <Handle.h>
 
 namespace Fizziks::internal
 {

@@ -1,8 +1,8 @@
 #pragma once
-#include <Fizziks.h>
-#include <RigidBody.h>
-#include <RigidDef.h>
-#include <Vec.h>
+#include "Fizziks.h"
+#include "RigidBody.h"
+#include "RigidDef.h"
+#include "Vec.h"
 
 #include <vector>
 #include <queue>

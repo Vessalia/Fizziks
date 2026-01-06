@@ -1,8 +1,8 @@
 #pragma once
-#include <Fizziks.h>
-#include <Shape.h>
-#include <Vec.h>
-#include <Ray.h>
+#include "Fizziks.h"
+#include "Shape.h"
+#include "Vec.h"
+#include "Ray.h"
 
 namespace Fizziks::internal
 {

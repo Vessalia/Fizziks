@@ -2,7 +2,7 @@
 
 // This file is the glue between the user and Eigen/GLM vector/matrix types.
 
-#include <Fizziks.h>
+#include "Fizziks.h"
 
 #ifdef FIZZIKS_USE_GLM
 #else

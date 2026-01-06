@@ -1,5 +1,6 @@
 #pragma once
-#include <Fizziks.h>
+#include "Fizziks.h"
+
 #include <cmath>
 
 namespace Fizziks
@@ -21,8 +22,8 @@ struct FIZZIKS_API Vec2
     Vec2 rotated(const val_t angle) const;
     Vec2& rotate(const val_t angle);
 
-    bool operator==(const Vec2& v) const { return x == v.x && y == v.y; };
-    bool operator!=(const Vec2& other) const { return !(*this == other); };
+    bool operator==(const Vec2&) const = default;
+    bool operator!=(const Vec2&) const = default;
 
     Vec2 operator+(const Vec2& other) const;
     Vec2 operator-(const Vec2& other) const;
@@ -60,8 +61,8 @@ struct FIZZIKS_API Mat2
         return mat;
     }
 
-    bool operator==(const Mat2& m) const { return m00 == m.m00 && m01 == m.m01 && m10 == m.m10 && m11 == m.m11; }
-    bool operator!=(const Mat2& other) const { return !(*this == other); }
+    bool operator==(const Mat2&) const = default;
+    bool operator!=(const Mat2&) const = default;
 
     Vec2 operator*(const Vec2& vec) const;
 };

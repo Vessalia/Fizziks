@@ -1,4 +1,5 @@
 #pragma once
+
 #include <inttypes.h>
 #include <functional>
 
@@ -10,7 +11,7 @@ struct ContactKey
     uint32_t collIdA, collIdB;
     uint32_t featureA, featureB;
 
-    bool operator==(const ContactKey&) const = default;
+    bool operator==(const ContactKey& ck) const = default;
 };
 }
 
