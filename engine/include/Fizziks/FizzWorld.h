@@ -21,7 +21,7 @@ public:
     Vec2 Gravity = {0, -9.81};
 
     FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timeStep);
-    FizzWorld() : FizzWorld(20, 20, 2, 5, 1 / 200.f) { }
+    FizzWorld() : FizzWorld(20, 20, 2, 5, 1 / 20.f) { }
     ~FizzWorld();
 
     RigidBody createBody(const BodyDef& def);
