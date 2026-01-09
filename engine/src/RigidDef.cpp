@@ -1,4 +1,4 @@
-#include "RigidDef.h"
+#include <Fizziks/RigidDef.h>
 
 namespace Fizziks 
 {

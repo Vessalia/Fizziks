@@ -1,7 +1,7 @@
-#include "RigidBody.h"
-#include "FizzWorld.h"
-#include "RigidBodyImpl.h"
-#include "FizzWorldImpl.h"
+#include <Fizziks/RigidBody.h>
+#include <Fizziks/FizzWorld.h>
+#include <Fizziks/RigidBodyImpl.h>
+#include <Fizziks/FizzWorldImpl.h>
 
 #define THIS (impl)
 #define WORLD (impl->world->impl)

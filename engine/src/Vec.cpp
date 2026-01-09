@@ -1,5 +1,5 @@
-#include "Vec.h"
-#include "VecMap.h"
+#include <Fizziks/Vec.h>
+#include <Fizziks/VecMap.h>
 
 namespace Fizziks
 {

@@ -1,5 +1,5 @@
-#include "Shape.h"
-#include "MathUtils.h"
+#include <Fizziks/Shape.h>
+#include <Fizziks/MathUtils.h>
 
 #include <algorithm>
 #include <array>

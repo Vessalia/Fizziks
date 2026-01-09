@@ -1,5 +1,5 @@
 #pragma once
-#include "Vec.h"
+#include <Fizziks/Vec.h>
 
 #include <limits>
 #include <cmath>

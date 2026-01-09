@@ -1,6 +1,6 @@
 #pragma once
-#include "Fizziks.h"
-#include "Vec.h"
+#include <Fizziks/Fizziks.h>
+#include <Fizziks/Vec.h>
 
 namespace Fizziks
 {

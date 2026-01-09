@@ -1,7 +1,7 @@
-#include "FizzWorld.h"
-#include "FizzWorldImpl.h"
-#include "MathUtils.h"
-#include "SimpleBP.h"
+#include <Fizziks/FizzWorld.h>
+#include <Fizziks/FizzWorldImpl.h>
+#include <Fizziks/MathUtils.h>
+#include <Fizziks/SimpleBP.h>
 
 #include <algorithm>
 
