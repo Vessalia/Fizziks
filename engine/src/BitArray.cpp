@@ -1,4 +1,4 @@
-#include "BitArray.h"
+#include <Fizziks/BitArray.h>
 
 namespace Fizziks::internal
 {

@@ -1,8 +1,8 @@
 #pragma once
-#include "RigidBodyImpl.h"
-#include "BroadPhase.h"
-#include "Handle.h"
-#include "ContactKey.h"
+#include <Fizziks/RigidBodyImpl.h>
+#include <Fizziks/BroadPhase.h>
+#include <Fizziks/Handle.h>
+#include <Fizziks/ContactKey.h>
 
 namespace Fizziks::internal
 {

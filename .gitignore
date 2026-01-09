@@ -461,3 +461,7 @@ FodyWeavers.xsd
 
 build/*
 .vscode
+
+dist/Fizziks/include
+dist/Fizziks/bin
+dist/Fizziks/lib

@@ -1,5 +1,5 @@
-#include "SimpleBP.h"
-#include "MathUtils.h"
+#include <Fizziks/SimpleBP.h>
+#include <Fizziks/MathUtils.h>
 
 namespace Fizziks::internal
 {

@@ -1,6 +1,6 @@
 #pragma once
-#include "Fizziks.h"
-#include "Broadphase.h"
+#include <Fizziks/Fizziks.h>
+#include <Fizziks/Broadphase.h>
 
 #include <unordered_map>
 

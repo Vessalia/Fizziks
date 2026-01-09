@@ -1,5 +1,5 @@
-#include "MathUtils.h"
-#include "Vec.h"
+#include <Fizziks/MathUtils.h>
+#include <Fizziks/Vec.h>
 
 namespace Fizziks
 {

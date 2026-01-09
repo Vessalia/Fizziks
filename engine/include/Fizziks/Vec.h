@@ -1,5 +1,5 @@
 #pragma once
-#include "Fizziks.h"
+#include <Fizziks/Fizziks.h>
 
 #include <cmath>
 

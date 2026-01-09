@@ -7,10 +7,10 @@
 #endif
 
 #if defined(_WIN32)
-    #if defined(FIZZIKS_BUILDING_DLL)
+    #if defined (FIZZIKS_BUILDING_DLL)
         #define FIZZIKS_API __declspec(dllexport)
     #else
-        #define FIZZIKS_API __declspec(dllimport)
+        #define FIZZIKS_API
     #endif
 #else  
     #define FIZZIKS_API __attribute__((visibility("default")))
