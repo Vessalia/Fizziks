@@ -39,6 +39,14 @@ cmake --build build
 
 ## Example Usage
 ```c++
+#include "Fizziks/Fizziks.h"
+#include "Fizziks/FizzWorld.h"
+#include "Fizziks/RigidBody.h"
+#include "Fizziks/RigidDef.h"
+#include "Fizziks/Shape.h"
+#include "Fizziks/Vec.h"
+#include "Fizziks/MathUtils.h"
+
 using namespace Fizziks;
 
 int main(int argc, char** argv) 
@@ -54,6 +62,12 @@ int main(int argc, char** argv)
     big.initPosition = { 20, 5 };
     big.initVelocity = { -3, 0 };
     bodies.push_back(world.createBody(big));
+
+    BodyDef stat;
+    stat.colliderDefs.push_back({ createCollider(createPolygon({ Vec2(0, 0), Vec2(0, 1), Vec2(1, 0) }, 1, deg2rad(10)), Vec2::Zero()) });
+    stat.BodyType = BodyType::STATIC;
+    stat.initPosition = { 10, 2 };
+    bodies.push_back(world.createBody(stat));
 
     float dt = 1 / 60.f;
 
