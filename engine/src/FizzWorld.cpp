@@ -22,9 +22,9 @@ const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
     BodyType::STATIC
 };
 
-FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timestep)
-    : unitsX(unitsX * worldScale)
-    , unitsY(unitsY * worldScale)
+FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep)
+    : unitsX(unitsX)
+    , unitsY(unitsY)
     , accumulator(0)
     , timestep(timestep)
     , broadphase(new SimpleBP())
@@ -657,8 +657,8 @@ void FizzWorldImpl::tick(const val_t dt, const Vec2& gravity)
 
 namespace Fizziks
 {
-FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timestep) 
-    : impl(new internal::FizzWorldImpl(unitsX, unitsY, worldScale, collisionIterations, timestep)) { }
+FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep) 
+    : impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep)) { }
 
 FizzWorld::~FizzWorld() { if (impl) { delete impl; } impl = nullptr;  }
 

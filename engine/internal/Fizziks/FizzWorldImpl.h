@@ -13,7 +13,7 @@ class FizzWorldImpl
     friend class RigidBodyImpl;
 
 private:
-    FizzWorldImpl(size_t unitsX, size_t unitsY, size_t worldScale, int collisionIterations, val_t timestep);
+    FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep);
     ~FizzWorldImpl();
 
     size_t currstep = 0;
