@@ -26,7 +26,7 @@ Vec2 getCentroid(const std::vector<Vec2>& vertices)
     return area != 0 ? centroid / (3 * area) : Vec2::Zero();
 }
 
-Shape createCircle(const val_t radius)
+Shape createCircle(val_t radius)
 {
     return { ShapeType::CIRCLE, Circle{ radius } };
 }
@@ -52,7 +52,13 @@ Shape createPolygon(const std::vector<Vec2>& vertices)
     {
         vert -= centroid;
     }
-    return { ShapeType::POLYGON, Polygon{ verts } };
+
+    val_t effRadius = 0;
+    for (auto& vert : verts)
+    {
+        effRadius = std::max(effRadius, vert.norm());
+    }
+    return { ShapeType::POLYGON, Polygon{ verts, effRadius } };
 }
 
 AABB createAABB(val_t width, val_t height, const Vec2& offset)
@@ -60,7 +66,7 @@ AABB createAABB(val_t width, val_t height, const Vec2& offset)
     return { width / 2, height / 2, offset };
 }
 
-val_t getMoI(const Shape& shape, const val_t mass)
+val_t getMoI(const Shape& shape, val_t mass)
 {
     val_t MoI = 0;
     if (shape.type == ShapeType::CIRCLE)
@@ -98,11 +104,32 @@ val_t getMoI(const Shape& shape, const val_t mass)
     return MoI;
 }
 
-AABB getInscribingAABB(const Shape& s, const Vec2& centroid, val_t rot)
+AABB getEncapsulatingAABBFast(const Shape& s)
+{
+    val_t rad = 0;
+    if (s.type == ShapeType::POLYGON)
+    {
+        rad = std::get<Circle>(s.data).radius;
+    }
+    else if (s.type == ShapeType::CIRCLE)
+    {
+        rad = std::get<Polygon>(s.data).effRadius;
+    }
+
+    AABB aabb;
+    if (!rad) return aabb;
+
+    aabb.hw  = rad;
+    aabb.hh = rad;
+
+    return aabb;
+}
+
+AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
 {
     AABB aabb;
 
-    if(s.type == ShapeType::POLYGON)
+    if (s.type == ShapeType::POLYGON)
     {
         auto& polygon = std::get<Polygon>(s.data);
 
@@ -116,34 +143,64 @@ AABB getInscribingAABB(const Shape& s, const Vec2& centroid, val_t rot)
             max.y = std::max(max.y, transformed.y);
         }
         
-        aabb.halfWidth  = (max.x - min.x) / 2;
-        aabb.halfHeight = (max.y - min.y) / 2;
+        aabb.hw  = (max.x - min.x) / 2;
+        aabb.hh = (max.y - min.y) / 2;
 
         aabb.offset = (min + max) / 2 - centroid;
     }
-    else if(s.type == ShapeType::CIRCLE)
+    else if (s.type == ShapeType::CIRCLE)
     {
         auto& circle = std::get<Circle>(s.data);
-        aabb.halfWidth  = circle.radius;
-        aabb.halfHeight = circle.radius;
-
-        aabb.offset = Vec2::Zero();
+        aabb.hw  = circle.radius;
+        aabb.hh = circle.radius;
     }
 
     return aabb;
 }
 
-bool AABBOverlapsAABB(const AABB& r1, const Vec2& p1, const AABB& r2, const Vec2& p2)
+AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight = false)
 {
-    bool overlapX = abs(p1.x - p2.x) <= r1.halfWidth  + r2.halfWidth;
-    bool overlapY = abs(p1.y - p2.y) <= r1.halfHeight + r2.halfHeight;
+    if (tight) return getEncapsulatingAABBTight(s, centroid, rot);
+    else       return getEncapsulatingAABBFast(s);
+}
+
+bool overlaps(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
+{
+    bool overlapX = abs(p1.x - p2.x) <= a.hw  + b.hw;
+    bool overlapY = abs(p1.y - p2.y) <= a.hh + b.hh;
     return overlapX && overlapY;
 }
-bool AABBContains(const AABB& aabb, const Vec2& pos, const Vec2& point)
+bool contains(const AABB& a, const Vec2& pos, const Vec2& point)
 {
-    bool overlapX = abs(pos.x - point.x) <= aabb.halfWidth;
-    bool overlapY = abs(pos.y - point.y) <= aabb.halfHeight;
+    bool overlapX = abs(pos.x - point.x) <= a.hw;
+    bool overlapY = abs(pos.y - point.y) <= a.hh;
     return overlapX && overlapY;
+}
+bool contains(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
+{
+    bool containX = abs(p2.x - p1.x) + b.hw <= a.hw;
+    bool containY = abs(p2.y - p1.y) + b.hh <= a.hh;
+    return containX && containY;
+}
+AABB merge(const AABB& a, const AABB& b)
+{
+    return 
+    { 
+        std::max(a.hw,  b.hw), 
+        std::max(a.hh, b.hh)
+    };
+}
+std::pair<AABB, Vec2> merge(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
+{
+    val_t minX = std::min(p1.x - a.hw, p2.x - b.hw);
+    val_t minY = std::min(p1.y - a.hh, p2.y - b.hh);
+    val_t maxX = std::max(p1.x + a.hw, p2.x + b.hw);
+    val_t maxY = std::max(p1.y + a.hh, p2.y + b.hh);
+
+    AABB aabb = { (maxX - minX) / 2, (maxY - minY) / 2 };
+    Vec2 pos = Vec2((minX + maxX) / 2, (minY + maxY) / 2);
+
+    return { aabb, pos };
 }
 
 #pragma region CSO support
@@ -243,7 +300,7 @@ void enforceCCWWinding(Simplex& simplex)
     }
 }
 
-Simplex reduceSimplex(const Simplex& simplex, Vec2* dir)
+Simplex reduceSimplex(const Simplex& simplex, Vec2& dir)
 {
     if (simplex.size() == 1) return simplex;
     else if (simplex.size() == 2)
@@ -256,12 +313,12 @@ Simplex reduceSimplex(const Simplex& simplex, Vec2* dir)
         Vec2 AB = B - A;
         if (AB.dot(-A) > 0)
         {
-            *dir = lefttriplecross(AB, -A, AB);
+            dir = lefttriplecross(AB, -A, AB);
             return simplex;
         }
         else
         {
-            *dir = -A;
+            dir = -A;
             return { simplex[1] };
         }
     }
@@ -278,17 +335,17 @@ Simplex reduceSimplex(const Simplex& simplex, Vec2* dir)
         {
             if (AC.dot(-A) > 0) 
             {
-                *dir = lefttriplecross(AC, -A, AC); // this is the same value as our outer if, but is more 3D friendly since this may point out of the trangles plane
+                dir = lefttriplecross(AC, -A, AC); // this is the same value as our outer if, but is more 3D friendly since this may point out of the trangles plane
                 return { simplex[0], simplex[2] };
             }
             else if (AB.dot(-A) > 0) // it is possible with a very wide angle we can be infront of AB
             {
-                *dir = lefttriplecross(AB, -A, AB);
+                dir = lefttriplecross(AB, -A, AB);
                 return { simplex[1], simplex[2] };
             }
             else
             {
-                *dir = -A;
+                dir = -A;
                 return { simplex[2] };
             }
         }
@@ -297,19 +354,19 @@ Simplex reduceSimplex(const Simplex& simplex, Vec2* dir)
         {
             if (AB.dot(-A) > 0)
             {
-                *dir = lefttriplecross(AB, -A, AB);
+                dir = lefttriplecross(AB, -A, AB);
                 return { simplex[1], simplex[2] };
             }
             else
             {
-                *dir = -A;
+                dir = -A;
                 return { simplex[2] };
             }
         }
         // we're inside, the origin is contained!
         else
         {
-            *dir = Vec2::Zero();
+            dir = Vec2::Zero();
             return simplex;
         }
     }
@@ -342,7 +399,7 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, val_t r1
         if (point.CSO.dot(direction) <= 0) return { false, {} }; // didn't pass origin -> it must be outside
         simplex.push_back(point); // need to insert at correct index
         enforceCCWWinding(simplex);
-        simplex = reduceSimplex(simplex, &direction);
+        simplex = reduceSimplex(simplex, direction);
         if (direction == Vec2::Zero()) return { true, simplex };
     }
 
@@ -408,7 +465,7 @@ Simplex blowupSimplex(const Simplex& simplex,
 }
 
 // undefined cases for when point is outside of the simplex
-std::tuple<std::vector<size_t>, Vec2> closestFacet(const Simplex& simplex, const Vec2& point)
+std::pair<std::vector<size_t>, Vec2> closestFacet(const Simplex& simplex, const Vec2& point)
 {
     if (simplex.size() < 3) return { { }, Vec2::Zero() }; // should never happen, will crash EPA
 

@@ -84,7 +84,7 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
-- Improve broadphase from brute-force to BVH or dynamic AABB tree (like Box2D)
+- Improve broadphase from brute-force to BVH or dynamic AABB tree (linked vs cache friendly array)
 - RigidBody layermasking
 - Logging (currently none)
 - Nearphase groups for multi-threading

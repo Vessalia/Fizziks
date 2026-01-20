@@ -27,7 +27,7 @@ CollisionPairs& SimpleBP::computePairs(void)
             auto [idB, entryB] = *itB;
             auto [aabbB, posB] = entryB;
 
-            if(AABBOverlapsAABB(aabbA, posA, aabbB, posB))
+            if(overlaps(aabbA, posA, aabbB, posB))
                 pairs.push_back({idA, idB});
         }
     }
@@ -40,7 +40,7 @@ uint32_t SimpleBP::pick(const Vec2& point) const
     for (const auto& [id, entry] : bodies)
     {
         auto [aabb, pos] = entry;
-        if (AABBContains(aabb, pos, point))
+        if (contains(aabb, pos, point))
             return id;
     }
 
@@ -53,7 +53,7 @@ std::vector<uint32_t> SimpleBP::query(const AABB& aabb, const Vec2& pos) const
     for (const auto& [id, entry] : bodies)
     {
         auto [o_aabb, o_pos] = entry;
-        if(AABBOverlapsAABB(aabb, pos, o_aabb, o_pos))
+        if(overlaps(aabb, pos, o_aabb, o_pos))
             IDs.push_back(id);
     }
 
@@ -72,8 +72,8 @@ RaycastResult SimpleBP::raycast(const Ray& _ray) const
     for(const auto& [id, entry] : bodies)
     {
         auto [aabb, pos] = entry;
-        Vec2 low  = pos - Vec2(aabb.halfWidth, aabb.halfHeight); // bottom left
-        Vec2 high = pos + Vec2(aabb.halfWidth, aabb.halfHeight); // top right
+        Vec2 low  = pos - Vec2(aabb.hw, aabb.hh); // bottom left
+        Vec2 high = pos + Vec2(aabb.hw, aabb.hh); // top right
 
         // x slab intersections
         val_t tminX, tmaxX;

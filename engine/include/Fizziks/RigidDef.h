@@ -13,6 +13,9 @@ struct FIZZIKS_API Collider
     // Geometry-related part
     val_t rotation;
     Shape shape;
+
+    // World-related part
+    Vec2 pos;
 };
 
 enum class FIZZIKS_API BodyType
@@ -24,7 +27,7 @@ enum class FIZZIKS_API BodyType
 
 struct FIZZIKS_API BodyDef
 {
-    uint32_t layermask = 0;
+    uint32_t layer = 0;
 
     Vec2 initPosition = { 0, 0 };
     Vec2 initVelocity = { 0, 0 };
@@ -43,8 +46,8 @@ struct FIZZIKS_API BodyDef
 
     BodyType bodyType = BodyType::DYNAMIC;
 
-    std::vector<std::pair<Collider, Vec2>> colliderDefs = {};
+    std::vector<Collider> colliderDefs = {};
 };
 
-FIZZIKS_API Collider createCollider(const Shape& shape, const val_t mass, const val_t rotation);
+FIZZIKS_API Collider createCollider(const Shape& shape, val_t mass, val_t rotation, const Vec2& pos = Vec2::Zero());
 }

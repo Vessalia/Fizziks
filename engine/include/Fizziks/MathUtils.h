@@ -9,7 +9,7 @@ namespace Fizziks
 constexpr val_t PI = 3.141592653589793238462643383279502884197169399375105820974944592307816406L;
 constexpr val_t TWO_PI = 2 * PI;
 
-inline val_t clamp_angle(const val_t angle)
+inline val_t clamp_angle(val_t angle)
 {
     return angle - TWO_PI * std::floor(angle / TWO_PI);
 }
@@ -38,13 +38,13 @@ T inline constexpr fizzmax() { return std::numeric_limits<T>::max(); }
 template<typename T>
 T inline constexpr fizzmin() { return std::numeric_limits<T>::min(); }
 
-inline constexpr val_t deg2rad(const val_t deg)
+inline constexpr val_t deg2rad(val_t deg)
 {
     constexpr val_t factor = PI / 180;
     return deg * factor;
 }
 
-inline constexpr val_t rad2deg(const val_t rad)
+inline constexpr val_t rad2deg(val_t rad)
 {
     constexpr val_t factor = 180 / PI;
     return rad * factor;

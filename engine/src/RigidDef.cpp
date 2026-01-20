@@ -2,13 +2,14 @@
 
 namespace Fizziks 
 {
-Collider createCollider(const Shape& shape, const val_t mass, const val_t rotation)
+Collider createCollider(const Shape& shape, val_t mass, val_t rotation, const Vec2& pos)
 {
     Collider collider;
     collider.mass = mass;
     collider.shape = shape;
     collider.rotation = rotation;
     collider.MoI = getMoI(shape, mass);
+    collider.pos = pos;
 
     return collider;
 }

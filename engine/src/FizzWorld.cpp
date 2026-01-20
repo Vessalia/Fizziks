@@ -1,7 +1,9 @@
 #include <Fizziks/FizzWorld.h>
 #include <Fizziks/FizzWorldImpl.h>
 #include <Fizziks/MathUtils.h>
+
 #include <Fizziks/SimpleBP.h>
+#include <Fizziks/BVH.h>
 
 #include <algorithm>
 
@@ -22,13 +24,23 @@ const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
     BodyType::STATIC
 };
 
-FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep)
+FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel)
     : unitsX(unitsX)
     , unitsY(unitsY)
     , accumulator(0)
     , timestep(timestep)
-    , broadphase(new SimpleBP())
-    , collisionIterations(collisionIterations) { }
+    , collisionIterations(collisionIterations) 
+    {
+        switch (accel)
+        {
+            case FizzWorld::AccelStruct::SIMPLE: 
+                broadphase = new SimpleBP();
+                break;
+            case FizzWorld::AccelStruct::BVH:
+                broadphase = new BVH();
+                break;
+        }
+    }
 
 FizzWorldImpl::~FizzWorldImpl() { delete broadphase; }
 
@@ -43,15 +55,15 @@ void FizzWorldImpl::apply_force(const RigidBodyImpl& rb, const Vec2& force, cons
     }
 }
 
-void FizzWorldImpl::add_collider(const RigidBodyImpl& rb, const Collider& collider, const Vec2& at)
+void FizzWorldImpl::add_collider(const RigidBodyImpl& rb, const Collider& collider)
 {
     BodyData* body = get_body(rb);
-    if(body) add_collider(body, collider, at);
+    if(body) add_collider(body, collider);
 }
 
-void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider, const Vec2& _at)
+void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 {
-    body->colliders.push_back({ collider, _at });
+    body->colliders.push_back(collider);
     
     if(body->bodyType != BodyType::STATIC)
     {
@@ -60,18 +72,18 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider, const
     }
 
     Vec2 centroid = Vec2::Zero();
-    for(auto [coll, at] : body->colliders)
+    for(auto coll : body->colliders)
     {
-        centroid += coll.mass * at;
+        centroid += coll.mass * coll.pos;
     }
 
     body->centroid = centroid * body->invMass;
 
     val_t MoI = 0;
-    for(auto [coll, at]: body->colliders)
+    for(auto coll : body->colliders)
     {
         // parallel axis theorem
-        Vec2 r = centroid - at;
+        Vec2 r = centroid - coll.pos;
         MoI += coll.MoI + coll.mass * r.dot(r);
     }
 
@@ -79,7 +91,7 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider, const
     body->invMoI = 1 / MoI;
 }
 
-std::vector<std::pair<Collider, Vec2>> FizzWorldImpl::body_colliders(const RigidBodyImpl& rb) const
+std::vector<Collider> FizzWorldImpl::body_colliders(const RigidBodyImpl& rb) const
 {
     auto* body = get_body(rb);
     if (body) return body->colliders;
@@ -98,20 +110,20 @@ const AABB FizzWorldImpl::compute_bounds(const BodyData* body) const
     if (body->colliders.size() == 0) return bounds;
 
     Vec2 min = vec_max(), max = vec_min();
-    for (auto [collider, at] : body->colliders)
+    for (auto collider : body->colliders)
     {
-        AABB minorBounds = getInscribingAABB(collider.shape, at, body->rotation);
-        Vec2 pos = body->position + at + minorBounds.offset;
+        AABB minorBounds = getEncapsulatingAABB(collider.shape, collider.pos, body->rotation);
+        Vec2 pos = body->position + collider.pos + minorBounds.offset;
 
-        min.x = std::min(min.x, pos.x - minorBounds.halfWidth);
-        min.y = std::min(min.y, pos.y - minorBounds.halfHeight);
+        min.x = std::min(min.x, pos.x - minorBounds.hw);
+        min.y = std::min(min.y, pos.y - minorBounds.hh);
 
-        max.x = std::max(max.x, pos.x + minorBounds.halfWidth);
-        max.y = std::max(max.y, pos.y + minorBounds.halfHeight);
+        max.x = std::max(max.x, pos.x + minorBounds.hw);
+        max.y = std::max(max.y, pos.y + minorBounds.hh);
     }
-    bounds.halfWidth  = (max.x - min.x) / 2;
-    bounds.halfHeight = (max.y - min.y) / 2;
-    bounds.offset = min + Vec2(bounds.halfWidth, bounds.halfHeight) - (body->position + body->centroid);
+    bounds.hw  = (max.x - min.x) / 2;
+    bounds.hh = (max.y - min.y) / 2;
+    bounds.offset = min + Vec2(bounds.hw, bounds.hh) - (body->position + body->centroid);
 
     return bounds;
 }
@@ -142,7 +154,7 @@ void FizzWorldImpl::set_body(const RigidBodyImpl& rb, const BodyDef& def)
 
 void FizzWorldImpl::set_body(BodyData* body, const BodyDef& def)
 {
-    body->layermask = def.layermask;
+    body->layer = def.layer;
 
     body->position = def.initPosition;
     body->velocity = def.initVelocity;
@@ -157,9 +169,9 @@ void FizzWorldImpl::set_body(BodyData* body, const BodyDef& def)
     body->mass = 0;
     body->MoI = 0;
 
-    for(auto [collider, at] : def.colliderDefs)
+    for(auto collider : def.colliderDefs)
     {
-        add_collider(body, collider, at);
+        add_collider(body, collider);
     }
 
     if(def.bodyType == BodyType::STATIC)
@@ -197,7 +209,7 @@ val_t FizzWorldImpl::body_rotation(const RigidBodyImpl& rb) const
     if (body) return body->rotation;
     else      return null_body.rotation;
 }
-void FizzWorldImpl::body_rotation(const RigidBodyImpl& rb, const val_t rot)
+void FizzWorldImpl::body_rotation(const RigidBodyImpl& rb, val_t rot)
 {
     auto* body = get_body(rb);
     if (body) body->rotation = clamp_angle(rot);
@@ -228,7 +240,7 @@ val_t FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb) const
     if (body) return body->angularVelocity;
     else      return null_body.angularVelocity;
 }
-void FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb, const val_t& angVel) 
+void FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb, val_t angVel) 
 { 
     auto* body = get_body(rb);
     if (body) body->angularVelocity = angVel;
@@ -271,16 +283,16 @@ void FizzWorldImpl::body_bodyType(const RigidBodyImpl& rb, const BodyType& type)
     if (body) body->bodyType = type;
 }
 
-uint32_t FizzWorldImpl::body_layerMask(const RigidBodyImpl& rb) const
+uint32_t FizzWorldImpl::body_layer(const RigidBodyImpl& rb) const
 {
     auto* body = get_body(rb);
-    if (body) return body->layermask;
-    else      return null_body.layermask;
+    if (body) return body->layer;
+    else      return null_body.layer;
 }
-void FizzWorldImpl::body_layerMask(const RigidBodyImpl& rb, const uint32_t mask)
+void FizzWorldImpl::body_layer(const RigidBodyImpl& rb, uint32_t layer)
 {
     auto* body = get_body(rb);
-    if (body) body->layermask = mask;
+    if (body) body->layer = layer;
 }
 
 Vec2 FizzWorldImpl::get_worldPos(const BodyData& body, const Vec2& colliderPos) const
@@ -293,7 +305,7 @@ val_t FizzWorldImpl::get_worldRotation(const BodyData& body, const Collider& col
     return clamp_angle(body.rotation + collider.rotation);
 }
 
-FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(const size_t idA, const size_t idB) const
+FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t idB) const
 {
     CollisionManifold manifold;
     manifold.bodyAId = idA;
@@ -303,15 +315,15 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(const size_t idA, c
     const auto& bodyB = activeBodies[idB];
     for (uint32_t i = 0; i < bodyA.colliders.size(); ++i)
     {
-        const auto& [s1, p1] = bodyA.colliders[i];
-        Vec2 posA = get_worldPos(bodyA, p1);
-        val_t rotA = get_worldRotation(bodyA, s1);
+        const auto& coll1 = bodyA.colliders[i];
+        Vec2 posA = get_worldPos(bodyA, coll1.pos);
+        val_t rotA = get_worldRotation(bodyA, coll1);
         for (uint32_t j = 0; j < bodyB.colliders.size(); ++j)
         {
-            const auto& [s2, p2] = bodyB.colliders[j];
-            Vec2 posB = get_worldPos(bodyB, p2);
-            val_t rotB = get_worldRotation(bodyB, s2);
-            Contact contact = getShapeContact(s1.shape, posA, rotA, s2.shape, posB, rotB);
+            const auto& coll2 = bodyB.colliders[j];
+            Vec2 posB = get_worldPos(bodyB, coll2.pos);
+            val_t rotB = get_worldRotation(bodyB, coll2);
+            Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
 
             if (contact.overlaps) manifold.contacts.push_back({ i, j, contact } );
         }
@@ -353,7 +365,7 @@ val_t warmStart = 0.75;
 // JM^-1    = [-n^TMa^-1 -(rA x n)^TIa^-1 n^TMb^-1 (rB x n)^TIb^-1]
 // JM^-1J^T = |n|^2Ma^-1 + |rA x n|^2 Ia^-1 + |n|^2Mb^-1 + |rB x n|^2 Ib^-1
 //          = Ma^-1 + |rA x n|^2 Ia^-1 + Mb^-1 + |rB x n|^2 Ib^-1
-FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(const uint32_t idA, const uint32_t idB, const uint32_t collIdA, const uint32_t collIdB, const Contact& contact, const val_t dt)
+FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA, uint32_t idB, uint32_t collIdA, uint32_t collIdB, const Contact& contact, val_t dt)
 {
     CollisionResolution resolution;
     resolution.bodyAId = idA;
@@ -513,7 +525,7 @@ void FizzWorldImpl::solve_contactConstraints(CollisionResolution& resolution)
     solve_frictionConstraint(resolution);
 }
 
-void FizzWorldImpl::resolve_collisions(const val_t dt)
+void FizzWorldImpl::resolve_collisions(val_t dt)
 {
     if (collisionManifolds.size() == 0) return;
 
@@ -546,7 +558,7 @@ void FizzWorldImpl::resolve_collisions(const val_t dt)
     collisionResolutions.clear();
 }
 
-void FizzWorldImpl::handle_collisions(const val_t dt)
+void FizzWorldImpl::handle_collisions(val_t dt)
 {
     if (currstep == 789)
     {
@@ -557,7 +569,7 @@ void FizzWorldImpl::handle_collisions(const val_t dt)
     resolve_collisions(dt);
 }
 
-void FizzWorldImpl::simulate_bodies(const val_t dt, const Vec2& gravity)
+void FizzWorldImpl::simulate_bodies(val_t dt, const Vec2& gravity)
 {
     for (size_t ID = 0; ID < activeBodies.size(); ++ID)
     {
@@ -640,7 +652,7 @@ RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
     return { handle, parent };
 }
 
-void FizzWorldImpl::tick(const val_t dt, const Vec2& gravity)
+void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 {
     accumulator += dt;
     while (accumulator >= timestep)
@@ -657,8 +669,8 @@ void FizzWorldImpl::tick(const val_t dt, const Vec2& gravity)
 
 namespace Fizziks
 {
-FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep) 
-    : impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep)) { }
+FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel) 
+    : impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep, accel)) { }
 
 FizzWorld::~FizzWorld() { if (impl) { delete impl; } impl = nullptr;  }
 
@@ -680,7 +692,7 @@ Vec2 FizzWorld::worldScale() const
     return { (val_t)impl->unitsX, (val_t)impl->unitsY };
 }
 
-void FizzWorld::tick(const val_t dt)
+void FizzWorld::tick(val_t dt)
 {
     impl->tick(dt, Gravity);
 }
