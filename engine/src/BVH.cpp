@@ -1,4 +1,7 @@
 #include <Fizziks/BVH.h>
+#include <Fizziks/MathUtils.h>
+
+#include <queue>
 
 namespace Fizziks::internal
 {
@@ -23,23 +26,79 @@ uint32_t BVH::allocateInternalNode()
     return index;
 }
 
-val_t BVH::cost(uint32_t from)
+val_t BVH::cost() const
 {
-    return nodes[from].bounds.first.area();
+    val_t cost = 0;
+    for (int i = 0; i < nodes.size(); ++i)
+    {
+        if (!nodes[i].isleaf && i != root) cost += nodes[i].bounds.first.area();
+    }
+
+    return cost;
 }
 
-uint32_t pickBestSibling(uint32_t nodeIndex)
+val_t BVH::deltaCost(uint32_t sibling, uint32_t node) const
 {
-    return 0;
+    return mergeBounds(sibling, node).first.area() - nodes[sibling].bounds.first.area();
+}
+
+BVH::Entry BVH::mergeBounds(uint32_t node1, uint32_t node2) const
+{
+    const auto& [b1, p1] = nodes[node1].bounds;
+    const auto& [b2, p2] = nodes[node2].bounds;
+    return merge(b1, p1, b2, p2);
+}
+
+uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
+{
+    struct Candidate
+    {
+        uint32_t index;
+        val_t directCost;
+        val_t inheritedCost;
+
+        bool operator<(const Candidate& other) const { return cost() > other.cost(); } // want to prioritize small costs
+        val_t cost() const { return directCost + inheritedCost; }
+    };
+
+    uint32_t bestSibling = root;
+    val_t bestCost = fizzmax<val_t>();
+    val_t rootCost = mergeBounds(root, nodeIndex).first.area();
+    std::priority_queue<Candidate> pq; pq.push({ root, rootCost, 0 });
+
+    while (!pq.empty())
+    {
+        Candidate c = pq.top(); pq.pop();
+        val_t cost = c.cost();
+        if (cost >= bestCost) continue; // this is branch and bound
+        
+        bestSibling = c.index;
+        bestCost = cost;
+
+        const Node& sibling = nodes[bestSibling];
+        if (!sibling.isleaf)
+        {
+            const uint32_t& c1 = sibling.child1;
+            const uint32_t& c2 = sibling.child2;
+            val_t inherited = c.inheritedCost + deltaCost(c.index, nodeIndex);
+            val_t cost1 = mergeBounds(c1, nodeIndex).first.area();
+            val_t cost2 = mergeBounds(c2, nodeIndex).first.area();
+            // since we don't know the cost of descending either child, we can't prune either here
+            // ex: child1 is a node, child2 is a leaf, cost1 > cost2, but eventually the new leaf has
+            // a lower cost in child1s subtree 
+            if (cost1 + inherited < bestCost) pq.push({ c1, cost1, inherited });
+            if (cost2 + inherited < bestCost) pq.push({ c2, cost2, inherited });
+        }
+    }
+
+    return bestSibling;
 }
 
 void BVH::refit(uint32_t from)
 {
     for (uint32_t i = from; i != INVALID; i = nodes[i].parent) 
     {
-        const auto& [b1, p1] = nodes[nodes[i].child1].bounds;
-        const auto& [b2, p2] = nodes[nodes[i].child2].bounds;
-        const Entry newBounds = merge(b1, p1, b2, p2);
+        const Entry newBounds = mergeBounds(nodes[i].child1, nodes[i].child2);
         if (newBounds == nodes[i].bounds) break;
         else nodes[i].bounds = newBounds;
     }
@@ -71,7 +130,7 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
     int newParent = allocateInternalNode();
     nodes[newParent].parent = oldParent;
     const auto& [siblingBox, siblingAt] = nodes[sibling].bounds;
-    nodes[newParent].bounds = merge(aabb, at, siblingBox, siblingAt);
+    nodes[newParent].bounds = merge(entry.first, at, siblingBox, siblingAt);
     
     if (oldParent != BVH::INVALID) // the sibling wasn't the root
     {
@@ -203,14 +262,32 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
     else if (node.parent == root)
     {
         Node& parent = nodes[node.parent];
-        const auto& [b1, p1] = nodes[parent.child1].bounds;
-        const auto& [b2, p2] = nodes[parent.child2].bounds;
-        parent.bounds = merge(b1, p1, b2, p2);
+        parent.bounds = mergeBounds(parent.child1, parent.child2);
     }
     else
     {
         remove(ID);
         add(ID, aabb, at);
     }
+}
+
+CollisionPairs& BVH::computePairs(void)
+{
+    return {};
+}
+
+uint32_t BVH::pick(const Vec2& point) const
+{
+    return 0;
+}
+
+std::vector<uint32_t> BVH::query(const AABB& aabb, const Vec2& pos) const
+{
+    return {};
+}
+
+RaycastResult BVH::raycast(const Ray& ray) const
+{
+    return {};
 }
 }

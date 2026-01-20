@@ -40,8 +40,10 @@ private:
 
     uint32_t allocateLeaf(uint32_t ID, const Entry& entry);
     uint32_t allocateInternalNode();
-    val_t cost(uint32_t from);
-    uint32_t pickBestSibling(uint32_t nodeIndex);
+    val_t cost() const;
+    val_t deltaCost(uint32_t sibling, uint32_t node) const;
+    Entry mergeBounds(uint32_t node1, uint32_t node2) const;
+    uint32_t pickBestSibling(uint32_t nodeIndex) const;
     void removeNodeAt(uint32_t index);
     void refit(uint32_t from);
 };
