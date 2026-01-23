@@ -27,18 +27,23 @@ uint32_t BVH::allocateInternalNode()
 
 val_t BVH::cost() const
 {
-    val_t cost = 0;
+    val_t result = 0;
     for (int i = 0; i < nodes.size(); ++i)
     {
-        if (!nodes[i].isleaf && i != root) cost += nodes[i].bounds.first.area();
+        if (!nodes[i].isleaf && i != root) result += cost(nodes[i].bounds);
     }
 
-    return cost;
+    return result;
+}
+
+val_t BVH::cost(const Entry& entry) const
+{
+    return entry.first.perimeter();
 }
 
 val_t BVH::deltaCost(uint32_t sibling, uint32_t node) const
 {
-    return mergeBounds(sibling, node).first.area() - nodes[sibling].bounds.first.area();
+    return cost(mergeBounds(sibling, node)) - cost(nodes[sibling].bounds);
 }
 
 BVH::Entry BVH::mergeBounds(uint32_t node1, uint32_t node2) const
@@ -46,6 +51,11 @@ BVH::Entry BVH::mergeBounds(uint32_t node1, uint32_t node2) const
     const auto& [b1, p1] = nodes[node1].bounds;
     const auto& [b2, p2] = nodes[node2].bounds;
     return merge(b1, p1, b2, p2);
+}
+
+BVH::Entry BVH::mergeBounds(const Entry& e1, const Entry& e2) const
+{
+    return merge(e1.first, e1.second, e2.first, e2.second);
 }
 
 uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
@@ -62,17 +72,17 @@ uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
 
     uint32_t bestSibling = root;
     val_t bestCost = fizzmax<val_t>();
-    val_t rootCost = mergeBounds(root, nodeIndex).first.area();
+    val_t rootCost = cost(mergeBounds(root, nodeIndex));
     std::priority_queue<Candidate> pq; pq.push({ root, rootCost, 0 });
 
     while (!pq.empty())
     {
         Candidate c = pq.top(); pq.pop();
-        val_t cost = c.cost();
-        if (cost >= bestCost) continue; // this is branch and bound
+        val_t currCost = c.cost();
+        if (currCost >= bestCost) continue; // this is branch and bound
         
         bestSibling = c.index;
-        bestCost = cost;
+        bestCost = currCost;
 
         const Node& sibling = nodes[bestSibling];
         if (!sibling.isleaf)
@@ -80,8 +90,8 @@ uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
             const uint32_t& c1 = sibling.child1;
             const uint32_t& c2 = sibling.child2;
             val_t inherited = c.inheritedCost + deltaCost(c.index, nodeIndex);
-            val_t cost1 = mergeBounds(c1, nodeIndex).first.area();
-            val_t cost2 = mergeBounds(c2, nodeIndex).first.area();
+            val_t cost1 = cost(mergeBounds(c1, nodeIndex));
+            val_t cost2 = cost(mergeBounds(c2, nodeIndex));
             // since we don't know the cost of descending either child, we can't prune either here
             // ex: child1 is a node, child2 is a leaf, cost1 > cost2, but eventually the new leaf has
             // a lower cost in child1s subtree 
@@ -93,16 +103,76 @@ uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
     return bestSibling;
 }
 
-void BVH::refit(uint32_t from)
+void BVH::refitAdd(uint32_t leaf)
+{
+    for (uint32_t i = nodes[leaf].parent; i != INVALID; i = nodes[i].parent)
+    {
+        nodes[i].bounds = mergeBounds(nodes[i].child1, nodes[i].child2);
+        rotate(i);
+        if (nodes[i].parent != INVALID)
+        {
+            const Node& G = nodes[nodes[i].parent];
+            uint32_t j = i == G.child1 ? G.child2 : G.child1;
+            rotate(j);
+        }
+    }
+}
+
+void BVH::refitRemove(uint32_t from)
 {
     for (uint32_t i = from; i != INVALID; i = nodes[i].parent) 
     {
         if (nodes[i].isleaf) continue;
 
         const Entry newBounds = mergeBounds(nodes[i].child1, nodes[i].child2);
-        if (newBounds == nodes[i].bounds) break;
-        else nodes[i].bounds = newBounds;
+        nodes[i].bounds = newBounds;
     }
+}
+
+/*
+   G
+  / \
+ D    A
+/ \  / \
+...  B  C
+
+From A, can swap D and B, or D and C.
+Find what has the min cost on A.
+Only As bounds change
+*/
+void BVH::rotate(uint32_t index)
+{
+    Node& A = nodes[index];
+    if (A.isleaf || A.parent == INVALID) return; // no children to rotate for a leaf, or a tree of depth 1
+
+    Node& G = nodes[A.parent];
+    uint32_t& other = G.child1 == index ? G.child2 : G.child1;
+    Node& D = nodes[other];
+    Node& B = nodes[A.child1];
+    Node& C = nodes[A.child2];
+
+    val_t AO = cost(A.bounds);
+    val_t DB = cost(mergeBounds(D.bounds, B.bounds));
+    val_t DC = cost(mergeBounds(D.bounds, C.bounds));
+
+    if (AO <= DB && AO <= DC)
+    {
+        return;
+    }
+    else if (DB <= DC)
+    {
+        C.parent = A.parent;
+        D.parent = B.parent;
+        std::swap(A.child2, other);
+    }
+    else
+    {
+        B.parent = A.parent;
+        D.parent = C.parent;
+        std::swap(A.child1, other);
+    }
+
+    A.bounds = mergeBounds(A.child1, A.child2);
 }
 
 constexpr val_t FAT_FACTOR = 1.05;
@@ -151,7 +221,7 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
     nodes[leaf].parent = newParent;
 
     // Stage 3: walk back up the tree refitting AABBs
-    refit(nodes[newParent].parent);
+    refitAdd(leaf);
 
     return ID;
 }
@@ -233,7 +303,7 @@ bool BVH::remove(uint32_t bodyID)
     if (sibling == nodes.size()) sibling = std::min(leaf, parent);
 
     // Refit upward (removeNodeAt may have invalidated parent, sibling, or grandparent)
-    if (sibling != root) refit(nodes[sibling].parent);
+    if (sibling != root) refitRemove(nodes[sibling].parent);
 
     return true;
 }
@@ -279,7 +349,7 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
 
 const CollisionPairs BVH::computePairs(void) const
 {
-    if (indexFromID.size() < 2) return {};
+    if (indexFromID.size() < 2) { };
 
     CollisionPairs pairs;
     std::stack<CollisionPair> stack;
@@ -345,5 +415,16 @@ std::vector<uint32_t> BVH::query(const AABB& aabb, const Vec2& pos) const
 RaycastResult BVH::raycast(const Ray& ray) const
 {
     return {};
+}
+
+std::vector<std::pair<AABB, Vec2>> BVH::getDebugInfo() const
+{
+    std::vector<std::pair<AABB, Vec2>> debug;
+    for (int i = 0; i < nodes.size(); ++i)
+    {
+        debug.push_back(nodes[i].bounds);
+    }
+
+    return debug;
 }
 }

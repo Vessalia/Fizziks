@@ -334,10 +334,6 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
 
 void FizzWorldImpl::detect_collisions()
 {
-    if (currstep == 68)
-    {
-        int x = 1;
-    }
     // broadphase detection
     auto broadPairs = broadphase->computePairs();
     if (broadPairs.size() == 0) return;
@@ -699,5 +695,10 @@ Vec2 FizzWorld::worldScale() const
 void FizzWorld::tick(val_t dt)
 {
     impl->tick(dt, Gravity);
+}
+
+std::vector<std::pair<AABB, Vec2>> FizzWorld::getBroadphaseDebugInfo() const
+{
+    return impl->broadphase->getDebugInfo();
 }
 }

@@ -44,7 +44,9 @@ struct FIZZIKS_API AABB
     Vec2 offset = Vec2::Zero();
 
     bool operator==(const AABB&) const = default;
+
     val_t area() const { return 4 * hw * hh; }
+    val_t perimeter() const { return 2 * (hw + hh); }
 };
 
 struct FIZZIKS_API Contact 

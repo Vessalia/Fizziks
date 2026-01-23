@@ -36,6 +36,8 @@ public:
 
     void tick(val_t dt);
 
+    std::vector<std::pair<AABB, Vec2>> getBroadphaseDebugInfo() const;
+
 private:
     friend class RigidBody;
 

@@ -29,5 +29,7 @@ public:
     virtual std::vector<uint32_t> query(const AABB& aabb, const Vec2& pos) const = 0;
 
     virtual RaycastResult raycast(const Ray& ray) const = 0;
+
+    virtual std::vector<std::pair<AABB, Vec2>> getDebugInfo() const = 0;
 };
 }

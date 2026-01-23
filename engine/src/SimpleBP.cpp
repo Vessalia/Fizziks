@@ -125,4 +125,15 @@ RaycastResult SimpleBP::raycast(const Ray& _ray) const
 
     return closest;
 }
+
+std::vector<std::pair<AABB, Vec2>> SimpleBP::getDebugInfo() const
+{
+    std::vector<std::pair<AABB, Vec2>> debug;
+    for (const auto& [id, entry] : bodies)
+    {
+        debug.push_back(entry);
+    }
+
+    return debug;
+}
 }
