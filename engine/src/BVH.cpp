@@ -332,14 +332,9 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
     Node& node = nodes[index];
     if (contains(node.bounds.first, node.bounds.second, aabb, at)) return;
 
-    Entry newBounds = { aabb, at };
+    Entry newBounds = { fatten(aabb), at };
     node.bounds = newBounds;
     if (node.parent == BVH::INVALID) return;
-    else if (node.parent == root)
-    {
-        Node& parent = nodes[node.parent];
-        parent.bounds = mergeBounds(parent.child1, parent.child2);
-    }
     else
     {
         remove(ID);
@@ -349,7 +344,7 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
 
 const CollisionPairs BVH::computePairs(void) const
 {
-    if (indexFromID.size() < 2) { };
+    if (indexFromID.size() < 2) return {};
 
     CollisionPairs pairs;
     std::stack<CollisionPair> stack;
