@@ -2,28 +2,27 @@
 #include <Fizziks/MathUtils.h>
 
 #include <queue>
+#include <stack>
 
 namespace Fizziks::internal
 {
 uint32_t BVH::allocateLeaf(uint32_t ID, const Entry& entry)
 {
-    uint32_t index = nodes.size();
     Node leaf;
     leaf.bounds = entry;
     leaf.bodyID = ID;
     nodes.push_back(leaf);
 
-    return index;
+    return nodes.size() - 1;
 }
 
 uint32_t BVH::allocateInternalNode()
 {
-    uint32_t index = nodes.size();
     Node node;
     node.isleaf = false;
     nodes.push_back(node);
 
-    return index;
+    return nodes.size() - 1;
 }
 
 val_t BVH::cost() const
@@ -98,13 +97,15 @@ void BVH::refit(uint32_t from)
 {
     for (uint32_t i = from; i != INVALID; i = nodes[i].parent) 
     {
+        if (nodes[i].isleaf) continue;
+
         const Entry newBounds = mergeBounds(nodes[i].child1, nodes[i].child2);
         if (newBounds == nodes[i].bounds) break;
         else nodes[i].bounds = newBounds;
     }
 }
 
-constexpr val_t FAT_FACTOR = 0.2;
+constexpr val_t FAT_FACTOR = 1.05;
 static AABB fatten(const AABB& aabb)
 {
     return { FAT_FACTOR * aabb.hw, FAT_FACTOR * aabb.hh, aabb.offset };
@@ -115,6 +116,7 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
     const Entry entry = { fatten(aabb), at };
 
     uint32_t leaf = allocateLeaf(ID, entry);
+    indexFromID[ID] = leaf;
 
     if (nodes.size() == 1)
     {
@@ -149,7 +151,7 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
     nodes[leaf].parent = newParent;
 
     // Stage 3: walk back up the tree refitting AABBs
-    refit(nodes[leaf].parent);
+    refit(nodes[newParent].parent);
 
     return ID;
 }
@@ -179,6 +181,8 @@ void BVH::removeNodeAt(uint32_t index)
 
         // Fix body map
         if (moved.bodyID != INVALID) indexFromID[moved.bodyID] = index;
+
+        if (last == root) root = index;
     }
 
     // don't remove ID mapping key, as this node may not be a leaf
@@ -224,10 +228,12 @@ bool BVH::remove(uint32_t bodyID)
     // Remove both structural nodes
     // since we swap pop the back node, make sure we don't accidentally alter the index of the other node
     removeNodeAt(std::max(leaf, parent)); // possibly the back node, remove it first
+    if (sibling == nodes.size()) sibling = std::max(leaf, parent); // sibling got swapped
     removeNodeAt(std::min(leaf, parent));
+    if (sibling == nodes.size()) sibling = std::min(leaf, parent);
 
-    // Refit upward
-    refit(grandparent);
+    // Refit upward (removeNodeAt may have invalidated parent, sibling, or grandparent)
+    if (sibling != root) refit(nodes[sibling].parent);
 
     return true;
 }
@@ -271,9 +277,59 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
     }
 }
 
-CollisionPairs& BVH::computePairs(void)
+const CollisionPairs BVH::computePairs(void) const
 {
-    return {};
+    if (indexFromID.size() < 2) return {};
+
+    CollisionPairs pairs;
+    std::stack<CollisionPair> stack;
+    std::vector<bool> visited(nodes.size(), false);
+    stack.push({ nodes[root].child1, nodes[root].child2 }); // there is at least 2 leaves in the tree
+    while (!stack.empty())
+    {
+        const auto [i1, i2] = stack.top(); stack.pop();
+        const Node& node1 = nodes[i1];
+        const Node& node2 = nodes[i2];
+        const auto& [b1, p1] = node1.bounds;
+        const auto& [b2, p2] = node2.bounds;
+        bool overlapping = overlaps(b1, p1, b2, p2);
+        if (!overlapping) continue;
+
+        if (node1.isleaf && node2.isleaf)
+        {
+            pairs.push_back({node1.bodyID, node2.bodyID});
+        }
+        else if (node1.isleaf)
+        {
+            stack.push({ i1, node2.child1 });
+            stack.push({ i1, node2.child2 });
+        }
+        else if (node2.isleaf)
+        {
+            stack.push({ node1.child1, i2 });
+            stack.push({ node1.child2, i2 });
+        }
+        else
+        {
+            stack.push({ node1.child1, node2.child1 });
+            stack.push({ node1.child1, node2.child2 });
+            stack.push({ node1.child2, node2.child1 });
+            stack.push({ node1.child2, node2.child2 });
+        }
+
+        if (!node1.isleaf && !visited[i1])
+        {
+            stack.push({ node1.child1, node1.child2 });
+            visited[i1] = true;
+        }
+        if (!node2.isleaf && !visited[i2])
+        {
+            stack.push({ node2.child1, node2.child2 });
+            visited[i2] = true;
+        }
+    }
+
+    return pairs;
 }
 
 uint32_t BVH::pick(const Vec2& point) const

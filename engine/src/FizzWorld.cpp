@@ -334,6 +334,10 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
 
 void FizzWorldImpl::detect_collisions()
 {
+    if (currstep == 68)
+    {
+        int x = 1;
+    }
     // broadphase detection
     auto broadPairs = broadphase->computePairs();
     if (broadPairs.size() == 0) return;
@@ -631,7 +635,7 @@ RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
     b.accumForce = Vec2::Zero();
     b.accumTorque = 0;
     set_body(&b, def);
-    broadphase->add(ID, b.bounds, b.position + b.centroid);
+    broadphase->add(ID, b.bounds, b.position + b.centroid + b.bounds.offset);
     activeBodies.push_back(std::move(b));
 
     Handle handle{ static_cast<uint32_t>(activeHandles.size()), 0 };

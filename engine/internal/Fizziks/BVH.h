@@ -9,13 +9,12 @@ namespace Fizziks::internal
 class BVH : public Broadphase
 {
 public:
-    BVH();
     virtual uint32_t add(uint32_t ID, const AABB& aabb, const Vec2& at);
     virtual bool remove(uint32_t ID);
     virtual void replace(uint32_t prevID, uint32_t newID);
     virtual void update(uint32_t ID, const AABB& aabb, const Vec2& at);
 
-    virtual CollisionPairs& computePairs(void);
+    virtual const CollisionPairs computePairs(void) const;
     virtual uint32_t pick(const Vec2& point) const;
     virtual std::vector<uint32_t> query(const AABB& aabb, const Vec2& pos) const;
     virtual RaycastResult raycast(const Ray& ray) const;

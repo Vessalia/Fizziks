@@ -107,11 +107,11 @@ val_t getMoI(const Shape& shape, val_t mass)
 AABB getEncapsulatingAABBFast(const Shape& s)
 {
     val_t rad = 0;
-    if (s.type == ShapeType::POLYGON)
+    if (s.type == ShapeType::CIRCLE)
     {
         rad = std::get<Circle>(s.data).radius;
     }
-    else if (s.type == ShapeType::CIRCLE)
+    else if (s.type == ShapeType::POLYGON)
     {
         rad = std::get<Polygon>(s.data).effRadius;
     }
@@ -158,7 +158,7 @@ AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
     return aabb;
 }
 
-AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight = false)
+AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight)
 {
     if (tight) return getEncapsulatingAABBTight(s, centroid, rot);
     else       return getEncapsulatingAABBFast(s);

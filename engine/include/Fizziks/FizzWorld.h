@@ -25,8 +25,8 @@ public:
         SIMPLE, BVH
     };
 
-    FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timeStep, AccelStruct accel = AccelStruct::SIMPLE);
-    FizzWorld() : FizzWorld(20, 20, 5, 1 / 20.f, AccelStruct::SIMPLE) { }
+    FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timeStep, AccelStruct accel = AccelStruct::BVH);
+    FizzWorld() : FizzWorld(20, 20, 5, 1 / 20.f, AccelStruct::BVH) { }
     ~FizzWorld();
 
     RigidBody createBody(const BodyDef& def);

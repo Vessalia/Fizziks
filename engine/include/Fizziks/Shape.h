@@ -43,7 +43,8 @@ struct FIZZIKS_API AABB
     
     Vec2 offset = Vec2::Zero();
 
-    val_t area() const { 4 * hw * hh; }
+    bool operator==(const AABB&) const = default;
+    val_t area() const { return 4 * hw * hh; }
 };
 
 struct FIZZIKS_API Contact 
@@ -66,7 +67,7 @@ FIZZIKS_API AABB createAABB(val_t width, val_t height, const Vec2& offset = { 0,
 
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 
-FIZZIKS_API AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight = false);
+FIZZIKS_API AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight = true);
 FIZZIKS_API bool overlaps(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2);
 FIZZIKS_API bool contains(const AABB& a, const Vec2& pos, const Vec2& point);
 FIZZIKS_API bool contains(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2);
