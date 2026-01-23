@@ -334,10 +334,6 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
 
 void FizzWorldImpl::detect_collisions()
 {
-    if (currstep == 68)
-    {
-        int x = 1;
-    }
     // broadphase detection
     auto broadPairs = broadphase->computePairs();
     if (broadPairs.size() == 0) return;
