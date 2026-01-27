@@ -38,8 +38,8 @@ struct FIZZIKS_API Compound
 
 struct FIZZIKS_API AABB
 {
-    val_t hw;
-    val_t hh;
+    val_t hw = 0;
+    val_t hh = 0;
     
     Vec2 offset = Vec2::Zero();
 

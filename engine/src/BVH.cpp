@@ -104,7 +104,7 @@ void BVH::refitAdd(uint32_t leaf)
     for (uint32_t i = nodes[leaf].parent; i != INVALID; i = nodes[i].parent)
     {
         nodes[i].bounds = mergeBounds(nodes[i].child1, nodes[i].child2);
-        //rotate(i);
+        rotate(i);
     }
 }
 
@@ -212,6 +212,8 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
 
     // Stage 3: walk back up the tree refitting AABBs
     refitAdd(leaf);
+
+    dirty = true;
 
     return ID;
 }
@@ -332,10 +334,13 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
     }
 }
 
-CollisionPairs BVH::computePairs(void) const
+CollisionPairs BVH::computePairs(void)
 {
+    if (!dirty) return collPairs;
+
     if (indexFromID.size() < 2) return {};
 
+    dirty = false;
     CollisionPairs pairs;
     std::stack<CollisionPair> stack;
     // there is at least 2 leaves in the tree
@@ -385,7 +390,8 @@ CollisionPairs BVH::computePairs(void) const
         // do nothing when self-traversing a leaf
     }
 
-    return pairs;
+    collPairs = pairs;
+    return collPairs;
 }
 
 uint32_t BVH::pick(const Vec2& point) const

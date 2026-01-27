@@ -12,7 +12,7 @@ void SimpleBP::replace(uint32_t prevID, uint32_t newID)
     }
 }
 
-CollisionPairs SimpleBP::computePairs(void) const
+CollisionPairs SimpleBP::computePairs(void)
 {
     CollisionPairs pairs;
 
