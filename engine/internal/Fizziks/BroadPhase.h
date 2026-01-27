@@ -19,7 +19,7 @@ public:
     virtual bool remove(uint32_t ID) = 0;
     virtual void replace(uint32_t prevID, uint32_t newID) = 0;
     virtual void update(uint32_t ID, const AABB& aabb, const Vec2& at) = 0;
-    virtual const CollisionPairs computePairs(void) const = 0;
+    virtual CollisionPairs computePairs(void) const = 0;
     //virtual void setLayer(uint32_t ID, uint32_t layer) = 0;
     
     // returns the collider ID that collides with a point

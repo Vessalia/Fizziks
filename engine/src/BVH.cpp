@@ -38,7 +38,7 @@ val_t BVH::cost() const
 
 val_t BVH::cost(const Entry& entry) const
 {
-    return entry.first.perimeter();
+    return entry.first.area();
 }
 
 val_t BVH::deltaCost(uint32_t sibling, uint32_t node) const
@@ -58,6 +58,7 @@ BVH::Entry BVH::mergeBounds(const Entry& e1, const Entry& e2) const
     return merge(e1.first, e1.second, e2.first, e2.second);
 }
 
+val_t epsilon = 0.001;
 uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
 {
     struct Candidate
@@ -79,7 +80,7 @@ uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
     {
         Candidate c = pq.top(); pq.pop();
         val_t currCost = c.cost();
-        if (currCost >= bestCost) continue; // this is branch and bound
+        if (currCost - bestCost >= -epsilon) continue; // this is branch and bound
         
         bestSibling = c.index;
         bestCost = currCost;
@@ -87,16 +88,11 @@ uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
         const Node& sibling = nodes[bestSibling];
         if (!sibling.isleaf)
         {
-            const uint32_t& c1 = sibling.child1;
-            const uint32_t& c2 = sibling.child2;
+            const uint32_t& child1 = sibling.child1;
+            const uint32_t& child2 = sibling.child2;
             val_t inherited = c.inheritedCost + deltaCost(c.index, nodeIndex);
-            val_t cost1 = cost(mergeBounds(c1, nodeIndex));
-            val_t cost2 = cost(mergeBounds(c2, nodeIndex));
-            // since we don't know the cost of descending either child, we can't prune either here
-            // ex: child1 is a node, child2 is a leaf, cost1 > cost2, but eventually the new leaf has
-            // a lower cost in child1s subtree 
-            if (cost1 + inherited < bestCost) pq.push({ c1, cost1, inherited });
-            if (cost2 + inherited < bestCost) pq.push({ c2, cost2, inherited });
+            pq.push({ child1, cost(mergeBounds(child1, nodeIndex)), inherited });
+            pq.push({ child2, cost(mergeBounds(child2, nodeIndex)), inherited });
         }
     }
 
@@ -108,13 +104,7 @@ void BVH::refitAdd(uint32_t leaf)
     for (uint32_t i = nodes[leaf].parent; i != INVALID; i = nodes[i].parent)
     {
         nodes[i].bounds = mergeBounds(nodes[i].child1, nodes[i].child2);
-        rotate(i);
-        if (nodes[i].parent != INVALID)
-        {
-            const Node& G = nodes[nodes[i].parent];
-            uint32_t j = i == G.child1 ? G.child2 : G.child1;
-            rotate(j);
-        }
+        //rotate(i);
     }
 }
 
@@ -342,56 +332,57 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
     }
 }
 
-const CollisionPairs BVH::computePairs(void) const
+CollisionPairs BVH::computePairs(void) const
 {
     if (indexFromID.size() < 2) return {};
 
     CollisionPairs pairs;
     std::stack<CollisionPair> stack;
-    std::vector<bool> visited(nodes.size(), false);
-    stack.push({ nodes[root].child1, nodes[root].child2 }); // there is at least 2 leaves in the tree
+    // there is at least 2 leaves in the tree
+    stack.push({ nodes[root].child1, nodes[root].child2 }); // cross-traverse 
+    stack.push({ nodes[root].child1, nodes[root].child1 }); // self-traverse
+    stack.push({ nodes[root].child2, nodes[root].child2 }); // self-traverse
     while (!stack.empty())
     {
         const auto [i1, i2] = stack.top(); stack.pop();
         const Node& node1 = nodes[i1];
         const Node& node2 = nodes[i2];
-        const auto& [b1, p1] = node1.bounds;
-        const auto& [b2, p2] = node2.bounds;
-        bool overlapping = overlaps(b1, p1, b2, p2);
-        if (!overlapping) continue;
+        
+        if (i1 != i2) // cross-traversal
+        {
+            const auto& [b1, p1] = node1.bounds;
+            const auto& [b2, p2] = node2.bounds;
+            bool overlapping = overlaps(b1, p1, b2, p2);
+            if (!overlapping) continue;
 
-        if (node1.isleaf && node2.isleaf)
-        {
-            pairs.push_back({node1.bodyID, node2.bodyID});
-        }
-        else if (node1.isleaf)
-        {
-            stack.push({ i1, node2.child1 });
-            stack.push({ i1, node2.child2 });
-        }
-        else if (node2.isleaf)
-        {
-            stack.push({ node1.child1, i2 });
-            stack.push({ node1.child2, i2 });
-        }
-        else
-        {
-            stack.push({ node1.child1, node2.child1 });
-            stack.push({ node1.child1, node2.child2 });
-            stack.push({ node1.child2, node2.child1 });
-            stack.push({ node1.child2, node2.child2 });
-        }
+            if (node1.isleaf && node2.isleaf) // leaf-leaf traversal
+            {
+                pairs.push_back({ node1.bodyID, node2.bodyID });
+            }
+            else if (node1.isleaf != node2.isleaf) // node-leaf / leaf-node traversal
+            {
+                const Node& node = node1.isleaf ? node2 : node1;
+                uint32_t leaf = node1.isleaf ? i1 : i2;
 
-        if (!node1.isleaf && !visited[i1])
-        {
-            stack.push({ node1.child1, node1.child2 });
-            visited[i1] = true;
+                stack.push({ node.child1, leaf });
+                stack.push({ node.child2, leaf });
+            }
+            else // node-node traversal
+            {
+                stack.push({ node1.child1, node2.child1 });
+                stack.push({ node1.child1, node2.child2 });
+                stack.push({ node1.child2, node2.child1 });
+                stack.push({ node1.child2, node2.child2 });
+            }
         }
-        if (!node2.isleaf && !visited[i2])
+        else if (i1 == i2 && !nodes[i1].isleaf) // node self-traversal
         {
-            stack.push({ node2.child1, node2.child2 });
-            visited[i2] = true;
+            const Node& node = nodes[i1];
+            stack.push({ node.child1, node.child1 });
+            stack.push({ node.child1, node.child2 });
+            stack.push({ node.child2, node.child2 });
         }
+        // do nothing when self-traversing a leaf
     }
 
     return pairs;

@@ -560,11 +560,6 @@ void FizzWorldImpl::resolve_collisions(val_t dt)
 
 void FizzWorldImpl::handle_collisions(val_t dt)
 {
-    if (currstep == 789)
-    {
-        int x = 1;
-    }
-
     detect_collisions();
     resolve_collisions(dt);
 }
