@@ -357,12 +357,12 @@ void FizzWorldImpl::detect_collisions()
     }
 
     std::vector<std::future<std::vector<CollisionManifold>>> futures;
-    for (auto pairs : threadBroadPairs)
+    for (const auto& pairs : threadBroadPairs)
     {
-        futures.emplace_back(threads.submit([this, pairs] 
+        futures.emplace_back(threads.submit([this, &pairs] 
         {
             std::vector<CollisionManifold> manifolds;
-            for (auto [idA, idB] : pairs)
+            for (const auto [idA, idB] : pairs)
             {
                 CollisionManifold manifold = get_manifold(idA, idB);
                 if (manifold.contacts.size() > 0) manifolds.push_back(manifold);
