@@ -29,7 +29,7 @@ public:
     RigidBody& position(const Vec2& pos);
 
     val_t rotation() const;
-    RigidBody& rotation(const val_t rot);
+    RigidBody& rotation(val_t rot);
 
     Vec2 centroidPosition() const;
 
@@ -37,24 +37,28 @@ public:
     RigidBody& velocity(const Vec2& vel);
 
     val_t angularVelocity() const;
-    RigidBody& angularVelocity(const val_t angVel);
+    RigidBody& angularVelocity(val_t angVel);
 
     val_t mass() const;
-    RigidBody& mass(const val_t m);
+    RigidBody& mass(val_t m);
 
     val_t gravityScale() const;
-    RigidBody& gravityScale(const val_t gs);
+    RigidBody& gravityScale(val_t gs);
 
     BodyType bodyType() const;
     RigidBody& bodyType(const BodyType& type);
 
-    uint32_t layerMask() const;
-    RigidBody& layerMask(const uint32_t mask);
+    uint32_t layer() const;
+    RigidBody& layer(uint32_t layer);
 
     RigidBody& applyForce(const Vec2& force, const Vec2& at = { 0, 0 });
-    RigidBody& addCollider(const Collider& collider, const Vec2& at = { 0, 0 });
+    RigidBody& addCollider(const Collider& collider);
 
-    std::vector<std::pair<Collider, Vec2>> colliders() const;
+    std::vector<Collider> colliders() const;
+
+    void collisionOnEnter();
+    void collisionOnStay();
+    void collisionOnExit();
 
 private:
     friend class FizzWorld;

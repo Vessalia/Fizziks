@@ -32,15 +32,16 @@ public:
         bodies[ID] = { aabb, at };
     }
      
-    virtual CollisionPairs& computePairs(void);
+    virtual CollisionPairs computePairs(void);
     virtual uint32_t pick(const Vec2& point) const;
     virtual std::vector<uint32_t> query(const AABB& aabb, const Vec2& pos) const;
     virtual RaycastResult raycast(const Ray& ray) const;
+
+    virtual std::vector<std::pair<AABB, Vec2>> getDebugInfo() const;
  
 private:
     using Entry = std::pair<AABB, Vec2>;
 
     std::unordered_map<uint32_t, Entry> bodies;
-    CollisionPairs pairs;
 };
 }

@@ -19,7 +19,8 @@ public:
     virtual bool remove(uint32_t ID) = 0;
     virtual void replace(uint32_t prevID, uint32_t newID) = 0;
     virtual void update(uint32_t ID, const AABB& aabb, const Vec2& at) = 0;
-    virtual const CollisionPairs& computePairs(void) = 0;
+    virtual CollisionPairs computePairs(void) = 0;
+    //virtual void setLayer(uint32_t ID, uint32_t layer) = 0;
     
     // returns the collider ID that collides with a point
     virtual uint32_t pick(const Vec2& point) const = 0;
@@ -28,5 +29,7 @@ public:
     virtual std::vector<uint32_t> query(const AABB& aabb, const Vec2& pos) const = 0;
 
     virtual RaycastResult raycast(const Ray& ray) const = 0;
+
+    virtual std::vector<std::pair<AABB, Vec2>> getDebugInfo() const = 0;
 };
 }

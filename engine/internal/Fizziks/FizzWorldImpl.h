@@ -13,14 +13,14 @@ class FizzWorldImpl
     friend class RigidBodyImpl;
 
 private:
-    FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep);
+    FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel);
     ~FizzWorldImpl();
 
     size_t currstep = 0;
 
     struct BodyData
     {
-        uint32_t layermask;
+        uint32_t layer;
 
         Vec2 centroid;
 
@@ -40,7 +40,7 @@ private:
 
         AABB bounds;
 
-        std::vector<std::pair<Collider, Vec2>> colliders;
+        std::vector<Collider> colliders;
 
         BodyType bodyType;
     };
@@ -92,17 +92,17 @@ private:
     Vec2 get_worldPos(const BodyData& body, const Vec2& colliderPos) const;
     val_t get_worldRotation(const BodyData& body, const Collider& collider) const;
 
-    CollisionManifold get_manifold(const size_t idA, const size_t idB) const;
+    CollisionManifold get_manifold(size_t idA, size_t idB) const;
     void detect_collisions();
     ContactKey makeContactKey(const CollisionResolution& resolution) const;
-    CollisionResolution collision_preStep(const uint32_t idA, const uint32_t idB, const uint32_t collIdA, const uint32_t collIdB, const Contact& constact, const val_t dt);
+    CollisionResolution collision_preStep(uint32_t idA, uint32_t idB, uint32_t collIdA, uint32_t collIdB, const Contact& constact, val_t dt);
     void solve_normalConstraint(CollisionResolution& resolution);
     void solve_frictionConstraint(CollisionResolution& resolution);
     void solve_contactConstraints(CollisionResolution& resolution);
-    void resolve_collisions(const val_t dt);
+    void resolve_collisions(val_t dt);
 
-    void simulate_bodies(const val_t dt, const Vec2& gravity);
-    void handle_collisions(const val_t dt);
+    void simulate_bodies(val_t dt, const Vec2& gravity);
+    void handle_collisions(val_t dt);
     void destroy_bodies();
 
     void set_body(const RigidBodyImpl& rb, const BodyDef& def);
@@ -111,9 +111,9 @@ private:
     const BodyData* get_body(const RigidBodyImpl& handle) const;
     BodyData* get_body(const RigidBodyImpl& handle);
 
-    void add_collider(const RigidBodyImpl& rb, const Collider& collider, const Vec2& at);
-    void add_collider(BodyData* body, const Collider& collider, const Vec2& at);
-    std::vector<std::pair<Collider, Vec2>> body_colliders(const RigidBodyImpl& rb) const;
+    void add_collider(const RigidBodyImpl& rb, const Collider& collider);
+    void add_collider(BodyData* body, const Collider& collider);
+    std::vector<Collider> body_colliders(const RigidBodyImpl& rb) const;
 
     const AABB get_bounds(const BodyData* body, bool compute) const;
     const AABB compute_bounds(const BodyData* body) const;
@@ -124,7 +124,7 @@ private:
     void body_position(const RigidBodyImpl& rb, const Vec2& pos);
 
     val_t body_rotation(const RigidBodyImpl& rb) const;
-    void body_rotation(const RigidBodyImpl& rb, const val_t rot);
+    void body_rotation(const RigidBodyImpl& rb, val_t rot);
 
     Vec2 body_centroidPosition(const RigidBodyImpl& rb) const;
 
@@ -132,7 +132,7 @@ private:
     void body_velocity(const RigidBodyImpl& rb, const Vec2& vel);
 
     val_t body_angularVelocity(const RigidBodyImpl& rb) const;
-    void body_angularVelocity(const RigidBodyImpl& rb, const val_t& angVel);
+    void body_angularVelocity(const RigidBodyImpl& rb, val_t angVel);
 
     val_t body_mass(const RigidBodyImpl& rb) const;
     void body_mass(const RigidBodyImpl& rb, val_t m);
@@ -143,10 +143,10 @@ private:
     BodyType body_bodyType(const RigidBodyImpl& rb) const;
     void body_bodyType(const RigidBodyImpl& rb, const BodyType& type);
 
-    uint32_t body_layerMask(const RigidBodyImpl& rb) const;
-    void body_layerMask(const RigidBodyImpl& rb, const uint32_t mask);
+    uint32_t body_layer(const RigidBodyImpl& rb) const;
+    void body_layer(const RigidBodyImpl& rb, uint32_t layer);
 
     RigidBodyImpl createBody(const BodyDef& def, FizzWorld* parent);
-    void tick(const val_t dt, const Vec2& gravity);
+    void tick(val_t dt, const Vec2& gravity);
 };
 }

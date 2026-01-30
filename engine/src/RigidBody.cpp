@@ -31,13 +31,13 @@ RigidBody& RigidBody::applyForce(const Vec2& force, const Vec2& at)
     return *this;
 }
 
-RigidBody& RigidBody::addCollider(const Collider& collider, const Vec2& at)
+RigidBody& RigidBody::addCollider(const Collider& collider)
 {
-    WORLD->add_collider(*THIS, collider, at);
+    WORLD->add_collider(*THIS, collider);
     return *this;
 }
 
-std::vector<std::pair<Collider, Vec2>> RigidBody::colliders() const
+std::vector<Collider> RigidBody::colliders() const
 {
     return WORLD->body_colliders(*THIS);
 }
@@ -56,7 +56,7 @@ val_t RigidBody::rotation() const
 {
     return WORLD->body_rotation(*THIS);
 }
-RigidBody& RigidBody::rotation(const val_t rot)
+RigidBody& RigidBody::rotation(val_t rot)
 {
     WORLD->body_rotation(*THIS, rot);
     return *this;
@@ -81,7 +81,7 @@ val_t RigidBody::angularVelocity() const
 { 
     return WORLD->body_angularVelocity(*THIS);
 }
-RigidBody& RigidBody::angularVelocity(const val_t angVel) 
+RigidBody& RigidBody::angularVelocity(val_t angVel) 
 { 
     WORLD->body_angularVelocity(*THIS, angVel);
     return *this; 
@@ -91,7 +91,7 @@ val_t RigidBody::mass() const
 { 
     return WORLD->body_mass(*THIS);
 }
-RigidBody& RigidBody::mass(const val_t m) 
+RigidBody& RigidBody::mass(val_t m) 
 { 
     WORLD->body_mass(*THIS, m);
     return *this; 
@@ -101,7 +101,7 @@ val_t RigidBody::gravityScale() const
 {
     return WORLD->body_gravityScale(*THIS);
 }
-RigidBody& RigidBody::gravityScale(const val_t gs)
+RigidBody& RigidBody::gravityScale(val_t gs)
 {
     WORLD->body_gravityScale(*THIS, gs);
     return *this;
@@ -118,14 +118,14 @@ RigidBody& RigidBody::bodyType(const BodyType& type)
     return *this;
 }
 
-uint32_t RigidBody::layerMask() const
+uint32_t RigidBody::layer() const
 {
-    return WORLD->body_layerMask(*THIS);
+    return WORLD->body_layer(*THIS);
 }
 
-RigidBody& RigidBody::layerMask(const uint32_t mask)
+RigidBody& RigidBody::layer(uint32_t mask)
 {
-    WORLD->body_layerMask(*THIS, mask);
+    WORLD->body_layer(*THIS, mask);
     return *this;
 }
 }
