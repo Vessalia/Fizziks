@@ -7,6 +7,8 @@
 
 #include <algorithm>
 
+#include <Fizziks/ScopeProfiler.h>
+
 namespace Fizziks::internal
 {
 const FizzWorldImpl::BodyData FizzWorldImpl::null_body = 
@@ -316,14 +318,14 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
     for (uint32_t i = 0; i < bodyA.colliders.size(); ++i)
     {
         const auto& coll1 = bodyA.colliders[i];
-        Vec2 posA = get_worldPos(bodyA, coll1.pos);
+        const Vec2 posA = get_worldPos(bodyA, coll1.pos);
         val_t rotA = get_worldRotation(bodyA, coll1);
         for (uint32_t j = 0; j < bodyB.colliders.size(); ++j)
         {
             const auto& coll2 = bodyB.colliders[j];
-            Vec2 posB = get_worldPos(bodyB, coll2.pos);
+            const Vec2 posB = get_worldPos(bodyB, coll2.pos);
             val_t rotB = get_worldRotation(bodyB, coll2);
-            Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
+            const Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
 
             if (contact.overlaps) manifold.contacts.push_back({ i, j, contact } );
         }
@@ -334,15 +336,46 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
 
 void FizzWorldImpl::detect_collisions()
 {
+    PROFILE_FUNCTION();
     // broadphase detection
-    auto broadPairs = broadphase->computePairs();
+    CollisionPairs broadPairs = broadphase->computePairs();
     if (broadPairs.size() == 0) return;
 
     // nearphase detection
-    for (auto [idA, idB] : broadPairs)
+    std::vector<CollisionPairs> threadBroadPairs;
+    int base = broadPairs.size() / threads.size();
+    int extra = broadPairs.size() % threads.size();
+    int offset = 0;
+    for (int i = 0; i < threads.size(); ++i)
     {
-        CollisionManifold manifold = get_manifold(idA, idB);
-        if (manifold.contacts.size() > 0) collisionManifolds.push_back(manifold);
+        int count = base + (i < extra ? 1 : 0);
+        auto start = broadPairs.begin() + offset;
+        auto end = start + count;
+        threadBroadPairs.emplace_back(start, end);
+
+        offset += count;
+    }
+
+    std::vector<std::future<std::vector<CollisionManifold>>> futures;
+    for (auto pairs : threadBroadPairs)
+    {
+        futures.emplace_back(threads.submit([this, pairs] 
+        {
+            std::vector<CollisionManifold> manifolds;
+            for (auto [idA, idB] : pairs)
+            {
+                CollisionManifold manifold = get_manifold(idA, idB);
+                if (manifold.contacts.size() > 0) manifolds.push_back(manifold);
+            }
+
+            return manifolds;
+        }));
+    }
+
+    for (auto& future : futures)
+    {
+        auto local = future.get();
+        collisionManifolds.insert(collisionManifolds.end(), std::make_move_iterator(local.begin()), std::make_move_iterator(local.end()));
     }
 }
 

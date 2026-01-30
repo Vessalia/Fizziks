@@ -3,6 +3,7 @@
 #include <Fizziks/BroadPhase.h>
 #include <Fizziks/Handle.h>
 #include <Fizziks/ContactKey.h>
+#include <Fizziks/ThreadPool.h>
 
 namespace Fizziks::internal
 {
@@ -66,6 +67,8 @@ private:
     };
 
     static const BodyData null_body;
+
+    ThreadPool threads;
 
     val_t timestep;
     val_t accumulator;
