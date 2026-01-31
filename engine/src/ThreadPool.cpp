@@ -41,6 +41,16 @@ ThreadPool::~ThreadPool()
     for (auto& thread : threads) thread.join();
 }
 
+void ThreadPool::submit(Task&& task)
+{
+    {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        tasks.emplace(std::move(task));
+    }
+
+    cv.notify_one();
+}
+
 void ThreadPool::wait()
 {
     std::unique_lock<std::mutex> lock(queue_mutex);

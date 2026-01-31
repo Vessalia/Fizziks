@@ -18,6 +18,7 @@ private:
     ~FizzWorldImpl();
 
     size_t currstep = 0;
+    static constexpr size_t THREAD_THRESHOLD = 1000;
 
     struct BodyData
     {
