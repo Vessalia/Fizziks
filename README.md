@@ -97,6 +97,6 @@ A demo of how to use this library can be found [here](https://github.com/Vessali
 
 ## References
 - [Ming-Lun "Allen" Chou's Game Physics Series](https://allenchou.net/game-physics-series/)
-- [Fantastic explanation of GJK from Casey Muratori](https://www.youtube.com/watch?v=XIavUJ848Mk&list=LL&index=15)
+- [Fantastic explanation of GJK from Casey Muratori](https://www.youtube.com/watch?v=Qupqu1xe7Io)
 - [Erin Catto's GDC talk about using BVHs in Overwatch for ray casts](https://gdcvault.com/play/1025909/Math-for-Game-Developers-Dynamic) ([and the associated slides](https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf))
 - [Andrew Kensler's paper on using tree rotations in BVHs to reduce the cost of the tree while minimizing the effect on construction times](http://eastfarthing.com/publications/tree.pdf)
