@@ -315,6 +315,7 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
 
     const auto& bodyA = activeBodies[idA];
     const auto& bodyB = activeBodies[idB];
+    manifold.contacts.reserve(bodyA.colliders.size() * bodyB.colliders.size());
     for (uint32_t i = 0; i < bodyA.colliders.size(); ++i)
     {
         const auto& coll1 = bodyA.colliders[i];
@@ -338,56 +339,49 @@ void FizzWorldImpl::detect_collisions()
 {
     PROFILE_FUNCTION_AVG();
     // broadphase detection
-    CollisionPairs broadPairs = broadphase->computePairs();
+    const CollisionPairs broadPairs = broadphase->computePairs();
     if (broadPairs.size() == 0) return;
 
     // nearphase detection
+    std::vector<CollisionManifold> manifolds(broadPairs.size());
+
+    auto processRange = [&](size_t begin, size_t end)
+    {
+        for (size_t i = begin; i < end; ++i)
+        {
+            const auto [idA, idB] = broadPairs[i];
+            manifolds[i] = get_manifold(idA, idB);
+        }
+    };
+
     if (broadPairs.size() > THREAD_THRESHOLD)
     {
-        std::vector<int> threadBounds;
-        int base = broadPairs.size() / threads.size();
-        int extra = broadPairs.size() % threads.size();
-        int offset = 0;
-        for (int i = 0; i < threads.size(); ++i)
-        {
-            int count = base + (i < extra ? 1 : 0);
-            if (!count) break;
-            auto index = offset + count;
-            threadBounds.push_back(index);
+        const size_t threadCount = std::min(threads.size(), broadPairs.size());
+        const size_t base  = broadPairs.size() / threadCount;
+        const size_t extra = broadPairs.size() % threadCount;
 
-            offset += count;
-        }
-
-        std::vector<CollisionManifold> manifolds;
-        manifolds.resize(broadPairs.size());
-        for (int ti = 0; ti < threadBounds.size(); ++ti)
+        size_t offset = 0;
+        for (size_t t = 0; t < threadCount; ++t)
         {
-            int base = ti ? threadBounds[ti - 1] : 0;
-            int bound = threadBounds[ti];
-            threads.submit([this, base, bound, &broadPairs, &manifolds] 
-            {
-                for (int i = base; i < bound; ++i)
-                {
-                    const auto [idA, idB] = broadPairs[i];
-                    manifolds[i] = get_manifold(idA, idB);
-                }
-            });
+            const size_t count = base + (t < extra ? 1 : 0);
+            const size_t begin = offset;
+            const size_t end = begin + count;
+            offset = end;
+
+            threads.submit([begin, end, &processRange] { processRange(begin, end); });
         }
 
         threads.wait();
-
-        for (const auto& manifold : manifolds)
-        {
-            if (manifold.contacts.size() > 0) collisionManifolds.push_back(manifold);
-        }
     }
     else
     {
-        for (auto [idA, idB] : broadPairs)
-        {
-            CollisionManifold manifold = get_manifold(idA, idB);
-            if (manifold.contacts.size() > 0) collisionManifolds.push_back(manifold);
-        }
+        processRange(0, broadPairs.size());
+    }
+
+    collisionManifolds.reserve(collisionManifolds.size() + manifolds.size());
+    for (auto& manifold : manifolds)
+    {
+        if (!manifold.contacts.empty()) collisionManifolds.emplace_back(manifold);
     }
 }
 
