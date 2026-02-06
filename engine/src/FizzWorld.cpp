@@ -5,6 +5,8 @@
 #include <Fizziks/SimpleBP.h>
 #include <Fizziks/BVH.h>
 
+#include <Fizziks/LinearAllocator.h>
+
 #include <algorithm>
 
 #include <Fizziks/ScopeProfiler.h>
@@ -42,9 +44,21 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
                 broadphase = new BVH();
                 break;
         }
+
+        for (int i = 0; i < threads.size(); ++i)
+        {
+            threadAllocators.push_back(new LinearAllocator(1000 * sizeof(ColliderContact))); // hard code 1000 contact slots per thread for now
+        }
     }
 
-FizzWorldImpl::~FizzWorldImpl() { delete broadphase; }
+FizzWorldImpl::~FizzWorldImpl() 
+{ 
+    delete broadphase; 
+    for (auto* alloc : threadAllocators)
+    {
+        delete alloc;
+    }
+}
 
 void FizzWorldImpl::apply_force(const RigidBodyImpl& rb, const Vec2& force, const Vec2& at)
 {
@@ -307,15 +321,16 @@ val_t FizzWorldImpl::get_worldRotation(const BodyData& body, const Collider& col
     return clamp_angle(body.rotation + collider.rotation);
 }
 
-FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t idB) const
+FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t idB, size_t allocIndex) const
 {
     CollisionManifold manifold;
     manifold.bodyAId = idA;
     manifold.bodyBId = idB;
+    manifold.allocIndex = allocIndex;
+    bool first = true;
 
     const auto& bodyA = activeBodies[idA];
     const auto& bodyB = activeBodies[idB];
-    manifold.contacts.reserve(bodyA.colliders.size() * bodyB.colliders.size());
     for (uint32_t i = 0; i < bodyA.colliders.size(); ++i)
     {
         const auto& coll1 = bodyA.colliders[i];
@@ -328,7 +343,17 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
             val_t rotB = get_worldRotation(bodyB, coll2);
             const Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
 
-            if (contact.overlaps) manifold.contacts.push_back({ i, j, contact } );
+            if (contact.overlaps)
+            {
+                ColliderContact collContact = { i, j, contact };
+                Allocator::Block block = threadAllocators[allocIndex]->write(&collContact, sizeof(ColliderContact));
+                if (first) 
+                {
+                    manifold.allocContact = block; 
+                    first = false;
+                }
+                ++manifold.numBlocks;
+            }
         }
     }
 
@@ -345,12 +370,12 @@ void FizzWorldImpl::detect_collisions()
     // nearphase detection
     std::vector<CollisionManifold> manifolds(broadPairs.size());
 
-    auto processRange = [&](size_t begin, size_t end)
+    auto processRange = [&](size_t begin, size_t end, size_t allocIndex)
     {
         for (size_t i = begin; i < end; ++i)
         {
             const auto [idA, idB] = broadPairs[i];
-            manifolds[i] = get_manifold(idA, idB);
+            manifolds[i] = get_manifold(idA, idB, allocIndex);
         }
     };
 
@@ -368,20 +393,25 @@ void FizzWorldImpl::detect_collisions()
             const size_t end = begin + count;
             offset = end;
 
-            threads.submit([begin, end, &processRange] { processRange(begin, end); });
+            threadAllocators[t]->reset();
+            threads.submit([t, begin, end, &processRange] 
+            { 
+                processRange(begin, end, t); 
+            });
         }
 
         threads.wait();
     }
     else
     {
-        processRange(0, broadPairs.size());
+        threadAllocators[1]->reset();
+        processRange(0, broadPairs.size(), 1);
     }
 
     collisionManifolds.reserve(collisionManifolds.size() + manifolds.size());
     for (auto& manifold : manifolds)
     {
-        if (!manifold.contacts.empty()) collisionManifolds.emplace_back(manifold);
+        if (manifold.allocContact.byte_count) collisionManifolds.emplace_back(manifold);
     }
 }
 
@@ -570,11 +600,16 @@ void FizzWorldImpl::resolve_collisions(val_t dt)
 
     for (auto& manifold : collisionManifolds)
     {
-        const auto& bodyAId = manifold.bodyAId;
-        const auto& bodyBId = manifold.bodyBId;
-        for (auto& [collIdA, collIdB, contact] : manifold.contacts)
+        const auto bodyAId = manifold.bodyAId;
+        const auto bodyBId = manifold.bodyBId;
+        const auto* alloc = threadAllocators[manifold.allocIndex];
+        const ColliderContact* collContacts = (ColliderContact*)alloc->read(manifold.allocContact);
+        for (int i = 0; i < manifold.numBlocks; ++i)
         {
-            collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, collIdA, collIdB, contact, dt));
+            const auto& collContact = collContacts[i];
+            collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, 
+                                                             collContact.collAId, collContact.collBId, 
+                                                             collContact.contact, dt));
         }
     }
     collisionManifolds.clear();
