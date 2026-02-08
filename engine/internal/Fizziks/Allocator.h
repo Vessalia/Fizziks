@@ -1,5 +1,5 @@
 #pragma once
-#include <mutex>
+#include <cstdint>
 
 namespace Fizziks::internal
 {
@@ -8,11 +8,11 @@ class Allocator
 public:
     struct Block
     {
-        size_t base;
+        uintptr_t base;
         size_t byte_count;
     };
 
-    virtual ~Allocator() = 0;
+    virtual ~Allocator() = default;
 
     virtual void reset() = 0;
 
@@ -21,9 +21,11 @@ public:
 
 protected:
     size_t tot_bytes;
+    size_t peak;
 
-    Allocator(size_t tot_bytes);
-    
+    Allocator(size_t tot_bytes) : tot_bytes(tot_bytes), peak(0) { };
+
+    virtual void resize(size_t new_size) = 0;
     virtual void* allocate(size_t size, size_t alignment = 0) = 0;
 };
 }

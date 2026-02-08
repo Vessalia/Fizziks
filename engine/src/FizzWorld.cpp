@@ -28,6 +28,7 @@ const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
     BodyType::STATIC
 };
 
+constexpr size_t INIT_ALLOC = 1024;
 FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel)
     : unitsX(unitsX)
     , unitsY(unitsY)
@@ -47,7 +48,7 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
 
         for (int i = 0; i < threads.size(); ++i)
         {
-            threadAllocators.push_back(new LinearAllocator(1000 * sizeof(ColliderContact))); // hard code 1000 contact slots per thread for now
+            threadAllocators.push_back(new LinearAllocator(INIT_ALLOC)); // hard code 1KB per thread for now
         }
     }
 
@@ -393,7 +394,6 @@ void FizzWorldImpl::detect_collisions()
             const size_t end = begin + count;
             offset = end;
 
-            threadAllocators[t]->reset();
             threads.submit([t, begin, end, &processRange] 
             { 
                 processRange(begin, end, t); 
@@ -404,8 +404,7 @@ void FizzWorldImpl::detect_collisions()
     }
     else
     {
-        threadAllocators[1]->reset();
-        processRange(0, broadPairs.size(), 1);
+        processRange(0, broadPairs.size(), 0);
     }
 
     collisionManifolds.reserve(collisionManifolds.size() + manifolds.size());
@@ -721,6 +720,14 @@ RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
     return { handle, parent };
 }
 
+void FizzWorldImpl::tick_end()
+{
+    for (auto alloc : threadAllocators)
+    {
+        alloc->reset();
+    }
+}
+
 void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 {
     accumulator += dt;
@@ -731,6 +738,7 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
         simulate_bodies(timestep, gravity);
         handle_collisions(timestep);
         destroy_bodies();
+        tick_end();
         currstep++;
     }
 }

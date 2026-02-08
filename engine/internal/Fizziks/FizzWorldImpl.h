@@ -59,7 +59,7 @@ private:
         size_t bodyAId, bodyBId;
 
         Allocator::Block allocContact;
-        size_t numBlocks;
+        size_t numBlocks = 0;
         size_t allocIndex;
     };
 
@@ -120,6 +120,8 @@ private:
     void simulate_bodies(val_t dt, const Vec2& gravity);
     void handle_collisions(val_t dt);
     void destroy_bodies();
+
+    void tick_end();
 
     void set_body(const RigidBodyImpl& rb, const BodyDef& def);
     void set_body(BodyData* body, const BodyDef& def);
