@@ -67,6 +67,8 @@ FIZZIKS_API Shape createRect(val_t width, val_t height);
 FIZZIKS_API Shape createPolygon(const std::vector<Vec2>& vertices);
 FIZZIKS_API AABB createAABB(val_t width, val_t height, const Vec2& offset = { 0, 0 });
 
+FIZZIKS_API Shape rotateShape(const Shape& shape, val_t rot);
+
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 
 FIZZIKS_API AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight = true);

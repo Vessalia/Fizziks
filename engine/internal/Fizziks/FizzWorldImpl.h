@@ -2,6 +2,7 @@
 #include <Fizziks/RigidBodyImpl.h>
 #include <Fizziks/BroadPhase.h>
 #include <Fizziks/Handle.h>
+#include <Fizziks/MathUtils.h>
 #include <Fizziks/ContactKey.h>
 #include <Fizziks/ThreadPool.h>
 #include <Fizziks/Allocator.h>
@@ -19,7 +20,7 @@ private:
     ~FizzWorldImpl();
 
     size_t currstep = 0;
-    static constexpr size_t THREAD_THRESHOLD = 1000;
+    static constexpr size_t THREAD_THRESHOLD = 128;
 
     struct BodyData
     {
