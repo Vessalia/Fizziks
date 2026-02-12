@@ -5,7 +5,11 @@
 #include <Fizziks/SimpleBP.h>
 #include <Fizziks/BVH.h>
 
+#include <Fizziks/LinearAllocator.h>
+
 #include <algorithm>
+
+#include <Fizziks/ScopeProfiler.h>
 
 namespace Fizziks::internal
 {
@@ -24,6 +28,7 @@ const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
     BodyType::STATIC
 };
 
+constexpr size_t INIT_ALLOC = 1024;
 FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel)
     : unitsX(unitsX)
     , unitsY(unitsY)
@@ -40,9 +45,21 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
                 broadphase = new BVH();
                 break;
         }
+
+        for (int i = 0; i < threads.size(); ++i)
+        {
+            threadAllocators.push_back(new LinearAllocator(INIT_ALLOC)); // hard code 1KB per thread for now
+        }
     }
 
-FizzWorldImpl::~FizzWorldImpl() { delete broadphase; }
+FizzWorldImpl::~FizzWorldImpl() 
+{ 
+    delete broadphase; 
+    for (auto* alloc : threadAllocators)
+    {
+        delete alloc;
+    }
+}
 
 void FizzWorldImpl::apply_force(const RigidBodyImpl& rb, const Vec2& force, const Vec2& at)
 {
@@ -305,27 +322,39 @@ val_t FizzWorldImpl::get_worldRotation(const BodyData& body, const Collider& col
     return clamp_angle(body.rotation + collider.rotation);
 }
 
-FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t idB) const
+FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t idB, size_t allocIndex) const
 {
     CollisionManifold manifold;
     manifold.bodyAId = idA;
     manifold.bodyBId = idB;
+    manifold.allocIndex = allocIndex;
+    bool first = true;
 
     const auto& bodyA = activeBodies[idA];
     const auto& bodyB = activeBodies[idB];
     for (uint32_t i = 0; i < bodyA.colliders.size(); ++i)
     {
         const auto& coll1 = bodyA.colliders[i];
-        Vec2 posA = get_worldPos(bodyA, coll1.pos);
+        const Vec2 posA = get_worldPos(bodyA, coll1.pos);
         val_t rotA = get_worldRotation(bodyA, coll1);
         for (uint32_t j = 0; j < bodyB.colliders.size(); ++j)
         {
             const auto& coll2 = bodyB.colliders[j];
-            Vec2 posB = get_worldPos(bodyB, coll2.pos);
+            const Vec2 posB = get_worldPos(bodyB, coll2.pos);
             val_t rotB = get_worldRotation(bodyB, coll2);
-            Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
+            const Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
 
-            if (contact.overlaps) manifold.contacts.push_back({ i, j, contact } );
+            if (contact.overlaps)
+            {
+                ColliderContact collContact = { i, j, contact };
+                Allocator::Block block = threadAllocators[allocIndex]->write(&collContact, sizeof(ColliderContact));
+                if (first) 
+                {
+                    manifold.allocContact = block; 
+                    first = false;
+                }
+                ++manifold.numBlocks;
+            }
         }
     }
 
@@ -334,15 +363,54 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
 
 void FizzWorldImpl::detect_collisions()
 {
+    //PROFILE_FUNCTION_AVG();
     // broadphase detection
-    auto broadPairs = broadphase->computePairs();
+    const CollisionPairs broadPairs = broadphase->computePairs();
     if (broadPairs.size() == 0) return;
 
     // nearphase detection
-    for (auto [idA, idB] : broadPairs)
+    std::vector<CollisionManifold> manifolds(broadPairs.size());
+
+    auto processRange = [&](size_t begin, size_t end, size_t allocIndex)
     {
-        CollisionManifold manifold = get_manifold(idA, idB);
-        if (manifold.contacts.size() > 0) collisionManifolds.push_back(manifold);
+        for (size_t i = begin; i < end; ++i)
+        {
+            const auto [idA, idB] = broadPairs[i];
+            manifolds[i] = get_manifold(idA, idB, allocIndex);
+        }
+    };
+
+    if (broadPairs.size() > THREAD_THRESHOLD)
+    {
+        const size_t threadCount = std::min(threads.size(), broadPairs.size());
+        const size_t base  = broadPairs.size() / threadCount;
+        const size_t extra = broadPairs.size() % threadCount;
+
+        size_t offset = 0;
+        for (size_t t = 0; t < threadCount; ++t)
+        {
+            const size_t count = base + (t < extra ? 1 : 0);
+            const size_t begin = offset;
+            const size_t end = begin + count;
+            offset = end;
+
+            threads.submit([t, begin, end, &processRange] 
+            { 
+                processRange(begin, end, t); 
+            });
+        }
+
+        threads.wait();
+    }
+    else
+    {
+        processRange(0, broadPairs.size(), 0);
+    }
+
+    collisionManifolds.reserve(collisionManifolds.size() + manifolds.size());
+    for (auto& manifold : manifolds)
+    {
+        if (manifold.allocContact.byte_count) collisionManifolds.emplace_back(manifold);
     }
 }
 
@@ -531,11 +599,16 @@ void FizzWorldImpl::resolve_collisions(val_t dt)
 
     for (auto& manifold : collisionManifolds)
     {
-        const auto& bodyAId = manifold.bodyAId;
-        const auto& bodyBId = manifold.bodyBId;
-        for (auto& [collIdA, collIdB, contact] : manifold.contacts)
+        const auto bodyAId = manifold.bodyAId;
+        const auto bodyBId = manifold.bodyBId;
+        const auto* alloc = threadAllocators[manifold.allocIndex];
+        const ColliderContact* collContacts = (ColliderContact*)alloc->read(manifold.allocContact);
+        for (int i = 0; i < manifold.numBlocks; ++i)
         {
-            collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, collIdA, collIdB, contact, dt));
+            const auto& collContact = collContacts[i];
+            collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, 
+                                                             collContact.collAId, collContact.collBId, 
+                                                             collContact.contact, dt));
         }
     }
     collisionManifolds.clear();
@@ -647,6 +720,14 @@ RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
     return { handle, parent };
 }
 
+void FizzWorldImpl::tick_end()
+{
+    for (auto alloc : threadAllocators)
+    {
+        alloc->reset();
+    }
+}
+
 void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 {
     accumulator += dt;
@@ -657,6 +738,7 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
         simulate_bodies(timestep, gravity);
         handle_collisions(timestep);
         destroy_bodies();
+        tick_end();
         currstep++;
     }
 }

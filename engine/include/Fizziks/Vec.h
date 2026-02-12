@@ -66,5 +66,8 @@ struct FIZZIKS_API Mat2
     bool operator!=(const Mat2&) const = default;
 
     Vec2 operator*(const Vec2& vec) const;
+    
+    Mat2 transposed() const;
+    Mat2& transpose();
 };
 }

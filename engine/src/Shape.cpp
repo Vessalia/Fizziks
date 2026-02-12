@@ -6,6 +6,31 @@
 
 namespace Fizziks
 {
+const val_t epsilon = 0.0001; // should probably be tunable?
+const Vec2 origin = Vec2::Zero();
+const int maxIterationsGJK = 30;
+const int maxIterationsEPA = 30;
+
+struct SupportVertex
+{
+    Vec2 CSO;
+    Vec2 A, B;
+
+    explicit operator Vec2() const
+    {
+        return CSO;
+    }
+
+    bool operator==(const SupportVertex&) const = default;
+};
+using Simplex = std::vector<SupportVertex>;
+
+struct Facet
+{
+    size_t from, to;
+    Vec2 dir;
+};
+
 // https://en.wikipedia.org/wiki/Centroid @ Of a polygon
 Vec2 getCentroid(const std::vector<Vec2>& vertices)
 {
@@ -204,25 +229,11 @@ std::pair<AABB, Vec2> merge(const AABB& a, const Vec2& p1, const AABB& b, const 
 }
 
 #pragma region CSO support
-struct SupportVertex
-{
-    Vec2 CSO;
-    Vec2 A, B;
 
-    explicit operator Vec2() const
-    {
-        return CSO;
-    }
-
-    bool operator==(const SupportVertex&) const = default;
-};
-
-typedef std::vector<SupportVertex> Simplex;
-
-Vec2 getSupport(const Shape& shape, val_t rot, const Vec2& direction)
+Vec2 getSupport(const Shape& shape, const Mat2& rot, const Vec2& direction)
 {
     Vec2 result = Vec2::Zero();
-    Vec2 dir = direction.rotated(-rot);
+    Vec2 dir = rot.transposed() * direction;
 
     if(shape.type == ShapeType::CIRCLE)
     {
@@ -247,13 +258,13 @@ Vec2 getSupport(const Shape& shape, val_t rot, const Vec2& direction)
     return result;
 }
 
-SupportVertex getCSOSupport(const Shape& s1, const Vec2& p1, val_t r1,
-                            const Shape& s2, const Vec2& p2, val_t r2, 
+SupportVertex getCSOSupport(const Shape& s1, const Vec2& p1, const Mat2& r1,
+                            const Shape& s2, const Vec2& p2, const Mat2& r2, 
                             const Vec2& dir)
 {
     Vec2 support1 = getSupport(s1, r1,  dir);
     Vec2 support2 = getSupport(s2, r2, -dir);
-    return { (support1.rotated(r1) + p1) - (support2.rotated(r2) + p2), support1, support2 };
+    return { (r1 * support1 + p1) - (r2 * support2 + p2), support1, support2 };
 }
 
 #pragma endregion
@@ -263,7 +274,8 @@ SupportVertex getCSOSupport(const Shape& s1, const Vec2& p1, val_t r1,
 Vec2 projToEdge (const Vec2& P, const Vec2& Q, const Vec2& point) 
 {
     Vec2 PQ = Q - P;
-    val_t t = (point - P).dot(PQ) / PQ.dot(PQ);
+    val_t denom = PQ.dot(PQ);
+    val_t t = denom < epsilon ? 0 : (point - P).dot(PQ) / denom;
     t = std::clamp(t, static_cast<val_t>(0), static_cast<val_t>(1));
     if      (t == 0) return P;
     else if (t == 1) return Q;
@@ -300,10 +312,9 @@ void enforceCCWWinding(Simplex& simplex)
     }
 }
 
-Simplex reduceSimplex(const Simplex& simplex, Vec2& dir)
+void reduceSimplex(Simplex& simplex, Vec2& dir)
 {
-    if (simplex.size() == 1) return simplex;
-    else if (simplex.size() == 2)
+    if (simplex.size() == 2)
     {
         // B can't be the closest to the origin, we just tried to get closer
         // AB is closest if angle between it and A to origin is positive
@@ -314,12 +325,11 @@ Simplex reduceSimplex(const Simplex& simplex, Vec2& dir)
         if (AB.dot(-A) > 0)
         {
             dir = lefttriplecross(AB, -A, AB);
-            return simplex;
         }
         else
         {
             dir = -A;
-            return { simplex[1] };
+            simplex.erase(simplex.begin()); // simplex = { simplex[1] };
         }
     }
     else if (simplex.size() == 3)
@@ -336,17 +346,18 @@ Simplex reduceSimplex(const Simplex& simplex, Vec2& dir)
             if (AC.dot(-A) > 0) 
             {
                 dir = lefttriplecross(AC, -A, AC); // this is the same value as our outer if, but is more 3D friendly since this may point out of the trangles plane
-                return { simplex[0], simplex[2] };
+                simplex.erase(simplex.begin() + 1); // simplex = { simplex[0], simplex[2] };
             }
             else if (AB.dot(-A) > 0) // it is possible with a very wide angle we can be infront of AB
             {
                 dir = lefttriplecross(AB, -A, AB);
-                return { simplex[1], simplex[2] };
+                simplex.erase(simplex.begin()); // simplex = { simplex[1], simplex[2] };
             }
             else
             {
                 dir = -A;
-                return { simplex[2] };
+                simplex.erase(simplex.begin()); 
+                simplex.erase(simplex.begin()); // simplex = { simplex[2] };
             }
         }
         // Similar to above, check if we're outside closest to AB
@@ -355,60 +366,57 @@ Simplex reduceSimplex(const Simplex& simplex, Vec2& dir)
             if (AB.dot(-A) > 0)
             {
                 dir = lefttriplecross(AB, -A, AB);
-                return { simplex[1], simplex[2] };
+                simplex.erase(simplex.begin()); // simplex = { simplex[1], simplex[2] };
             }
             else
             {
                 dir = -A;
-                return { simplex[2] };
+                simplex.erase(simplex.begin()); 
+                simplex.erase(simplex.begin()); // simplex = { simplex[2] };
             }
         }
         // we're inside, the origin is contained!
         else
         {
             dir = Vec2::Zero();
-            return simplex;
         }
     }
-    else
+    else if (simplex.size() > 1)
     {
         ASSERT_AND_CRASH("invalid state reached in GJK");
-        return simplex;
     }
 }
 
-const val_t epsilon = 0.0001; // should probably be tunable?
-const Vec2 origin = Vec2::Zero();
-const int maxIterationsGJK = 30;
-const int maxIterationsEPA = 30;
-std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, val_t r1,
-                                       const Shape& s2, const Vec2& p2, val_t r2)
+std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, const Mat2& r1,
+                                       const Shape& s2, const Vec2& p2, const Mat2& r2)
 {
     Simplex simplex;
+    simplex.reserve(maxIterationsGJK / 2); // we'll usually exit early
 
     Vec2 direction = p2 - p1; // doesn't really matter
     if (direction.squaredNorm() == 0) direction = Vec2(1, 0);
 
     auto point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
     simplex.push_back(point);
-    if (point.CSO.squaredNorm() == 0) return { true, simplex };
+    if (point.CSO.squaredNorm() == 0) return { true, std::move(simplex) };
     direction = -point.CSO;
     for (int i = 0; i < maxIterationsGJK; ++i)
     {
         point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
-        if (point.CSO.dot(direction) <= 0) return { false, {} }; // didn't pass origin -> it must be outside
+        if (point.CSO.dot(direction) <= 0) return { false, std::move(simplex) }; // didn't pass origin -> it must be outside
         simplex.push_back(point); // need to insert at correct index
         enforceCCWWinding(simplex);
-        simplex = reduceSimplex(simplex, direction);
-        if (direction == Vec2::Zero()) return { true, simplex };
+        reduceSimplex(simplex, direction);
+        if (direction == Vec2::Zero()) return { true, std::move(simplex) };
     }
 
-    return { false, {} };
+    return { false, std::move(simplex) };
 }
 
-bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t r1,
-                   const Shape& s2, const Vec2& p2, val_t r2)
+bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t rot1,
+                   const Shape& s2, const Vec2& p2, val_t rot2)
 {
+    Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
     const auto [overlaps, _] = getGJKSimplex(s1, p1, r1, s2, p2, r2);
     return overlaps;
 }
@@ -423,13 +431,12 @@ const Vec2 pos_y = { 0,  1};
 const Vec2 neg_y = { 0, -1};
 const std::array<Vec2, 4> dirs = { pos_x, neg_x, pos_y, neg_y };
 const std::array<Vec2, 2> axes = { pos_x, pos_y };
-Simplex blowupSimplex(const Simplex& simplex,
-                      const Shape& s1, const Vec2& p1, val_t r1,
-                      const Shape& s2, const Vec2& p2, val_t r2)
+void blowupSimplex(Simplex& simplex,
+                   const Shape& s1, const Vec2& p1, const Mat2& r1,
+                   const Shape& s2, const Vec2& p2, const Mat2& r2)
 {
-    if (simplex.size() < 1 || simplex.size() > 2) return simplex; // can only blow up a point or line
+    if (simplex.size() < 1 || simplex.size() > 2) return; // can only blow up a point or line
 
-    Simplex result = simplex;
     switch(simplex.size())
     {
         case (1): // point
@@ -437,39 +444,38 @@ Simplex blowupSimplex(const Simplex& simplex,
             for (const Vec2& dir : dirs)
             {
                 const SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
-                if ((point.CSO - result[0].CSO).squaredNorm() >= epsilon)
+                if ((point.CSO - simplex[0].CSO).squaredNorm() >= epsilon)
                 {
-                    result.push_back(point);
+                    simplex.push_back(point);
                     break;
                 }
             }
-            if (result.size() < 2) result.push_back(getCSOSupport(s1, p1, r1, s2, p2, r2, dirs[0]));
+            if (simplex.size() < 2) simplex.push_back(getCSOSupport(s1, p1, r1, s2, p2, r2, dirs[0]));
         [[fallthrough]];
         } // fall-through: point -> line -> triangle
         case (2): // line
         {
-            const Vec2 line = result[1].CSO - result[0].CSO;
+            const Vec2 line = simplex[1].CSO - simplex[0].CSO;
             Vec2 perp = Vec2(-line.y, line.x); // in 2D vs 3D, don't need to be careful about tangent vectors
             SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, perp);
-            if ((point.CSO - result[0].CSO).squaredNorm() < epsilon)
+            if ((point.CSO - simplex[0].CSO).squaredNorm() < epsilon)
             {
                 point = getCSOSupport(s1, p1, r1, s2, p2, r2, -perp);
             }
-            result.push_back(point);
+            simplex.push_back(point);
         }
     }
 
     // enforce CCW winding
-    enforceCCWWinding(result);
-    return result;
+    enforceCCWWinding(simplex);
 }
 
 // undefined cases for when point is outside of the simplex
-std::pair<std::vector<size_t>, Vec2> closestFacet(const Simplex& simplex, const Vec2& point)
+Facet closestFacet(const Simplex& simplex, const Vec2& point)
 {
-    if (simplex.size() < 3) return { { }, Vec2::Zero() }; // should never happen, will crash EPA
+    if (simplex.size() < 3) return { static_cast<size_t>(-1), static_cast<size_t>(-1), Vec2::Zero() }; // should never happen, will crash EPA
 
-    std::vector<size_t> bestEdge;
+    Facet bestFacet;
     val_t bestDist = fizzmax<val_t>();
     for (size_t i = 0; i < simplex.size(); ++i)
     {
@@ -481,21 +487,23 @@ std::pair<std::vector<size_t>, Vec2> closestFacet(const Simplex& simplex, const 
         if (dist < bestDist)
         {
             bestDist = dist;
-            bestEdge = { from, to };
+            bestFacet.from = from;
+            bestFacet.to = to;
         }
     }
 
-    Vec2 A = simplex[bestEdge[0]].CSO;
-    Vec2 B = simplex[bestEdge[1]].CSO;
+    Vec2 A = simplex[bestFacet.from].CSO;
+    Vec2 B = simplex[bestFacet.to].CSO;
     Vec2 edge = B - A;
     Vec2 dir(edge.y, -edge.x);   // perpendicular
     if (dir.dot(-A) > 0) dir = -dir;
+    bestFacet.dir = dir;
 
-    return { bestEdge, dir };
+    return bestFacet;
 }
 
-Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, val_t r1,
-                               const Circle& c2, const Vec2& p2, val_t r2)
+Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, const Mat2& r1,
+                               const Circle& c2, const Vec2& p2, const Mat2& r2)
 {
     Contact contact;
     contact.overlaps = false;
@@ -517,8 +525,8 @@ Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, val_t r1,
     contact.contactPointWorldA = p1 + norm * c1.radius;
     contact.contactPointWorldB = p2 - norm * c2.radius;
 
-    contact.contactPointLocalA = (contact.contactPointWorldA - p1).rotated(r1);
-    contact.contactPointLocalB = (contact.contactPointWorldB - p2).rotated(r2);
+    contact.contactPointLocalA = r1.transposed() * (contact.contactPointWorldA - p1);
+    contact.contactPointLocalB = r2.transposed() * (contact.contactPointWorldB - p2);
 
     contact.featureA = 0;
     contact.featureB = 0;
@@ -546,12 +554,14 @@ uint32_t getFeature(const Shape& shape, const Vec2& pos, const Vec2& normal)
         return i;
     }
 
-    return -1;
+    return UINT32_MAX;
 }
 
-Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t r1,
-                        const Shape& s2, const Vec2& p2, val_t r2)
+Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
+                        const Shape& s2, const Vec2& p2, val_t rot2)
 {
+    Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
+
     if (s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
     {
         return getCircleCircleContact(std::get<Circle>(s1.data), p1, r1,
@@ -559,31 +569,30 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t r1,
     }
 
     Contact contact;
-
     auto [overlaps, simplex] = getGJKSimplex(s1, p1, r1, s2, p2, r2);
     contact.overlaps = overlaps;
     if (!overlaps) return contact;
 
-    simplex = blowupSimplex(simplex, s1, p1, r1, s2, p2, r2);
+    blowupSimplex(simplex, s1, p1, r1, s2, p2, r2);
 
-    auto [closestEdge, dir] = closestFacet(simplex, origin);
-    SupportVertex support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
+    Facet facet = closestFacet(simplex, origin);
+    SupportVertex support = getCSOSupport(s1, p1, r1, s2, p2, r2, facet.dir);
     SupportVertex lastSupport = { vec_max(), vec_max(), vec_max() };
     int iterations = 0;
     while (iterations++ < maxIterationsEPA && (support.CSO - lastSupport.CSO).squaredNorm() > epsilon)
     {
         // since s1 and s2 is convex, so is their minkowski difference,
         // so we don't need to remove any vertices
-        int insert = (closestEdge[0] + 1) % simplex.size();
+        int insert = (facet.from + 1) % simplex.size();
         simplex.insert(simplex.begin() + insert, support);
-        std::tie(closestEdge, dir) = closestFacet(simplex, origin);
+        facet = closestFacet(simplex, origin);
         lastSupport = support;
-        support = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
+        support = getCSOSupport(s1, p1, r1, s2, p2, r2, facet.dir);
     }
 
     // closest edge of final simplex to the origin
-    std::tie(closestEdge, dir) = closestFacet(simplex, origin);
-    size_t i0 = closestEdge[0], i1 = closestEdge[1];
+    facet = closestFacet(simplex, origin);
+    size_t i0 = facet.from, i1 = facet.to;
     SupportVertex SA = simplex[i0];
     SupportVertex SB = simplex[i1];
     Vec2 A = SA.CSO, B = SB.CSO;
@@ -606,8 +615,8 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t r1,
     contact.tangent = { -contact.normal.y, contact.normal.x };
     contact.contactPointLocalA = vert.A;
     contact.contactPointLocalB = vert.B;
-    contact.contactPointWorldA = vert.A.rotated(r1) + p1;
-    contact.contactPointWorldB = vert.B.rotated(r2) + p2;
+    contact.contactPointWorldA = r1 * vert.A + p1;
+    contact.contactPointWorldB = r2 * vert.B + p2;
     contact.featureA = getFeature(s1, vert.A, contact.normal);
     contact.featureB = getFeature(s2, vert.B, -contact.normal);
 

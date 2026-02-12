@@ -2,7 +2,10 @@
 #include <Fizziks/RigidBodyImpl.h>
 #include <Fizziks/BroadPhase.h>
 #include <Fizziks/Handle.h>
+#include <Fizziks/MathUtils.h>
 #include <Fizziks/ContactKey.h>
+#include <Fizziks/ThreadPool.h>
+#include <Fizziks/Allocator.h>
 
 namespace Fizziks::internal
 {
@@ -17,6 +20,7 @@ private:
     ~FizzWorldImpl();
 
     size_t currstep = 0;
+    static constexpr size_t THREAD_THRESHOLD = 128;
 
     struct BodyData
     {
@@ -45,10 +49,19 @@ private:
         BodyType bodyType;
     };
 
+    struct ColliderContact
+    {
+        uint32_t collAId, collBId;
+        Contact contact;
+    };
+
     struct CollisionManifold
     {
         size_t bodyAId, bodyBId;
-        std::vector<std::tuple<uint32_t, uint32_t, Contact>> contacts;
+
+        Allocator::Block allocContact;
+        size_t numBlocks = 0;
+        size_t allocIndex;
     };
 
     struct CollisionResolution
@@ -67,6 +80,8 @@ private:
 
     static const BodyData null_body;
 
+    ThreadPool threads;
+
     val_t timestep;
     val_t accumulator;
 
@@ -81,6 +96,8 @@ private:
     std::vector<uint32_t> activeList;
     std::vector<BodyData> activeBodies;
 
+    std::vector<Allocator*> threadAllocators;
+
     std::vector<CollisionManifold> collisionManifolds;
     std::vector<CollisionResolution> collisionResolutions;
     std::unordered_map<ContactKey, CollisionResolution> warmStartCache;
@@ -92,7 +109,7 @@ private:
     Vec2 get_worldPos(const BodyData& body, const Vec2& colliderPos) const;
     val_t get_worldRotation(const BodyData& body, const Collider& collider) const;
 
-    CollisionManifold get_manifold(size_t idA, size_t idB) const;
+    CollisionManifold get_manifold(size_t idA, size_t idB, size_t allocIndex) const;
     void detect_collisions();
     ContactKey makeContactKey(const CollisionResolution& resolution) const;
     CollisionResolution collision_preStep(uint32_t idA, uint32_t idB, uint32_t collIdA, uint32_t collIdB, const Contact& constact, val_t dt);
@@ -104,6 +121,8 @@ private:
     void simulate_bodies(val_t dt, const Vec2& gravity);
     void handle_collisions(val_t dt);
     void destroy_bodies();
+
+    void tick_end();
 
     void set_body(const RigidBodyImpl& rb, const BodyDef& def);
     void set_body(BodyData* body, const BodyDef& def);

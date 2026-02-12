@@ -98,4 +98,14 @@ Vec2 Mat2::operator*(const Vec2& vec) const
 {
     return internal::map((internal::map(*this) * internal::map(vec)).eval());
 }
+
+Mat2 Mat2::transposed() const
+{
+    return internal::map(static_cast<internal::Matrix2p>(internal::map(*this).transpose().eval()));
+}
+Mat2& Mat2::transpose()
+{
+    internal::map(*this) = static_cast<internal::Matrix2p>(internal::map(*this).transpose());
+    return *this;
+}
 }
