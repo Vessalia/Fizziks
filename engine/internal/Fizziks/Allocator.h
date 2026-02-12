@@ -8,7 +8,7 @@ class Allocator
 public:
     struct Block
     {
-        uintptr_t base;
+        size_t base;
         size_t byte_count;
     };
 

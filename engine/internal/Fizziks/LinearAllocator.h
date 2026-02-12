@@ -18,7 +18,7 @@ public:
 
 private:
     void* start = nullptr;
-    uintptr_t cursor;
+    size_t cursor;
     size_t init_bytes;
 
     std::mutex mutex;

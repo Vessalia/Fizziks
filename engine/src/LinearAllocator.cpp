@@ -46,9 +46,9 @@ void LinearAllocator::resize(size_t new_size)
 }
 
 void* LinearAllocator::allocate(size_t size, size_t alignment)
-{
+{   
     size_t padding = 0;
-    uintptr_t currAddress = (uintptr_t)start + cursor;
+    uintptr_t currAddress = (uintptr_t)start + (uintptr_t)cursor;
 
     // if we care about alignment, and the cursor is not currently
     bool align = alignment && currAddress % alignment;
@@ -60,7 +60,7 @@ void* LinearAllocator::allocate(size_t size, size_t alignment)
         resize(newSize);
 
         // start has moved, need to update addresses
-        currAddress = (uintptr_t)start + cursor;
+        currAddress = (uintptr_t)start + (uintptr_t)cursor;
         padding = align ? calculatePadding(currAddress, alignment) : 0;
         counter = 0;
         timing = true;
@@ -93,11 +93,11 @@ void LinearAllocator::shrink()
     if (target < tot_bytes)resize(target);
 }
 
-LinearAllocator::Block LinearAllocator::write(void* data, size_t byte_count, size_t alignment)
+Allocator::Block LinearAllocator::write(void* data, size_t byte_count, size_t alignment)
 {
     std::lock_guard lock(mutex);
 
-    uintptr_t writeStart = cursor;
+    size_t writeStart = cursor;
     void* location = allocate(byte_count, alignment);
     if (location) memcpy(location, data, byte_count);
 
