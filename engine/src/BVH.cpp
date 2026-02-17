@@ -12,8 +12,10 @@ uint32_t BVH::allocateLeaf(uint32_t ID, const Entry& entry)
     leaf.bounds = entry;
     leaf.bodyID = ID;
     nodes.push_back(leaf);
+    uint32_t index = nodes.size() - 1;
+    indexFromID[ID] = index;
 
-    return nodes.size() - 1;
+    return index;
 }
 
 uint32_t BVH::allocateInternalNode()
@@ -176,7 +178,6 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
     const Entry entry = { fatten(aabb), at };
 
     uint32_t leaf = allocateLeaf(ID, entry);
-    indexFromID[ID] = leaf;
 
     if (nodes.size() == 1)
     {
@@ -213,7 +214,7 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
     // Stage 3: walk back up the tree refitting AABBs
     refitAdd(leaf);
 
-    dirty = true;
+    moveBuffer.push(ID);
 
     return ID;
 }
@@ -289,10 +290,12 @@ bool BVH::remove(uint32_t bodyID)
 
     // Remove both structural nodes
     // since we swap pop the back node, make sure we don't accidentally alter the index of the other node
-    removeNodeAt(std::max(leaf, parent)); // possibly the back node, remove it first
-    if (sibling == nodes.size()) sibling = std::max(leaf, parent); // sibling got swapped
-    removeNodeAt(std::min(leaf, parent));
-    if (sibling == nodes.size()) sibling = std::min(leaf, parent);
+    uint32_t front = std::min(leaf, parent);
+    uint32_t back = std::max(leaf, parent);
+    removeNodeAt(back); // possibly the back node, remove it first
+    if (sibling == nodes.size()) sibling = back; // sibling got swapped
+    removeNodeAt(front);
+    if (sibling == nodes.size()) sibling = front;
 
     // Refit upward (removeNodeAt may have invalidated parent, sibling, or grandparent)
     if (sibling != root) refitRemove(nodes[sibling].parent);
@@ -334,63 +337,62 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
     }
 }
 
+void BVH::removePairs(uint32_t ID)
+{
+    std::erase_if(collPairs, [&](const CollisionPair& pair) {
+        return pair.first == ID || pair.second == ID;
+    });
+}
+
+void BVH::addPair(uint32_t idA, uint32_t idB)
+{
+    if (idA > idB) std::swap(idA, idB);
+    const CollisionPair pair = { idA, idB };
+    collPairs.push_back(pair);
+}
+
 CollisionPairs BVH::computePairs(void)
 {
-    if (!dirty) return collPairs;
+    if (!moveBuffer.size()) return collPairs;
 
-    if (indexFromID.size() < 2) return {};
-
-    dirty = false;
-    CollisionPairs pairs;
-    std::stack<CollisionPair> stack;
-    // there is at least 2 leaves in the tree
-    stack.push({ nodes[root].child1, nodes[root].child2 }); // cross-traverse 
-    stack.push({ nodes[root].child1, nodes[root].child1 }); // self-traverse
-    stack.push({ nodes[root].child2, nodes[root].child2 }); // self-traverse
-    while (!stack.empty())
+    std::vector<uint32_t> stack;
+    stack.reserve(std::log2(nodes.size()));
+    while (!moveBuffer.empty())
     {
-        const auto [i1, i2] = stack.top(); stack.pop();
-        const Node& node1 = nodes[i1];
-        const Node& node2 = nodes[i2];
-        
-        if (i1 != i2) // cross-traversal
+        uint32_t movedID = moveBuffer.front(); moveBuffer.pop();
+
+        removePairs(movedID);
+        const uint32_t movedIndex = indexFromID[movedID];
+        const Node& moved = nodes[movedIndex];
+        const auto [box, pos] = moved.bounds;
+
+        if (!nodes[root].isleaf)
         {
-            const auto& [b1, p1] = node1.bounds;
-            const auto& [b2, p2] = node2.bounds;
-            bool overlapping = overlaps(b1, p1, b2, p2);
-            if (!overlapping) continue;
+            stack.push_back(nodes[root].child1);
+            stack.push_back(nodes[root].child2);
+        }
 
-            if (node1.isleaf && node2.isleaf) // leaf-leaf traversal
-            {
-                pairs.push_back({ node1.bodyID, node2.bodyID });
-            }
-            else if (node1.isleaf != node2.isleaf) // node-leaf / leaf-node traversal
-            {
-                const Node& node = node1.isleaf ? node2 : node1;
-                uint32_t leaf = node1.isleaf ? i1 : i2;
+        while (!stack.empty())
+        {
+            uint32_t index = stack.back(); stack.pop_back();
+            if (index == movedIndex) continue;
 
-                stack.push({ node.child1, leaf });
-                stack.push({ node.child2, leaf });
-            }
-            else // node-node traversal
+            const Node& node = nodes[index];
+            const auto [oBox, oPos] = node.bounds;
+            if (!overlaps(box, pos, oBox, oPos)) continue;
+
+            if (node.isleaf)
             {
-                stack.push({ node1.child1, node2.child1 });
-                stack.push({ node1.child1, node2.child2 });
-                stack.push({ node1.child2, node2.child1 });
-                stack.push({ node1.child2, node2.child2 });
+                addPair(movedID, node.bodyID);
+            }
+            else
+            {
+                stack.push_back(node.child1);
+                stack.push_back(node.child2);
             }
         }
-        else if (i1 == i2 && !nodes[i1].isleaf) // node self-traversal
-        {
-            const Node& node = nodes[i1];
-            stack.push({ node.child1, node.child1 });
-            stack.push({ node.child1, node.child2 });
-            stack.push({ node.child2, node.child2 });
-        }
-        // do nothing when self-traversing a leaf
     }
 
-    collPairs = pairs;
     return collPairs;
 }
 

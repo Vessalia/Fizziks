@@ -3,6 +3,7 @@
 #include <Fizziks/Broadphase.h>
 
 #include <unordered_map>
+#include <queue>
 
 namespace Fizziks::internal
 {
@@ -23,6 +24,11 @@ public:
 
 private:
     using Entry = std::pair<AABB, Vec2>;
+    struct Pair
+    {
+        CollisionPair pair;
+        uint32_t indexA, indexB; // adjacency list
+    };
 
     static constexpr uint32_t INVALID = -1;
     struct Node
@@ -39,7 +45,9 @@ private:
     std::vector<Node> nodes;
     std::unordered_map<uint32_t, uint32_t> indexFromID;
 
-    bool dirty = true;
+    std::unordered_map<uint32_t, std::unordered_map<uint32_t, bool>> pairMap;
+
+    std::queue<uint32_t> moveBuffer;
     CollisionPairs collPairs;
 
     uint32_t allocateLeaf(uint32_t ID, const Entry& entry);
@@ -54,5 +62,7 @@ private:
     void refitAdd(uint32_t leaf);
     void refitRemove(uint32_t from);
     void rotate(uint32_t index);
+    void removePairs(uint32_t ID);
+    void addPair(uint32_t idA, uint32_t idB);
 };
 }
