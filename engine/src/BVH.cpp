@@ -252,8 +252,7 @@ void BVH::removeNodeAt(uint32_t index)
     nodes.pop_back();
 }
 
-// users can only request to remove leaf nodes
-bool BVH::remove(uint32_t bodyID)
+bool BVH::removeNode(uint32_t bodyID, bool temp)
 {
     auto it = indexFromID.find(bodyID);
     if (it == indexFromID.end()) return false;
@@ -300,7 +299,19 @@ bool BVH::remove(uint32_t bodyID)
     // Refit upward (removeNodeAt may have invalidated parent, sibling, or grandparent)
     if (sibling != root) refitRemove(nodes[sibling].parent);
 
+    if (!temp)
+    {
+        removePairs(bodyID);
+        pairMap.erase(bodyID);
+    }
+
     return true;
+}
+
+// users can only request to remove leaf nodes
+bool BVH::remove(uint32_t bodyID)
+{
+    return removeNode(bodyID);
 }
 
 void BVH::replace(uint32_t prevID, uint32_t newID)
@@ -316,6 +327,9 @@ void BVH::replace(uint32_t prevID, uint32_t newID)
     nodes[index].bodyID = newID;
     indexFromID.erase(it);
     indexFromID[newID] = index;
+
+    removePairs(prevID);
+    moveBuffer.push(newID);
 }
 
 void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
@@ -332,23 +346,79 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
     if (node.parent == BVH::INVALID) return;
     else
     {
-        remove(ID);
+        auto& t = pairMap[ID];
+        removeNode(ID, true);
         add(ID, aabb, at);
     }
-}
-
-void BVH::removePairs(uint32_t ID)
-{
-    std::erase_if(collPairs, [&](const CollisionPair& pair) {
-        return pair.first == ID || pair.second == ID;
-    });
 }
 
 void BVH::addPair(uint32_t idA, uint32_t idB)
 {
     if (idA > idB) std::swap(idA, idB);
+
     const CollisionPair pair = { idA, idB };
+    const InternalPair internalPair = { pair, static_cast<uint32_t>(pairMap[idA].size()), static_cast<uint32_t>(pairMap[idB].size()) };
+    uint32_t idx = collPairs.size();
+
     collPairs.push_back(pair);
+    internalPairs.push_back(internalPair);
+
+    pairMap[idA].push_back(idx);
+    pairMap[idB].push_back(idx);
+}
+
+void BVH::removePairs(uint32_t ID)
+{
+    if (!pairMap.contains(ID)) return; // don't create indexes if not needed
+
+    auto& list = pairMap[ID];
+    while (!list.empty())
+    {
+        uint32_t index = list.back();
+        removePair(index);
+    }
+}
+
+void BVH::removePair(uint32_t index)
+{
+    auto dead = internalPairs[index];
+    auto [da, db] = dead.pair;
+
+    auto fixAdj = [&](uint32_t body, uint32_t idx)
+    {
+        auto& list = pairMap[body];
+        
+        std::swap(list[idx], list.back());
+        list.pop_back();
+
+        if (idx < list.size()) // something moved into idx
+        {
+            uint32_t movedPairIdx = list[idx];
+            auto& mp = internalPairs[movedPairIdx];
+            if (mp.pair.first == body) mp.indexA = idx;
+            else                       mp.indexB = idx;
+        }
+    };
+
+    fixAdj(da, dead.indexA);
+    fixAdj(db, dead.indexB);
+
+    uint32_t last = internalPairs.size() - 1;
+
+    if (index < last)
+    {
+        internalPairs[index] = internalPairs[last];
+        collPairs[index] = collPairs[last];
+
+        auto& moved = internalPairs[index];
+        auto [a, b] = moved.pair;
+
+        pairMap[a][moved.indexA] = index;
+        pairMap[b][moved.indexB] = index;
+    }
+
+    internalPairs.pop_back();
+    collPairs.pop_back();
 }
 
 CollisionPairs BVH::computePairs(void)
@@ -379,7 +449,7 @@ CollisionPairs BVH::computePairs(void)
 
             const Node& node = nodes[index];
             const auto [oBox, oPos] = node.bounds;
-            if (!overlaps(box, pos, oBox, oPos)) continue;
+            if (node.bodyID == movedID || !overlaps(box, pos, oBox, oPos)) continue;
 
             if (node.isleaf)
             {

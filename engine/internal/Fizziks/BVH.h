@@ -24,10 +24,10 @@ public:
 
 private:
     using Entry = std::pair<AABB, Vec2>;
-    struct Pair
+    struct InternalPair
     {
         CollisionPair pair;
-        uint32_t indexA, indexB; // adjacency list
+        uint32_t indexA, indexB; // adjacency list back reference
     };
 
     static constexpr uint32_t INVALID = -1;
@@ -45,10 +45,10 @@ private:
     std::vector<Node> nodes;
     std::unordered_map<uint32_t, uint32_t> indexFromID;
 
-    std::unordered_map<uint32_t, std::unordered_map<uint32_t, bool>> pairMap;
-
     std::queue<uint32_t> moveBuffer;
-    CollisionPairs collPairs;
+    std::unordered_map<uint32_t, std::vector<uint32_t>> pairMap; // adjacency list
+    std::vector<InternalPair> internalPairs; // internal list used with adjacency lists
+    CollisionPairs collPairs; // public list used by users
 
     uint32_t allocateLeaf(uint32_t ID, const Entry& entry);
     uint32_t allocateInternalNode();
@@ -59,10 +59,12 @@ private:
     Entry mergeBounds(const Entry& e1, const Entry& e2) const;
     uint32_t pickBestSibling(uint32_t nodeIndex) const;
     void removeNodeAt(uint32_t index);
+    bool removeNode(uint32_t bodyID, bool temp = false);
     void refitAdd(uint32_t leaf);
     void refitRemove(uint32_t from);
     void rotate(uint32_t index);
-    void removePairs(uint32_t ID);
     void addPair(uint32_t idA, uint32_t idB);
+    void removePairs(uint32_t ID);
+    void removePair(uint32_t index);
 };
 }

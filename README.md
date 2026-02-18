@@ -12,7 +12,7 @@ Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for
 
 ## Building
 ### Requirements
-- C++17 compatible compiler
+- C++20 compatible compiler
 - CMake 3.28 - 4.2
 - Only tested on Windows
 
