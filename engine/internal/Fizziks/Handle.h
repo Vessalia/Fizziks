@@ -4,9 +4,9 @@ namespace Fizziks::internal
 {
 struct Handle 
 {
-    uint32_t index;
-    uint32_t gen;
+	uint32_t index;
+	uint32_t gen;
 
-    bool operator==(const Handle&) const = default;
+	bool operator==(const Handle&) const = default;
 };
 }
