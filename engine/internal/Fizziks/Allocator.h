@@ -8,8 +8,8 @@ class Allocator
 public:
 	struct Block
 	{
-	size_t base;
-	size_t byte_count;
+		size_t base;
+		size_t byte_count;
 	};
 
 	virtual ~Allocator() = default;

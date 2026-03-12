@@ -23,27 +23,27 @@ public:
 
 	explicit operator bool() const
 	{
-	for(const auto& byte : bytes)
-	{
-	if(byte.any())
-	{
-	return true;
-	}
-	}
+		for(const auto& byte : bytes)
+		{
+			if(byte.any())
+			{
+				return true;
+			}
+		}
 
-	return false;
+		return false;
 	}
 	explicit operator size_t() const
 	{
-	if (bytes.size() > sizeof(size_t)) return SIZE_MAX;
+		if (bytes.size() > sizeof(size_t)) return SIZE_MAX;
 
-	size_t val = 0;
-	for(size_t i = 0; i < bytes.size(); ++i)
-	{
-	val += bytes[i].to_ullong() << (BYTE_SIZE * i);
-	}
+		size_t val = 0;
+		for(size_t i = 0; i < bytes.size(); ++i)
+		{
+			val += bytes[i].to_ullong() << (BYTE_SIZE * i);
+		}
 
-	return val;
+		return val;
 	}
 
 	const std::vector<std::bitset<BYTE_SIZE>>& getBytes() const;
@@ -70,7 +70,7 @@ public:
 	BitArray& set(size_t index, bool val = true);
 	BitArray& clear(size_t index);
 	BitArray& flip(size_t index);
-	bool      read(size_t index) const;
+	bool	  read(size_t index) const;
 
 	BitArray& trim();
 
@@ -84,9 +84,10 @@ inline std::ostream& operator<<(std::ostream& os, const BitArray& ba)
 {
 	for (auto it = ba.getBytes().rbegin(); it != ba.getBytes().rend(); ++it)
 	{
-	os << *it;
-	os << " ";
+		os << *it;
+		os << " ";
 	}
+	
 	return os;
 };
 }

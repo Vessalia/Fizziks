@@ -24,58 +24,58 @@ private:
 
 	struct BodyData
 	{
-	uint32_t layer;
+		uint32_t layer;
 
-	Vec2 centroid;
+		Vec2 centroid;
 
-	Vec2 position, velocity, accumForce;
-	val_t rotation, angularVelocity, accumTorque;
+		Vec2 position, velocity, accumForce;
+		val_t rotation, angularVelocity, accumTorque;
 
-	val_t mass, invMass;
-	val_t MoI, invMoI;
+		val_t mass, invMass;
+		val_t MoI, invMoI;
 
-	val_t gravityScale;
+		val_t gravityScale;
 
-	val_t restitution;
-	val_t staticFriction;
-	val_t dynamicFriction;
-	val_t linearDamping;
-	val_t angularDamping;
+		val_t restitution;
+		val_t staticFriction;
+		val_t dynamicFriction;
+		val_t linearDamping;
+		val_t angularDamping;
 
-	AABB bounds;
+		AABB bounds;
 
-	std::vector<Collider> colliders;
+		std::vector<Collider> colliders;
 
-	BodyType bodyType;
+		BodyType bodyType;
 	};
 
 	struct ColliderContact
 	{
-	uint32_t collAId, collBId;
-	Contact contact;
+		uint32_t collAId, collBId;
+		Contact contact;
 	};
 
 	struct CollisionManifold
 	{
-	size_t bodyAId, bodyBId;
+		size_t bodyAId, bodyBId;
 
-	Allocator::Block allocContact;
-	size_t numBlocks = 0;
-	size_t allocIndex;
+		Allocator::Block allocContact;
+		size_t numBlocks = 0;
+		size_t allocIndex;
 	};
 
 	struct CollisionResolution
 	{
-	uint32_t bodyAId, bodyBId;
-	uint32_t collIdA, collIdB;
-	Contact contact;
+		uint32_t bodyAId, bodyBId;
+		uint32_t collIdA, collIdB;
+		Contact contact;
 
-	val_t normalImpulse;
-	val_t tangentImpulse;
+		val_t normalImpulse;
+		val_t tangentImpulse;
 
-	val_t invEffMass;
-	val_t invEffTangentMass;
-	val_t bias;
+		val_t invEffMass;
+		val_t invEffTangentMass;
+		val_t bias;
 	};
 
 	static const BodyData null_body;

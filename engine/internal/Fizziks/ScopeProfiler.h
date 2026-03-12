@@ -25,25 +25,28 @@ public:
 
 	~ScopeProfiler()
 	{
-	const auto end = clock::now();
-	const auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+		const auto end = clock::now();
+		const auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-	if (average)
-	{
-	if (!averages.contains(label)) averages[label] = { microseconds, 1 };
-	else
-	{
-	averages[label].first += microseconds;
-	++averages[label].second;
-	}
+		if (average)
+		{
+			if (!averages.contains(label))
+			{
+				averages[label] = { microseconds, 1 };
+			}
+			else
+			{
+				averages[label].first += microseconds;
+				++averages[label].second;
+			}
 
-	auto average = averages[label].first / averages[label].second;
-	print(average);
-	}
-	else
-	{
-	print(microseconds);
-	}
+			auto average = averages[label].first / averages[label].second;
+			print(average);
+		}
+		else
+		{
+			print(microseconds);
+		}
 	}
 
 	ScopeProfiler(const ScopeProfiler&) = delete;
@@ -51,9 +54,9 @@ public:
 
 	void print(long long time) const
 	{
-	std::cout << "[PROFILE] " << label
-	<< " | " << functionSignature
-	<< " | " << time << " us\n";
+		std::cout << "[PROFILE] " << label
+				  << " | " << functionSignature
+				  << " | " << time << " us\n";
 	}
 
 private:

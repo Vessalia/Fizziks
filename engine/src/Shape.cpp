@@ -18,7 +18,7 @@ struct SupportVertex
 
 	explicit operator Vec2() const
 	{
-	return CSO;
+		return CSO;
 	}
 
 	bool operator==(const SupportVertex&) const = default;
@@ -40,12 +40,12 @@ Vec2 getCentroid(const std::vector<Vec2>& vertices)
 	size_t n = vertices.size();
 	for (size_t i = 0; i < n; ++i)
 	{
-	const Vec2& v0 = vertices[i];
-	const Vec2& v1 = vertices[(i + 1) % n];
+		const Vec2& v0 = vertices[i];
+		const Vec2& v1 = vertices[(i + 1) % n];
 
-	val_t cross = crossproduct(v0, v1);
-	centroid += (v0 + v1) * cross;
-	area += cross;
+		val_t cross = crossproduct(v0, v1);
+		centroid += (v0 + v1) * cross;
+		area += cross;
 	}
 
 	return area != 0 ? centroid / (3 * area) : Vec2::Zero();
@@ -60,10 +60,10 @@ Shape createRect(val_t width, val_t height)
 {
 	std::vector<Vec2> vertices 
 	{
-	{ -width / 2,  height / 2 },
-	{ -width / 2, -height / 2 },
-	{  width / 2, -height / 2 },
-	{  width / 2,  height / 2 }
+		{ -width / 2,  height / 2 },
+		{ -width / 2, -height / 2 },
+		{  width / 2, -height / 2 },
+		{  width / 2,  height / 2 }
 	};
 
 	return createPolygon(vertices);
@@ -75,14 +75,15 @@ Shape createPolygon(const std::vector<Vec2>& vertices)
 	auto verts = vertices;
 	for (auto& vert : verts)
 	{
-	vert -= centroid;
+		vert -= centroid;
 	}
 
 	val_t effRadius = 0;
 	for (auto& vert : verts)
 	{
-	effRadius = std::max(effRadius, vert.norm());
+		effRadius = std::max(effRadius, vert.norm());
 	}
+
 	return { ShapeType::POLYGON, Polygon{ verts, effRadius } };
 }
 
@@ -96,34 +97,34 @@ val_t getMoI(const Shape& shape, val_t mass)
 	val_t MoI = 0;
 	if (shape.type == ShapeType::CIRCLE)
 	{
-	Circle c = std::get<Circle>(shape.data);
-	MoI = 0.5 * mass * c.radius * c.radius;
+		Circle c = std::get<Circle>(shape.data);
+		MoI = 0.5 * mass * c.radius * c.radius;
 	}
 	else if (shape.type == ShapeType::POLYGON)
 	{
-	Polygon p = std::get<Polygon>(shape.data);
+		Polygon p = std::get<Polygon>(shape.data);
 
-	val_t area = 0;
-	val_t cx = 0, cy = 0;
+		val_t area = 0;
+		val_t cx = 0, cy = 0;
 
-	for(int i = 0; i < p.vertices.size(); ++i)
-	{
-	const auto& v0 = p.vertices[i];
-	const auto& v1 = p.vertices[(i + 1) % p.vertices.size()];
-	const val_t cross = crossproduct(v0, v1);
+		for(int i = 0; i < p.vertices.size(); ++i)
+		{
+			const auto& v0 = p.vertices[i];
+			const auto& v1 = p.vertices[(i + 1) % p.vertices.size()];
+			const val_t cross = crossproduct(v0, v1);
 
-	area += cross;
-	cx += (v0.x + v1.x) * cross;
-	cy += (v0.y + v1.y) * cross;
+			area += cross;
+			cx += (v0.x + v1.x) * cross;
+			cy += (v0.y + v1.y) * cross;
 
-	MoI += (v0.x * v0.x + v0.x * v1.x + v1.x * v1.x + 
-	v0.y * v0.y + v0.y * v1.y + v1.y * v1.y) * cross;
-	}
+			MoI += (v0.x * v0.x + v0.x * v1.x + v1.x * v1.x + 
+			v0.y * v0.y + v0.y * v1.y + v1.y * v1.y) * cross;
+		}
 
-	cx /= (3 * area);
-	cy /= (3 * area);
+		cx /= (3 * area);
+		cy /= (3 * area);
 
-	MoI = MoI / 12 - mass * (cx * cx + cy * cy);
+		MoI = MoI / 12 - mass * (cx * cx + cy * cy);
 	}
 
 	return MoI;
@@ -134,11 +135,11 @@ AABB getEncapsulatingAABBFast(const Shape& s)
 	val_t rad = 0;
 	if (s.type == ShapeType::CIRCLE)
 	{
-	rad = std::get<Circle>(s.data).radius;
+		rad = std::get<Circle>(s.data).radius;
 	}
 	else if (s.type == ShapeType::POLYGON)
 	{
-	rad = std::get<Polygon>(s.data).effRadius;
+		rad = std::get<Polygon>(s.data).effRadius;
 	}
 
 	AABB aabb;
@@ -156,28 +157,28 @@ AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
 
 	if (s.type == ShapeType::POLYGON)
 	{
-	auto& polygon = std::get<Polygon>(s.data);
+		auto& polygon = std::get<Polygon>(s.data);
 
-	Vec2 min = vec_max(), max = vec_min();
-	for (const auto& vertex : polygon.vertices)
-	{
-	auto transformed = vertex.rotated(rot);
-	min.x = std::min(min.x, transformed.x);
-	min.y = std::min(min.y, transformed.y);
-	max.x = std::max(max.x, transformed.x);
-	max.y = std::max(max.y, transformed.y);
-	}
-	
-	aabb.hw  = (max.x - min.x) / 2;
-	aabb.hh = (max.y - min.y) / 2;
+		Vec2 min = vec_max(), max = vec_min();
+		for (const auto& vertex : polygon.vertices)
+		{
+			auto transformed = vertex.rotated(rot);
+			min.x = std::min(min.x, transformed.x);
+			min.y = std::min(min.y, transformed.y);
+			max.x = std::max(max.x, transformed.x);
+			max.y = std::max(max.y, transformed.y);
+		}
+		
+		aabb.hw  = (max.x - min.x) / 2;
+		aabb.hh = (max.y - min.y) / 2;
 
-	aabb.offset = (min + max) / 2 - centroid;
+		aabb.offset = (min + max) / 2 - centroid;
 	}
 	else if (s.type == ShapeType::CIRCLE)
 	{
-	auto& circle = std::get<Circle>(s.data);
-	aabb.hw  = circle.radius;
-	aabb.hh = circle.radius;
+		auto& circle = std::get<Circle>(s.data);
+		aabb.hw  = circle.radius;
+		aabb.hh = circle.radius;
 	}
 
 	return aabb;
@@ -186,7 +187,7 @@ AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
 AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight)
 {
 	if (tight) return getEncapsulatingAABBTight(s, centroid, rot);
-	else       return getEncapsulatingAABBFast(s);
+	else	   return getEncapsulatingAABBFast(s);
 }
 
 bool overlaps(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
@@ -211,8 +212,8 @@ AABB merge(const AABB& a, const AABB& b)
 {
 	return 
 	{ 
-	std::max(a.hw,  b.hw), 
-	std::max(a.hh, b.hh)
+		std::max(a.hw, b.hw), 
+		std::max(a.hh, b.hh)
 	};
 }
 std::pair<AABB, Vec2> merge(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
@@ -237,30 +238,30 @@ Vec2 getSupport(const Shape& shape, const Mat2& rot, const Vec2& direction)
 
 	if(shape.type == ShapeType::CIRCLE)
 	{
-	result = dir.normalized() * std::get<Circle>(shape.data).radius;
+		result = dir.normalized() * std::get<Circle>(shape.data).radius;
 	}
 	else if (shape.type == ShapeType::POLYGON)
 	{
-	const auto& p = std::get<Polygon>(shape.data);
-	val_t bestProj = -fizzmax<val_t>();
-	
-	for (const auto& v : p.vertices)
-	{
-	val_t proj = v.dot(dir);
-	if(proj > bestProj)
-	{
-	bestProj = proj;
-	result = v;
-	}
-	}
+		const auto& p = std::get<Polygon>(shape.data);
+		val_t bestProj = -fizzmax<val_t>();
+		
+		for (const auto& v : p.vertices)
+		{
+			val_t proj = v.dot(dir);
+			if(proj > bestProj)
+			{
+				bestProj = proj;
+				result = v;
+			}
+		}
 	}
 
 	return result;
 }
 
 SupportVertex getCSOSupport(const Shape& s1, const Vec2& p1, const Mat2& r1,
-	const Shape& s2, const Vec2& p2, const Mat2& r2, 
-	const Vec2& dir)
+							const Shape& s2, const Vec2& p2, const Mat2& r2, 
+							const Vec2& dir)
 {
 	Vec2 support1 = getSupport(s1, r1,  dir);
 	Vec2 support2 = getSupport(s2, r2, -dir);
@@ -277,9 +278,9 @@ Vec2 projToEdge (const Vec2& P, const Vec2& Q, const Vec2& point)
 	val_t denom = PQ.dot(PQ);
 	val_t t = denom < epsilon ? 0 : (point - P).dot(PQ) / denom;
 	t = std::clamp(t, static_cast<val_t>(0), static_cast<val_t>(1));
-	if      (t == 0) return P;
+	if  	(t == 0) return P;
 	else if (t == 1) return Q;
-	else             return P + t * PQ; // avoid dealing with all the float math stuff
+	else			 return P + t * PQ; // avoid dealing with all the float math stuff
 }
 
 void enforceCCWWinding(Simplex& simplex)
@@ -287,28 +288,28 @@ void enforceCCWWinding(Simplex& simplex)
 	if (simplex.size() < 3) return;
 	else if (simplex.size() == 3) // need 3rd point to be the newest one (don't move) for GJK simplex reduction alg
 	{
-	Vec2 A = simplex[0].CSO, B = simplex[1].CSO, C = simplex[2].CSO;
-	val_t cross = crossproduct(B - A, C - A);
-	if (cross < 0) std::swap(simplex[0], simplex[1]);
+		Vec2 A = simplex[0].CSO, B = simplex[1].CSO, C = simplex[2].CSO;
+		val_t cross = crossproduct(B - A, C - A);
+		if (cross < 0) std::swap(simplex[0], simplex[1]);
 	}
 	else
 	{
-	val_t signedArea = 0;
+		val_t signedArea = 0;
 
-	// Shoelace formula (signed area * 2)
-	for (size_t i = 0; i < simplex.size(); ++i)
-	{
-	const Vec2& a = simplex[i].CSO;
-	const Vec2& b = simplex[(i + 1) % simplex.size()].CSO;
+		// Shoelace formula (signed area * 2)
+		for (size_t i = 0; i < simplex.size(); ++i)
+		{
+			const Vec2& a = simplex[i].CSO;
+			const Vec2& b = simplex[(i + 1) % simplex.size()].CSO;
 
-	signedArea += crossproduct(a, b);
-	}
+			signedArea += crossproduct(a, b);
+		}
 
-	// If clockwise, reverse to make CCW
-	if (signedArea < 0)
-	{
-	std::reverse(simplex.begin(), simplex.end());
-	}
+		// If clockwise, reverse to make CCW
+		if (signedArea < 0)
+		{
+			std::reverse(simplex.begin(), simplex.end());
+		}
 	}
 }
 
@@ -316,79 +317,79 @@ void reduceSimplex(Simplex& simplex, Vec2& dir)
 {
 	if (simplex.size() == 2)
 	{
-	// B can't be the closest to the origin, we just tried to get closer
-	// AB is closest if angle between it and A to origin is positive
-	// else its on the far side of A -> A is the closest
-	Vec2 B = simplex[0].CSO;
-	Vec2 A = simplex[1].CSO;
-	Vec2 AB = B - A;
-	if (AB.dot(-A) > 0)
-	{
-	dir = lefttriplecross(AB, -A, AB);
-	}
-	else
-	{
-	dir = -A;
-	simplex.erase(simplex.begin()); // simplex = { simplex[1] };
-	}
+		// B can't be the closest to the origin, we just tried to get closer
+		// AB is closest if angle between it and A to origin is positive
+		// else its on the far side of A -> A is the closest
+		Vec2 B = simplex[0].CSO;
+		Vec2 A = simplex[1].CSO;
+		Vec2 AB = B - A;
+		if (AB.dot(-A) > 0)
+		{
+			dir = lefttriplecross(AB, -A, AB);
+		}
+		else
+		{
+			dir = -A;
+			simplex.erase(simplex.begin()); // simplex = { simplex[1] };
+		}
 	}
 	else if (simplex.size() == 3)
 	{
-	// origin can't be closest to C or B, since BC was closer. Can't be BC, we just tried to get closer
-	Vec2 C = simplex[0].CSO;
-	Vec2 B = simplex[1].CSO;
-	Vec2 A = simplex[2].CSO;
-	Vec2 AB = B - A;
-	Vec2 AC = C - A;
-	// AB x AC -> into the page, so (AB x AC) x AC is perp to AC and outside the triangle
-	if (lefttriplecross(AB, AC, AC).dot(-A) > 0)
-	{
-	if (AC.dot(-A) > 0) 
-	{
-	dir = lefttriplecross(AC, -A, AC); // this is the same value as our outer if, but is more 3D friendly since this may point out of the trangles plane
-	simplex.erase(simplex.begin() + 1); // simplex = { simplex[0], simplex[2] };
-	}
-	else if (AB.dot(-A) > 0) // it is possible with a very wide angle we can be infront of AB
-	{
-	dir = lefttriplecross(AB, -A, AB);
-	simplex.erase(simplex.begin()); // simplex = { simplex[1], simplex[2] };
-	}
-	else
-	{
-	dir = -A;
-	simplex.erase(simplex.begin()); 
-	simplex.erase(simplex.begin()); // simplex = { simplex[2] };
-	}
-	}
-	// Similar to above, check if we're outside closest to AB
-	else if (righttriplecross(AB, AB, AC).dot(-A) > 0)
-	{
-	if (AB.dot(-A) > 0)
-	{
-	dir = lefttriplecross(AB, -A, AB);
-	simplex.erase(simplex.begin()); // simplex = { simplex[1], simplex[2] };
-	}
-	else
-	{
-	dir = -A;
-	simplex.erase(simplex.begin()); 
-	simplex.erase(simplex.begin()); // simplex = { simplex[2] };
-	}
-	}
-	// we're inside, the origin is contained!
-	else
-	{
-	dir = Vec2::Zero();
-	}
+		// origin can't be closest to C or B, since BC was closer. Can't be BC, we just tried to get closer
+		Vec2 C = simplex[0].CSO;
+		Vec2 B = simplex[1].CSO;
+		Vec2 A = simplex[2].CSO;
+		Vec2 AB = B - A;
+		Vec2 AC = C - A;
+		// AB x AC -> into the page, so (AB x AC) x AC is perp to AC and outside the triangle
+		if (lefttriplecross(AB, AC, AC).dot(-A) > 0)
+		{
+			if (AC.dot(-A) > 0) 
+			{
+				dir = lefttriplecross(AC, -A, AC); // this is the same value as our outer if, but is more 3D friendly since this may point out of the trangles plane
+				simplex.erase(simplex.begin() + 1); // simplex = { simplex[0], simplex[2] };
+			}
+			else if (AB.dot(-A) > 0) // it is possible with a very wide angle we can be infront of AB
+			{
+				dir = lefttriplecross(AB, -A, AB);
+				simplex.erase(simplex.begin()); // simplex = { simplex[1], simplex[2] };
+			}
+			else
+			{
+				dir = -A;
+				simplex.erase(simplex.begin()); 
+				simplex.erase(simplex.begin()); // simplex = { simplex[2] };
+			}
+		}
+		// Similar to above, check if we're outside closest to AB
+		else if (righttriplecross(AB, AB, AC).dot(-A) > 0)
+		{
+			if (AB.dot(-A) > 0)
+			{
+				dir = lefttriplecross(AB, -A, AB);
+				simplex.erase(simplex.begin()); // simplex = { simplex[1], simplex[2] };
+			}
+			else
+			{
+				dir = -A;
+				simplex.erase(simplex.begin()); 
+				simplex.erase(simplex.begin()); // simplex = { simplex[2] };
+			}
+		}
+		// we're inside, the origin is contained!
+		else
+		{
+			dir = Vec2::Zero();
+		}
 	}
 	else if (simplex.size() > 1)
 	{
-	ASSERT_AND_CRASH("invalid state reached in GJK");
+		ASSERT_AND_CRASH("invalid state reached in GJK");
 	}
 }
 
 std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, const Mat2& r1,
-	   const Shape& s2, const Vec2& p2, const Mat2& r2)
+									   const Shape& s2, const Vec2& p2, const Mat2& r2)
 {
 	Simplex simplex;
 	simplex.reserve(maxIterationsGJK / 2); // we'll usually exit early
@@ -402,19 +403,19 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, const Ma
 	direction = -point.CSO;
 	for (int i = 0; i < maxIterationsGJK; ++i)
 	{
-	point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
-	if (point.CSO.dot(direction) <= 0) return { false, std::move(simplex) }; // didn't pass origin -> it must be outside
-	simplex.push_back(point); // need to insert at correct index
-	enforceCCWWinding(simplex);
-	reduceSimplex(simplex, direction);
-	if (direction == Vec2::Zero()) return { true, std::move(simplex) };
+		point = getCSOSupport(s1, p1, r1, s2, p2, r2, direction);
+		if (point.CSO.dot(direction) <= 0) return { false, std::move(simplex) }; // didn't pass origin -> it must be outside
+		simplex.push_back(point); // need to insert at correct index
+		enforceCCWWinding(simplex);
+		reduceSimplex(simplex, direction);
+		if (direction == Vec2::Zero()) return { true, std::move(simplex) };
 	}
 
 	return { false, std::move(simplex) };
 }
 
 bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t rot1,
-	   const Shape& s2, const Vec2& p2, val_t rot2)
+				   const Shape& s2, const Vec2& p2, val_t rot2)
 {
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
 	const auto [overlaps, _] = getGJKSimplex(s1, p1, r1, s2, p2, r2);
@@ -432,38 +433,38 @@ const Vec2 neg_y = { 0, -1};
 const std::array<Vec2, 4> dirs = { pos_x, neg_x, pos_y, neg_y };
 const std::array<Vec2, 2> axes = { pos_x, pos_y };
 void blowupSimplex(Simplex& simplex,
-	   const Shape& s1, const Vec2& p1, const Mat2& r1,
-	   const Shape& s2, const Vec2& p2, const Mat2& r2)
+				   const Shape& s1, const Vec2& p1, const Mat2& r1,
+				   const Shape& s2, const Vec2& p2, const Mat2& r2)
 {
 	if (simplex.size() < 1 || simplex.size() > 2) return; // can only blow up a point or line
 
 	switch(simplex.size())
 	{
-	case (1): // point
-	{
-	for (const Vec2& dir : dirs)
-	{
-	const SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
-	if ((point.CSO - simplex[0].CSO).squaredNorm() >= epsilon)
-	{
-	simplex.push_back(point);
-	break;
-	}
-	}
-	if (simplex.size() < 2) simplex.push_back(getCSOSupport(s1, p1, r1, s2, p2, r2, dirs[0]));
-	[[fallthrough]];
-	} // fall-through: point -> line -> triangle
-	case (2): // line
-	{
-	const Vec2 line = simplex[1].CSO - simplex[0].CSO;
-	Vec2 perp = Vec2(-line.y, line.x); // in 2D vs 3D, don't need to be careful about tangent vectors
-	SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, perp);
-	if ((point.CSO - simplex[0].CSO).squaredNorm() < epsilon)
-	{
-	point = getCSOSupport(s1, p1, r1, s2, p2, r2, -perp);
-	}
-	simplex.push_back(point);
-	}
+		case (1): // point
+		{
+			for (const Vec2& dir : dirs)
+			{
+				const SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, dir);
+				if ((point.CSO - simplex[0].CSO).squaredNorm() >= epsilon)
+				{
+					simplex.push_back(point);
+					break;
+				}
+			}
+			if (simplex.size() < 2) simplex.push_back(getCSOSupport(s1, p1, r1, s2, p2, r2, dirs[0]));
+		[[fallthrough]];
+		} // fall-through: point -> line -> triangle
+		case (2): // line
+		{
+			const Vec2 line = simplex[1].CSO - simplex[0].CSO;
+			Vec2 perp = Vec2(-line.y, line.x); // in 2D vs 3D, don't need to be careful about tangent vectors
+			SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, perp);
+			if ((point.CSO - simplex[0].CSO).squaredNorm() < epsilon)
+			{
+				point = getCSOSupport(s1, p1, r1, s2, p2, r2, -perp);
+			}
+			simplex.push_back(point);
+		}
 	}
 
 	// enforce CCW winding
@@ -479,17 +480,17 @@ Facet closestFacet(const Simplex& simplex, const Vec2& point)
 	val_t bestDist = fizzmax<val_t>();
 	for (size_t i = 0; i < simplex.size(); ++i)
 	{
-	const size_t from = i, to = (i + 1) % simplex.size();
-	const Vec2 P = simplex[from].CSO;
-	const Vec2 Q = simplex[to].CSO;
-	Vec2 proj = projToEdge(P, Q, point);
-	val_t dist = (proj - point).squaredNorm();
-	if (dist < bestDist)
-	{
-	bestDist = dist;
-	bestFacet.from = from;
-	bestFacet.to = to;
-	}
+		const size_t from = i, to = (i + 1) % simplex.size();
+		const Vec2 P = simplex[from].CSO;
+		const Vec2 Q = simplex[to].CSO;
+		Vec2 proj = projToEdge(P, Q, point);
+		val_t dist = (proj - point).squaredNorm();
+		if (dist < bestDist)
+		{
+			bestDist = dist;
+			bestFacet.from = from;
+			bestFacet.to = to;
+		}
 	}
 
 	Vec2 A = simplex[bestFacet.from].CSO;
@@ -503,7 +504,7 @@ Facet closestFacet(const Simplex& simplex, const Vec2& point)
 }
 
 Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, const Mat2& r1,
-	   const Circle& c2, const Vec2& p2, const Mat2& r2)
+							   const Circle& c2, const Vec2& p2, const Mat2& r2)
 {
 	Contact contact;
 	contact.overlaps = false;
@@ -541,31 +542,31 @@ uint32_t getFeature(const Shape& shape, const Vec2& pos, const Vec2& normal)
 	auto& vertices = std::get<Polygon>(shape.data).vertices;
 	for (int i = 0; i < vertices.size(); ++i)
 	{
-	Vec2 A = vertices[i];
-	Vec2 B = vertices[(i + 1) % vertices.size()];
-	Vec2 AB = B - A;
-	Vec2 AP = pos - A;
+		Vec2 A = vertices[i];
+		Vec2 B = vertices[(i + 1) % vertices.size()];
+		Vec2 AB = B - A;
+		Vec2 AP = pos - A;
 
-	val_t dot = AP.dot(AB);
-	if (crossproduct(AB, AP) > epsilon                // make sure point is on feature edge
-	 || dot < 0 || dot > AB.dot(AB)                   // make sure point is between A and B
-	 || std::abs(AB.dot(normal)) > epsilon) continue; // normal check picks dominant feature at vertices
+		val_t dot = AP.dot(AB);
+		if (crossproduct(AB, AP) > epsilon ||            // make sure point is on feature edge
+		   dot < 0 || dot > AB.dot(AB) ||                // make sure point is between A and B
+		   std::abs(AB.dot(normal)) > epsilon) continue; // normal check picks dominant feature at vertices
 
-	return i;
+		return i;
 	}
 
 	return UINT32_MAX;
 }
 
 Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
-	const Shape& s2, const Vec2& p2, val_t rot2)
+						const Shape& s2, const Vec2& p2, val_t rot2)
 {
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
 
 	if (s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
 	{
-	return getCircleCircleContact(std::get<Circle>(s1.data), p1, r1,
-	  std::get<Circle>(s2.data), p2, r2);
+		return getCircleCircleContact(std::get<Circle>(s1.data), p1, r1,
+			   std::get<Circle>(s2.data), p2, r2);
 	}
 
 	Contact contact;
@@ -581,13 +582,13 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 	int iterations = 0;
 	while (iterations++ < maxIterationsEPA && (support.CSO - lastSupport.CSO).squaredNorm() > epsilon)
 	{
-	// since s1 and s2 is convex, so is their minkowski difference,
-	// so we don't need to remove any vertices
-	int insert = (facet.from + 1) % simplex.size();
-	simplex.insert(simplex.begin() + insert, support);
-	facet = closestFacet(simplex, origin);
-	lastSupport = support;
-	support = getCSOSupport(s1, p1, r1, s2, p2, r2, facet.dir);
+		// since s1 and s2 is convex, so is their minkowski difference,
+		// so we don't need to remove any vertices
+		int insert = (facet.from + 1) % simplex.size();
+		simplex.insert(simplex.begin() + insert, support);
+		facet = closestFacet(simplex, origin);
+		lastSupport = support;
+		support = getCSOSupport(s1, p1, r1, s2, p2, r2, facet.dir);
 	}
 
 	// closest edge of final simplex to the origin
@@ -605,9 +606,9 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 	t = std::clamp(t, static_cast<val_t>(0), static_cast<val_t>(1));
 	SupportVertex vert = 
 	{
-	A    + t * edge,
-	SA.A + t * (SB.A - SA.A),
-	SA.B + t * (SB.B - SA.B)
+		A    + t * edge,
+		SA.A + t * (SB.A - SA.A),
+		SA.B + t * (SB.B - SA.B)
 	};
 
 	contact.penetration = vert.CSO.norm();

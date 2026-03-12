@@ -56,14 +56,14 @@ void* LinearAllocator::allocate(size_t size, size_t alignment)
 
 	if (cursor + padding + size > tot_bytes) 
 	{
-	size_t newSize = std::max(tot_bytes * 2, cursor + padding + size);
-	resize(newSize);
+		size_t newSize = std::max(tot_bytes * 2, cursor + padding + size);
+		resize(newSize);
 
-	// start has moved, need to update addresses
-	currAddress = (uintptr_t)start + (uintptr_t)cursor;
-	padding = align ? calculatePadding(currAddress, alignment) : 0;
-	counter = 0;
-	timing = true;
+		// start has moved, need to update addresses
+		currAddress = (uintptr_t)start + (uintptr_t)cursor;
+		padding = align ? calculatePadding(currAddress, alignment) : 0;
+		counter = 0;
+		timing = true;
 	}
 
 	uintptr_t nextAddress = currAddress + padding;
@@ -78,10 +78,10 @@ void LinearAllocator::reset()
 {
 	if (timing && counter++ == COLLECTION_TIMER)
 	{
-	shrink();
-	timing = false;
-	counter = 0;
-	peak = 0;
+		shrink();
+		timing = false;
+		counter = 0;
+		peak = 0;
 	}
 
 	cursor = 0;

@@ -46,20 +46,20 @@ struct FIZZIKS_API Mat2
 
 	static constexpr Mat2 Identity()
 	{
-	Mat2 mat;
-	mat.m00 = 1; mat.m01 = 0;
-	mat.m10 = 0; mat.m11 = 1;
-	return mat;
+		Mat2 mat;
+		mat.m00 = 1; mat.m01 = 0;
+		mat.m10 = 0; mat.m11 = 1;
+		return mat;
 	}
 
 	static Mat2 Rotation(const val_t angle)
 	{
-	Mat2 mat;
-	val_t c = std::cos(angle);
-	val_t s = std::sin(angle);
-	mat.m00 = c;  mat.m01 = -s;
-	mat.m10 = s;  mat.m11 =  c;
-	return mat;
+		Mat2 mat;
+		val_t c = std::cos(angle);
+		val_t s = std::sin(angle);
+		mat.m00 = c;  mat.m01 = -s;
+		mat.m10 = s;  mat.m11 =  c;
+		return mat;
 	}
 
 	bool operator==(const Mat2&) const = default;

@@ -17,19 +17,19 @@ public:
 
 	virtual bool remove(uint32_t ID)
 	{
-	size_t oldSize = bodies.size();
+		size_t oldSize = bodies.size();
 
-	bodies.erase(ID);
+		bodies.erase(ID);
 
-	return bodies.size() != oldSize;
+		return bodies.size() != oldSize;
 	}
 
 	virtual void replace(uint32_t prevID, uint32_t newID);
 	 
 	virtual void update(uint32_t ID, const AABB& aabb, const Vec2& at)
 	{
-	if(bodies.contains(ID));
-	bodies[ID] = { aabb, at };
+		if(bodies.contains(ID));
+			bodies[ID] = { aabb, at };
 	}
 	 
 	virtual CollisionPairs computePairs(void);

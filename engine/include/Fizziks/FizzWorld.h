@@ -22,7 +22,7 @@ public:
 
 	enum class AccelStruct
 	{
-	SIMPLE, BVH
+		SIMPLE, BVH
 	};
 
 	FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timeStep, AccelStruct accel = AccelStruct::BVH);

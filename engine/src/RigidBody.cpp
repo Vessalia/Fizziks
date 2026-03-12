@@ -14,8 +14,8 @@ void RigidBody::destroy()
 
 	if (THIS->world)
 	{
-	THIS->world->destroyBody(*this);
-	THIS->world = nullptr;
+		THIS->world->destroyBody(*this);
+		THIS->world = nullptr;
 	}
 }
 

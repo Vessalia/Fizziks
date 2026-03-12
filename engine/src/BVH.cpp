@@ -32,7 +32,7 @@ val_t BVH::cost() const
 	val_t result = 0;
 	for (int i = 0; i < nodes.size(); ++i)
 	{
-	if (!nodes[i].isleaf && i != root) result += cost(nodes[i].bounds);
+		if (!nodes[i].isleaf && i != root) result += cost(nodes[i].bounds);
 	}
 
 	return result;
@@ -65,12 +65,12 @@ uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
 {
 	struct Candidate
 	{
-	uint32_t index;
-	val_t directCost;
-	val_t inheritedCost;
+		uint32_t index;
+		val_t directCost;
+		val_t inheritedCost;
 
-	bool operator<(const Candidate& other) const { return cost() > other.cost(); } // want to prioritize small costs
-	val_t cost() const { return directCost + inheritedCost; }
+		bool operator<(const Candidate& other) const { return cost() > other.cost(); } // want to prioritize small costs
+		val_t cost() const { return directCost + inheritedCost; }
 	};
 
 	uint32_t bestSibling = root;
@@ -80,22 +80,22 @@ uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
 
 	while (!pq.empty())
 	{
-	Candidate c = pq.top(); pq.pop();
-	val_t currCost = c.cost();
-	if (currCost - bestCost >= -epsilon) continue; // this is branch and bound
-	
-	bestSibling = c.index;
-	bestCost = currCost;
+		Candidate c = pq.top(); pq.pop();
+		val_t currCost = c.cost();
+		if (currCost - bestCost >= -epsilon) continue; // this is branch and bound
+		
+		bestSibling = c.index;
+		bestCost = currCost;
 
-	const Node& sibling = nodes[bestSibling];
-	if (!sibling.isleaf)
-	{
-	const uint32_t& child1 = sibling.child1;
-	const uint32_t& child2 = sibling.child2;
-	val_t inherited = c.inheritedCost + deltaCost(c.index, nodeIndex);
-	pq.push({ child1, cost(mergeBounds(child1, nodeIndex)), inherited });
-	pq.push({ child2, cost(mergeBounds(child2, nodeIndex)), inherited });
-	}
+		const Node& sibling = nodes[bestSibling];
+		if (!sibling.isleaf)
+		{
+			const uint32_t& child1 = sibling.child1;
+			const uint32_t& child2 = sibling.child2;
+			val_t inherited = c.inheritedCost + deltaCost(c.index, nodeIndex);
+			pq.push({ child1, cost(mergeBounds(child1, nodeIndex)), inherited });
+			pq.push({ child2, cost(mergeBounds(child2, nodeIndex)), inherited });
+		}
 	}
 
 	return bestSibling;
@@ -105,8 +105,8 @@ void BVH::refitAdd(uint32_t leaf)
 {
 	for (uint32_t i = nodes[leaf].parent; i != INVALID; i = nodes[i].parent)
 	{
-	nodes[i].bounds = mergeBounds(nodes[i].child1, nodes[i].child2);
-	rotate(i);
+		nodes[i].bounds = mergeBounds(nodes[i].child1, nodes[i].child2);
+		rotate(i);
 	}
 }
 
@@ -114,10 +114,10 @@ void BVH::refitRemove(uint32_t from)
 {
 	for (uint32_t i = from; i != INVALID; i = nodes[i].parent) 
 	{
-	if (nodes[i].isleaf) continue;
+		if (nodes[i].isleaf) continue;
 
-	const Entry newBounds = mergeBounds(nodes[i].child1, nodes[i].child2);
-	nodes[i].bounds = newBounds;
+		const Entry newBounds = mergeBounds(nodes[i].child1, nodes[i].child2);
+		nodes[i].bounds = newBounds;
 	}
 }
 
@@ -149,19 +149,19 @@ void BVH::rotate(uint32_t index)
 
 	if (AO <= DB && AO <= DC)
 	{
-	return;
+		return;
 	}
 	else if (DB <= DC)
 	{
-	C.parent = A.parent;
-	D.parent = B.parent;
-	std::swap(A.child2, other);
+		C.parent = A.parent;
+		D.parent = B.parent;
+		std::swap(A.child2, other);
 	}
 	else
 	{
-	B.parent = A.parent;
-	D.parent = C.parent;
-	std::swap(A.child1, other);
+		B.parent = A.parent;
+		D.parent = C.parent;
+		std::swap(A.child1, other);
 	}
 
 	A.bounds = mergeBounds(A.child1, A.child2);
@@ -181,8 +181,8 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at, val_t rot, cons
 
 	if (nodes.size() == 1)
 	{
-	root = leaf;
-	return ID;
+		root = leaf;
+		return ID;
 	}
 
 	// Stage 1: find the best sibling for the new leaf
@@ -197,14 +197,14 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at, val_t rot, cons
 	
 	if (oldParent != BVH::INVALID) // the sibling wasn't the root
 	{
-	if (nodes[oldParent].child1 == sibling) 
-	nodes[oldParent].child1 = newParent;
-	else                                    
-	nodes[oldParent].child2 = newParent;
+		if (nodes[oldParent].child1 == sibling) 
+			nodes[oldParent].child1 = newParent;
+		else                                    
+			nodes[oldParent].child2 = newParent;
 	}
 	else // the sibling was the root
 	{
-	root = newParent;
+		root = newParent;
 	}
 	nodes[newParent].child1 = sibling;
 	nodes[newParent].child2 = leaf;
@@ -227,25 +227,25 @@ void BVH::removeNodeAt(uint32_t index)
 	uint32_t last = nodes.size() - 1;
 	if (index != last) 
 	{
-	Node& moved = nodes[last];
-	nodes[index] = moved;
+		Node& moved = nodes[last];
+		nodes[index] = moved;
 
-	// Fix parent
-	if (moved.parent != INVALID) 
-	{
-	Node& p = nodes[moved.parent];
-	if (p.child1 == last) p.child1 = index;
-	if (p.child2 == last) p.child2 = index;
-	}
+		// Fix parent
+		if (moved.parent != INVALID) 
+		{
+			Node& p = nodes[moved.parent];
+			if (p.child1 == last) p.child1 = index;
+			if (p.child2 == last) p.child2 = index;
+		}
 
-	// Fix children
-	if (moved.child1 != INVALID) nodes[moved.child1].parent = index;
-	if (moved.child2 != INVALID) nodes[moved.child2].parent = index;
+		// Fix children
+		if (moved.child1 != INVALID) nodes[moved.child1].parent = index;
+		if (moved.child2 != INVALID) nodes[moved.child2].parent = index;
 
-	// Fix body map
-	if (moved.bodyID != INVALID) indexFromID[moved.bodyID] = index;
+		// Fix body map
+		if (moved.bodyID != INVALID) indexFromID[moved.bodyID] = index;
 
-	if (last == root) root = index;
+		if (last == root) root = index;
 	}
 
 	// don't remove ID mapping key, as this node may not be a leaf
@@ -261,10 +261,10 @@ bool BVH::removeNode(uint32_t bodyID, bool temp)
 
 	if (leaf == root) 
 	{
-	nodes.clear();
-	indexFromID.clear();
-	root = INVALID;
-	return true;
+		nodes.clear();
+		indexFromID.clear();
+		root = INVALID;
+		return true;
 	}
 
 	uint32_t parent = nodes[leaf].parent;
@@ -273,18 +273,18 @@ bool BVH::removeNode(uint32_t bodyID, bool temp)
 
 	if (grandparent != INVALID) // the parent is not the root
 	{
-	Node& gp = nodes[grandparent];
-	if (gp.child1 == parent) 
-	gp.child1 = sibling;
-	else 
-	gp.child2 = sibling;
+		Node& gp = nodes[grandparent];
+		if (gp.child1 == parent) 
+			gp.child1 = sibling;
+		else 
+			gp.child2 = sibling;
 
-	nodes[sibling].parent = grandparent;
+		nodes[sibling].parent = grandparent;
 	} 
 	else 
 	{
-	root = sibling;
-	nodes[sibling].parent = INVALID;
+		root = sibling;
+		nodes[sibling].parent = INVALID;
 	}
 
 	// Remove both structural nodes
@@ -301,8 +301,8 @@ bool BVH::removeNode(uint32_t bodyID, bool temp)
 
 	if (!temp)
 	{
-	removePairs(bodyID);
-	pairMap.erase(bodyID);
+		removePairs(bodyID);
+		pairMap.erase(bodyID);
 	}
 
 	return true;
@@ -346,9 +346,9 @@ void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
 	if (node.parent == BVH::INVALID) return;
 	else
 	{
-	auto& t = pairMap[ID];
-	removeNode(ID, true);
-	add(ID, aabb, at);
+		auto& t = pairMap[ID];
+		removeNode(ID, true);
+		add(ID, aabb, at);
 	}
 }
 
@@ -374,8 +374,8 @@ void BVH::removePairs(uint32_t ID)
 	auto& list = pairMap[ID];
 	while (!list.empty())
 	{
-	uint32_t index = list.back();
-	removePair(index);
+		uint32_t index = list.back();
+		removePair(index);
 	}
 }
 
@@ -386,18 +386,18 @@ void BVH::removePair(uint32_t index)
 
 	auto fixAdj = [&](uint32_t body, uint32_t idx)
 	{
-	auto& list = pairMap[body];
-	
-	std::swap(list[idx], list.back());
-	list.pop_back();
+		auto& list = pairMap[body];
+		
+		std::swap(list[idx], list.back());
+		list.pop_back();
 
-	if (idx < list.size()) // something moved into idx
-	{
-	uint32_t movedPairIdx = list[idx];
-	auto& mp = internalPairs[movedPairIdx];
-	if (mp.pair.first == body) mp.indexA = idx;
-	else                       mp.indexB = idx;
-	}
+		if (idx < list.size()) // something moved into idx
+		{
+			uint32_t movedPairIdx = list[idx];
+			auto& mp = internalPairs[movedPairIdx];
+			if (mp.pair.first == body) mp.indexA = idx;
+			else					   mp.indexB = idx;
+		}
 	};
 
 	fixAdj(da, dead.indexA);
@@ -407,14 +407,14 @@ void BVH::removePair(uint32_t index)
 
 	if (index < last)
 	{
-	internalPairs[index] = internalPairs[last];
-	collPairs[index] = collPairs[last];
+		internalPairs[index] = internalPairs[last];
+		collPairs[index] = collPairs[last];
 
-	auto& moved = internalPairs[index];
-	auto [a, b] = moved.pair;
+		auto& moved = internalPairs[index];
+		auto [a, b] = moved.pair;
 
-	pairMap[a][moved.indexA] = index;
-	pairMap[b][moved.indexB] = index;
+		pairMap[a][moved.indexA] = index;
+		pairMap[b][moved.indexB] = index;
 	}
 
 	internalPairs.pop_back();
@@ -429,38 +429,38 @@ CollisionPairs BVH::computePairs(void)
 	stack.reserve(std::log2(nodes.size()));
 	while (!moveBuffer.empty())
 	{
-	uint32_t movedID = moveBuffer.front(); moveBuffer.pop();
+		uint32_t movedID = moveBuffer.front(); moveBuffer.pop();
 
-	removePairs(movedID);
-	const uint32_t movedIndex = indexFromID[movedID];
-	const Node& moved = nodes[movedIndex];
-	const auto [box, pos] = moved.bounds;
+		removePairs(movedID);
+		const uint32_t movedIndex = indexFromID[movedID];
+		const Node& moved = nodes[movedIndex];
+		const auto [box, pos] = moved.bounds;
 
-	if (!nodes[root].isleaf)
-	{
-	stack.push_back(nodes[root].child1);
-	stack.push_back(nodes[root].child2);
-	}
+		if (!nodes[root].isleaf)
+		{
+			stack.push_back(nodes[root].child1);
+			stack.push_back(nodes[root].child2);
+		}
 
-	while (!stack.empty())
-	{
-	uint32_t index = stack.back(); stack.pop_back();
-	if (index == movedIndex) continue;
+		while (!stack.empty())
+		{
+			uint32_t index = stack.back(); stack.pop_back();
+			if (index == movedIndex) continue;
 
-	const Node& node = nodes[index];
-	const auto [oBox, oPos] = node.bounds;
-	if (node.bodyID == movedID || !overlaps(box, pos, oBox, oPos)) continue;
+			const Node& node = nodes[index];
+			const auto [oBox, oPos] = node.bounds;
+			if (node.bodyID == movedID || !overlaps(box, pos, oBox, oPos)) continue;
 
-	if (node.isleaf)
-	{
-	addPair(movedID, node.bodyID);
-	}
-	else
-	{
-	stack.push_back(node.child1);
-	stack.push_back(node.child2);
-	}
-	}
+			if (node.isleaf)
+			{
+				addPair(movedID, node.bodyID);
+			}
+			else
+			{
+				stack.push_back(node.child1);
+				stack.push_back(node.child2);
+			}
+		}
 	}
 
 	return collPairs;
@@ -475,16 +475,16 @@ uint32_t BVH::pick(const Vec2& point) const
 
 	while (!stack.empty())
 	{
-	uint32_t idx = stack.top(); stack.pop();
+		uint32_t idx = stack.top(); stack.pop();
 
-	const Node& node = nodes[idx];
-	const auto [aabb, pos] = node.bounds;
+		const Node& node = nodes[idx];
+		const auto [aabb, pos] = node.bounds;
 
-	if (!contains(aabb, pos, point)) continue;
-	if (node.isleaf) return node.bodyID;
+		if (!contains(aabb, pos, point)) continue;
+		if (node.isleaf) return node.bodyID;
 
-	stack.push(node.child1);
-	stack.push(node.child2);
+		stack.push(node.child1);
+		stack.push(node.child2);
 	}
 
 	return INVALID;
@@ -500,20 +500,20 @@ std::vector<uint32_t> BVH::query(const AABB& aabb, const Vec2& pos) const
 
 	while (!stack.empty())
 	{
-	uint32_t idx = stack.top(); stack.pop();
+		uint32_t idx = stack.top(); stack.pop();
 
-	const Node& node = nodes[idx];
-	const auto [box, p] = node.bounds;
+		const Node& node = nodes[idx];
+		const auto [box, p] = node.bounds;
 
-	if (!overlaps(box, p, aabb, pos)) continue;
-	if (node.isleaf)
-	{
-	results.push_back(node.bodyID);
-	continue;
-	}
+		if (!overlaps(box, p, aabb, pos)) continue;
+		if (node.isleaf)
+		{
+			results.push_back(node.bodyID);
+			continue;
+		}
 
-	stack.push(node.child1);
-	stack.push(node.child2);
+		stack.push(node.child1);
+		stack.push(node.child2);
 	}
 
 	return results;
@@ -531,30 +531,30 @@ RaycastResult BVH::raycast(const Ray& ray) const
 
 	while (!stack.empty())
 	{
-	uint32_t idx = stack.top(); stack.pop();
+		uint32_t idx = stack.top(); stack.pop();
 
-	const Node& node = nodes[idx];
-	const auto [aabb, pos] = node.bounds;
+		const Node& node = nodes[idx];
+		const auto [aabb, pos] = node.bounds;
 
-	val_t t = raytest(ray, aabb, pos);
-	if (t < 0 || t > closestT || t > maxT) continue;
-	if (node.isleaf)
-	{
-	// need to check against colliders here and recalc t
-	if (t < closestT)
-	{
-	closestT = t;
-	res.hit = true;
-	res.ID = node.bodyID;
-	res.point = ray.pos + ray.dir * t;
-	// get the normal based on the collider
-	}
-	}
-	else
-	{
-	stack.push(node.child1);
-	stack.push(node.child2);
-	}
+		val_t t = raytest(ray, aabb, pos);
+		if (t < 0 || t > closestT || t > maxT) continue;
+		if (node.isleaf)
+		{
+			// need to check against colliders here and recalc t
+			if (t < closestT)
+			{
+				closestT = t;
+				res.hit = true;
+				res.ID = node.bodyID;
+				res.point = ray.pos + ray.dir * t;
+				// get the normal based on the collider
+			}
+		}
+		else
+		{
+			stack.push(node.child1);
+			stack.push(node.child2);
+		}
 	}
 
 	return res;
@@ -565,7 +565,7 @@ std::vector<std::pair<AABB, Vec2>> BVH::getDebugInfo() const
 	std::vector<std::pair<AABB, Vec2>> debug;
 	for (int i = 0; i < nodes.size(); ++i)
 	{
-	debug.push_back(nodes[i].bounds);
+		debug.push_back(nodes[i].bounds);
 	}
 
 	return debug;

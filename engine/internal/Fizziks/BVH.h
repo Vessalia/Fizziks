@@ -26,19 +26,19 @@ private:
 	using Entry = std::pair<AABB, Vec2>;
 	struct InternalPair
 	{
-	CollisionPair pair;
-	uint32_t indexA, indexB; // adjacency list back reference
+        CollisionPair pair;
+        uint32_t indexA, indexB; // adjacency list back reference
 	};
 
 	static constexpr uint32_t INVALID = -1;
 	struct Node
 	{
-	Entry bounds;
-	uint32_t bodyID = INVALID;
-	uint32_t parent = INVALID;
-	uint32_t child1 = INVALID;
-	uint32_t child2 = INVALID;
-	bool isleaf = true;
+        Entry bounds;
+        uint32_t bodyID = INVALID;
+        uint32_t parent = INVALID;
+        uint32_t child1 = INVALID;
+        uint32_t child2 = INVALID;
+        bool isleaf = true;
 	};
 
 	uint32_t root = 0;

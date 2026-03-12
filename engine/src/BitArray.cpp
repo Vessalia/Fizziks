@@ -10,9 +10,9 @@ BitArray::BitArray(size_t val)
 	size_t numBits = 0;
 	do
 	{
-	std::bitset<BYTE_SIZE> byte { ((val >> numBits) & mask) };
-	bytes.push_back(byte);
-	if(byte.any()) numBits += BYTE_SIZE;
+		std::bitset<BYTE_SIZE> byte { ((val >> numBits) & mask) };
+		bytes.push_back(byte);
+		if(byte.any()) numBits += BYTE_SIZE;
 	}
 	while((val >> numBits) & mask);
 
@@ -20,8 +20,8 @@ BitArray::BitArray(size_t val)
 	lastByte <<= 1; // offset by 1
 	while(lastByte.any())
 	{
-	lastByte <<= 1;
-	--numBits;
+		lastByte <<= 1;
+		--numBits;
 	}
 
 	bitCount = numBits;
@@ -41,7 +41,7 @@ BitArray BitArray::operator~() const
 	BitArray result;
 	result.bytes.resize(bytes.size());
 	for(size_t i = 0; i < bytes.size() - 1; ++i)
-	result.bytes[i] = ~bytes[i];
+		result.bytes[i] = ~bytes[i];
 
 	uint8_t count = bitCount % BYTE_SIZE;
 	uint8_t convert = (1 << count) - 1;
@@ -65,7 +65,7 @@ std::bitset<BYTE_SIZE>::reference BitArray::operator[](size_t index)
 	uint8_t bitIndex = index % BYTE_SIZE;
 
 	if(byteIndex > bytes.size()) 
-	throw std::out_of_range("BitArray::operator[] index out of range");
+		throw std::out_of_range("BitArray::operator[] index out of range");
 
 	return bytes[byteIndex][bitIndex];
 }
@@ -80,7 +80,7 @@ BitArray& BitArray::operator|=(const BitArray& other)
 	bitCount = std::max(bitCount, other.bitCount);
 
 	for(size_t i = 0; i < other.bytes.size(); ++i)
-	bytes[i] |= other.bytes[i];
+		bytes[i] |= other.bytes[i];
 
 	return *this;
 }
@@ -91,10 +91,10 @@ BitArray& BitArray::operator&=(const BitArray& other)
 
 	size_t i;
 	for(i = 0; i < other.bytes.size(); ++i)
-	bytes[i] &= other.bytes[i];
+		bytes[i] &= other.bytes[i];
 
 	for (; i < bytes.size(); ++i)
-	bytes[i] &= 0;
+		bytes[i] &= 0;
 
 	return *this;
 }
@@ -103,7 +103,7 @@ BitArray& BitArray::operator^=(const BitArray& other)
 	bytes.resize(std::max(bytes.size(), other.bytes.size()));
 
 	for(size_t i = 0; i < other.bytes.size(); ++i)
-	bytes[i] ^= other.bytes[i];
+		bytes[i] ^= other.bytes[i];
 
 	bitCount = countBits();
 
@@ -118,8 +118,8 @@ BitArray& BitArray::operator<<=(size_t shift)
 
 	if (byteShift > 0)
 	{
-	bitCount += BYTE_SIZE * byteShift;
-	bytes.insert(bytes.begin(), byteShift, std::bitset<BYTE_SIZE>{}); // prepend zero bytes
+		bitCount += BYTE_SIZE * byteShift;
+		bytes.insert(bytes.begin(), byteShift, std::bitset<BYTE_SIZE>{}); // prepend zero bytes
 	}
 
 	if (!bitShift) return *this;
@@ -128,10 +128,10 @@ BitArray& BitArray::operator<<=(size_t shift)
 	std::bitset<BYTE_SIZE> carry{};
 	for (size_t i = byteShift; i < bytes.size(); ++i)
 	{
-	std::bitset<BYTE_SIZE> newCarry = (bytes[i] >> (BYTE_SIZE - bitShift));
-	bytes[i] <<= bitShift;
-	bytes[i] |= carry;
-	carry = newCarry;
+		std::bitset<BYTE_SIZE> newCarry = (bytes[i] >> (BYTE_SIZE - bitShift));
+		bytes[i] <<= bitShift;
+		bytes[i] |= carry;
+		carry = newCarry;
 	}
 
 	return *this;
@@ -145,14 +145,14 @@ BitArray& BitArray::operator>>=(size_t shift)
 
 	if (byteShift > 0)
 	{
-	if (byteShift >= bytes.size())
-	{
-	bytes.clear(); bitCount = 0;
-	return *this;
-	}
+		if (byteShift >= bytes.size())
+		{
+			bytes.clear(); bitCount = 0;
+			return *this;
+		}
 
-	bytes.erase(bytes.begin(), bytes.begin() + byteShift);
-	bitCount -= BYTE_SIZE * byteShift;
+		bytes.erase(bytes.begin(), bytes.begin() + byteShift);
+		bitCount -= BYTE_SIZE * byteShift;
 	}
 
 	if (bitShift == 0) return *this;
@@ -161,10 +161,10 @@ BitArray& BitArray::operator>>=(size_t shift)
 	std::bitset<BYTE_SIZE> carry{};
 	for (size_t i = bytes.size(); i > 0; --i)
 	{
-	std::bitset<BYTE_SIZE> newCarry = (bytes[i] >> (BYTE_SIZE - bitShift));
-	bytes[i] >>= bitShift;
-	bytes[i] |= carry;
-	carry = newCarry;
+		std::bitset<BYTE_SIZE> newCarry = (bytes[i] >> (BYTE_SIZE - bitShift));
+		bytes[i] >>= bitShift;
+		bytes[i] |= carry;
+		carry = newCarry;
 	}
 
 	return *this;
@@ -214,7 +214,7 @@ bool BitArray::operator==(const BitArray& other) const
 	if(other.bytes.size() != bytes.size()) return false;
 
 	for(size_t i = 0; i < bytes.size(); ++i)
-	if(bytes[i] != other.bytes[i]) return false;
+		if(bytes[i] != other.bytes[i]) return false;
 
 	return true;
 }
@@ -258,7 +258,7 @@ uint8_t MSB(unsigned long mask)
 	uint8_t max = BYTE_SIZE - 1;
 	for (uint8_t bit = max; bit >= 0; --bit)
 	{
-	if (mask & (1 << bit)) { msb = bit; break; }
+		if (mask & (1 << bit)) { msb = bit; break; }
 	}
 	return msb;
 }
@@ -267,7 +267,7 @@ uint8_t LSB(unsigned long mask)
 	uint8_t lsb = 0;
 	for (uint8_t bit = 0; bit < BYTE_SIZE; ++bit)
 	{
-	if (mask & (1 << bit)) { lsb = bit; break; }
+		if (mask & (1 << bit)) { lsb = bit; break; }
 	}
 	return lsb;
 }
@@ -281,14 +281,14 @@ BitArray& BitArray::set(size_t index, bool val)
 	if (byteIndex >= bytes.size() && !val) return *this;
 
 	if (byteIndex >= bytes.size())
-	bytes.resize(byteIndex + 1);
+		bytes.resize(byteIndex + 1);
 
 	bytes[byteIndex].set(bitIndex, val);
 
 	if (val && index + 1 > bitCount)
-	bitCount = index + 1;
+		bitCount = index + 1;
 	else if (!val && index + 1 == bitCount)
-	bitCount = countBits();
+		bitCount = countBits();
 
 	return *this;
 }
@@ -330,9 +330,9 @@ unsigned long BitArray::getLSB() const
 {
 	for (size_t i = 0; i < bytes.size(); ++i) 
 	{
-	auto byte = bytes[i];
-	if (byte.any())
-	return i * BYTE_SIZE + LSB(byte.to_ulong());
+		auto byte = bytes[i];
+		if (byte.any())
+			return i * BYTE_SIZE + LSB(byte.to_ulong());
 	}
 
 	return 0;
@@ -348,14 +348,14 @@ size_t BitArray::countBits() const
 	size_t count = 0;
 	for(size_t i = bytes.size(); i > 0; --i) 
 	{
-	auto byte = bytes[i - 1];
-	if (byte.any()) 
-	{
-	unsigned long mask = byte.to_ulong();
-	unsigned long msb = MSB(mask);
-	count = (i - 1) * BYTE_SIZE + msb + 1;
-	break;
-	}
+		auto byte = bytes[i - 1];
+		if (byte.any()) 
+		{
+			unsigned long mask = byte.to_ulong();
+			unsigned long msb = MSB(mask);
+			count = (i - 1) * BYTE_SIZE + msb + 1;
+			break;
+		}
 	}
 
 	return count;

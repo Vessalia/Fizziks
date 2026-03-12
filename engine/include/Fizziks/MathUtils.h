@@ -18,8 +18,8 @@ inline Vec2 vec_max()
 {
 	return
 	{
-	std::numeric_limits<val_t>::max(),
-	std::numeric_limits<val_t>::max()
+		std::numeric_limits<val_t>::max(),
+		std::numeric_limits<val_t>::max()
 	};
 }
 
@@ -27,8 +27,8 @@ inline Vec2 vec_min()
 {
 	return
 	{
-	std::numeric_limits<val_t>::lowest(),
-	std::numeric_limits<val_t>::lowest()
+		std::numeric_limits<val_t>::lowest(),
+		std::numeric_limits<val_t>::lowest()
 	};
 }
 

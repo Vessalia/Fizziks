@@ -6,30 +6,30 @@ ThreadPool::ThreadPool(size_t num_threads)
 {
 	for (size_t i = 0; i < num_threads; ++i)
 	{
-	threads.emplace_back([this] 
-	{
-	while (true)
-	{
-	Task task;
+		threads.emplace_back([this] 
+		{
+			while (true)
+			{
+				Task task;
 
-	{
-	std::unique_lock<std::mutex> lock(queue_mutex);
-	cv.wait(lock, [this] { return !tasks.empty() || stop; });
-	if (stop && tasks.empty()) return;
+				{
+					std::unique_lock<std::mutex> lock(queue_mutex);
+					cv.wait(lock, [this] { return !tasks.empty() || stop; });
+					if (stop && tasks.empty()) return;
 
-	task = move(tasks.front()); tasks.pop();
-	++running_tasks;
-	}
+					task = move(tasks.front()); tasks.pop();
+					++running_tasks;
+				}
 
-	task();
+				task();
 
-	{
-	std::unique_lock<std::mutex> lock(queue_mutex);
-	--running_tasks;
-	if (tasks.empty() && !running_tasks) cv.notify_all();
-	}
-	}
-	});
+				{
+					std::unique_lock<std::mutex> lock(queue_mutex);
+					--running_tasks;
+					if (tasks.empty() && !running_tasks) cv.notify_all();
+				}
+			}
+		});
 	}
 }
 
@@ -44,8 +44,8 @@ ThreadPool::~ThreadPool()
 void ThreadPool::submit(Task&& task)
 {
 	{
-	std::unique_lock<std::mutex> lock(queue_mutex);
-	tasks.emplace(std::move(task));
+		std::unique_lock<std::mutex> lock(queue_mutex);
+		tasks.emplace(std::move(task));
 	}
 
 	cv.notify_one();
