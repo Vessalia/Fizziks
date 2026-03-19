@@ -173,7 +173,7 @@ static AABB fatten(const AABB& aabb)
 	return { FAT_FACTOR * aabb.hw, FAT_FACTOR * aabb.hh, aabb.offset };
 }
 
-uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at, val_t rot, const std::vector<Collider>& colliders)
+uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
 {
 	const Entry entry = { fatten(aabb), at };
 

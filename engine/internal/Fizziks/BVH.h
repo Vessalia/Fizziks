@@ -10,7 +10,7 @@ namespace Fizziks::internal
 class BVH : public Broadphase
 {
 public:
-	virtual uint32_t add(uint32_t ID, const AABB& aabb, const Vec2& at, val_t rot, const std::vector<Collider>& colliders);
+	virtual uint32_t add(uint32_t ID, const AABB& aabb, const Vec2& at);
 	virtual bool remove(uint32_t ID);
 	virtual void replace(uint32_t prevID, uint32_t newID);
 	virtual void update(uint32_t ID, const AABB& aabb, const Vec2& at);

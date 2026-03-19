@@ -9,7 +9,7 @@ namespace Fizziks::internal
 class SimpleBP : public Broadphase
 {
 public:
-	virtual uint32_t add(uint32_t ID, const AABB& aabb, const Vec2& at, val_t rot, const std::vector<Collider>& colliders)
+	virtual uint32_t add(uint32_t ID, const AABB& aabb, const Vec2& at)
 	{
 		bodies[ID] = { aabb, at };
 		return ID;

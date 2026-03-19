@@ -16,7 +16,7 @@ class Broadphase
 public:
 	virtual ~Broadphase() = default;
 
-	virtual uint32_t add(uint32_t ID, const AABB& aabb, const Vec2& at, val_t rot, const std::vector<Collider>& colliders) = 0;
+	virtual uint32_t add(uint32_t ID, const AABB& aabb, const Vec2& at) = 0;
 	virtual bool remove(uint32_t ID) = 0;
 	virtual void replace(uint32_t prevID, uint32_t newID) = 0;
 	virtual void update(uint32_t ID, const AABB& aabb, const Vec2& at) = 0;
