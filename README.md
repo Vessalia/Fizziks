@@ -4,6 +4,7 @@ Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for
 ## Features
 - Broadphase and narrowphase collision detection
 - BVH acceleration structure for broadphase detection
+- Per-step Iterative collision candidate pair detection in BVH 
 - Convex collision detection (GJK + EPA)
 - Impulse-based + warm-started collision resolution
 - Constraint solving (currently just for contacts)
@@ -85,8 +86,8 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
-- Implement iterative BVH
 - RigidBody layermasking
+- BVH raycasting/user data + callback abstraction
 - Logging (currently none)
 - Nearphase groups for multi-threading
 - Collision event callbacks
