@@ -8,7 +8,7 @@ BUILD_DIR="build"
  
 # ── Usage ────────────────────────────────────────────────────────────────────
 usage() {
-  cat <<EOF
+  cat <<USAGE
 Usage: $(basename "$0") [OPTIONS]
  
 Options:
@@ -16,7 +16,7 @@ Options:
   --no-shared       Disable BUILD_SHARED_LIBS        (default: ON)
   --build-dir DIR   Set build directory              (default: build)
   -h, --help        Show this help message
-EOF
+USAGE
   exit 0
 }
  
@@ -34,7 +34,14 @@ done
  
 # ── Helpers ──────────────────────────────────────────────────────────────────
 log()  { echo "▶  $*"; }
-step() { echo; echo "══════════════════════════════════════════"; echo "   $*"; echo "══════════════════════════════════════════"; }
+step() {
+  local bar
+  bar=$(printf '═%.0s' {1..44})
+  echo
+  echo "$bar"
+  echo "   $*"
+  echo "$bar"
+}
  
 # ── Build ────────────────────────────────────────────────────────────────────
 step "Configure"
