@@ -28,7 +28,7 @@ cmake --build build
 ```
 
 ### Build Options
-- ./build.sh [-h|--help] - builds the library and distributable based on the set options. Use -h for help
+- `./build.sh [-h|--help]` - `-h` displays build options for the build script
 - `BUILD_SHARED_LIBS=ON` - build as a shared library
 - `FIZZIKS_BUILD_DIST=ON` - build a distributable
 
