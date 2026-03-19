@@ -57,17 +57,25 @@ int main(int argc, char** argv)
 	FizzWorld world;
 
 	BodyDef def;
-	small.colliderDefs.push_back({ createCollider(createRect(0.25, 0.25), 1, 0), Vec2::Zero() });
+	small.colliderDefs.push_back({ 
+		createCollider(createRect(0.25, 0.25), 1, 0), Vec2::Zero() 
+	});
 	bodies.push_back(world.createBody(small));
 
 	BodyDef big;
-	big.colliderDefs.push_back({ createCollider(createCircle(1.4), 10, 0), Vec2::Zero() });
+	big.colliderDefs.push_back({ 
+		createCollider(createCircle(1.4), 10, 0), Vec2::Zero() 
+	});
 	big.initPosition = { 20, 5 };
 	big.initVelocity = { -3, 0 };
 	bodies.push_back(world.createBody(big));
 
 	BodyDef stat;
-	stat.colliderDefs.push_back({ createCollider(createPolygon({ Vec2(0, 0), Vec2(0, 1), Vec2(1, 0) }, 1, deg2rad(10)), Vec2::Zero()) });
+	stat.colliderDefs.push_back({ 
+		createCollider(createPolygon({ 
+			Vec2(0, 0), Vec2(0, 1), Vec2(1, 0) 
+		}, 1, deg2rad(10)), Vec2::Zero()) 
+	});
 	stat.BodyType = BodyType::STATIC;
 	stat.initPosition = { 10, 2 };
 	bodies.push_back(world.createBody(stat));
@@ -76,7 +84,7 @@ int main(int argc, char** argv)
 
 	while(true)
 	{
-	world.tick(dt);
+		world.tick(dt);
 	}
 
 	return 0;
