@@ -12,7 +12,7 @@ Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for
 
 ## Building
 ### Requirements
-- C++17 compatible compiler
+- C++20 compatible compiler
 - CMake 3.28 - 4.2
 - Only tested on Windows
 
@@ -52,32 +52,32 @@ using namespace Fizziks;
 
 int main(int argc, char** argv) 
 {
-    FizzWorld world;
+	FizzWorld world;
 
-    BodyDef def;
-    small.colliderDefs.push_back({ createCollider(createRect(0.25, 0.25), 1, 0), Vec2::Zero() });
-    bodies.push_back(world.createBody(small));
+	BodyDef def;
+	small.colliderDefs.push_back({ createCollider(createRect(0.25, 0.25), 1, 0), Vec2::Zero() });
+	bodies.push_back(world.createBody(small));
 
-    BodyDef big;
-    big.colliderDefs.push_back({ createCollider(createCircle(1.4), 10, 0), Vec2::Zero() });
-    big.initPosition = { 20, 5 };
-    big.initVelocity = { -3, 0 };
-    bodies.push_back(world.createBody(big));
+	BodyDef big;
+	big.colliderDefs.push_back({ createCollider(createCircle(1.4), 10, 0), Vec2::Zero() });
+	big.initPosition = { 20, 5 };
+	big.initVelocity = { -3, 0 };
+	bodies.push_back(world.createBody(big));
 
-    BodyDef stat;
-    stat.colliderDefs.push_back({ createCollider(createPolygon({ Vec2(0, 0), Vec2(0, 1), Vec2(1, 0) }, 1, deg2rad(10)), Vec2::Zero()) });
-    stat.BodyType = BodyType::STATIC;
-    stat.initPosition = { 10, 2 };
-    bodies.push_back(world.createBody(stat));
+	BodyDef stat;
+	stat.colliderDefs.push_back({ createCollider(createPolygon({ Vec2(0, 0), Vec2(0, 1), Vec2(1, 0) }, 1, deg2rad(10)), Vec2::Zero()) });
+	stat.BodyType = BodyType::STATIC;
+	stat.initPosition = { 10, 2 };
+	bodies.push_back(world.createBody(stat));
 
-    float dt = 1 / 60.f;
+	float dt = 1 / 60.f;
 
-    while(true)
-    {
-        world.tick(dt);
-    }
+	while(true)
+	{
+	world.tick(dt);
+	}
 
-    return 0;
+	return 0;
 }
 ```
 

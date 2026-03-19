@@ -15,56 +15,56 @@ namespace Fizziks
 class FIZZIKS_API RigidBody
 {
 public:
-    RigidBody(const RigidBody&) = delete;
-    RigidBody& operator=(const RigidBody&) = delete;
+	RigidBody(const RigidBody&) = delete;
+	RigidBody& operator=(const RigidBody&) = delete;
 
-    RigidBody(RigidBody&&) noexcept = default;
-    RigidBody& operator=(RigidBody&&) noexcept = default;
+	RigidBody(RigidBody&&) noexcept = default;
+	RigidBody& operator=(RigidBody&&) noexcept = default;
 
-    void destroy();
+	void destroy();
 
-    RigidBody& setBody(const BodyDef& def);
+	RigidBody& setBody(const BodyDef& def);
 
-    Vec2 position() const;
-    RigidBody& position(const Vec2& pos);
+	Vec2 position() const;
+	RigidBody& position(const Vec2& pos);
 
-    val_t rotation() const;
-    RigidBody& rotation(val_t rot);
+	val_t rotation() const;
+	RigidBody& rotation(val_t rot);
 
-    Vec2 centroidPosition() const;
+	Vec2 centroidPosition() const;
 
-    Vec2 velocity() const;
-    RigidBody& velocity(const Vec2& vel);
+	Vec2 velocity() const;
+	RigidBody& velocity(const Vec2& vel);
 
-    val_t angularVelocity() const;
-    RigidBody& angularVelocity(val_t angVel);
+	val_t angularVelocity() const;
+	RigidBody& angularVelocity(val_t angVel);
 
-    val_t mass() const;
-    RigidBody& mass(val_t m);
+	val_t mass() const;
+	RigidBody& mass(val_t m);
 
-    val_t gravityScale() const;
-    RigidBody& gravityScale(val_t gs);
+	val_t gravityScale() const;
+	RigidBody& gravityScale(val_t gs);
 
-    BodyType bodyType() const;
-    RigidBody& bodyType(const BodyType& type);
+	BodyType bodyType() const;
+	RigidBody& bodyType(const BodyType& type);
 
-    uint32_t layer() const;
-    RigidBody& layer(uint32_t layer);
+	uint32_t layer() const;
+	RigidBody& layer(uint32_t layer);
 
-    RigidBody& applyForce(const Vec2& force, const Vec2& at = { 0, 0 });
-    RigidBody& addCollider(const Collider& collider);
+	RigidBody& applyForce(const Vec2& force, const Vec2& at = { 0, 0 });
+	RigidBody& addCollider(const Collider& collider);
 
-    std::vector<Collider> colliders() const;
+	std::vector<Collider> colliders() const;
 
-    void collisionOnEnter();
-    void collisionOnStay();
-    void collisionOnExit();
+	void collisionOnEnter();
+	void collisionOnStay();
+	void collisionOnExit();
 
 private:
-    friend class FizzWorld;
+	friend class FizzWorld;
 
-    RigidBody() : impl(nullptr) { }
+	RigidBody() : impl(nullptr) { }
 
-    internal::RigidBodyImpl* impl;
+	internal::RigidBodyImpl* impl;
 };
 }

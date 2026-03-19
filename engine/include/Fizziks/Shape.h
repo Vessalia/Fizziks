@@ -10,64 +10,62 @@ namespace Fizziks
 {
 struct FIZZIKS_API Circle
 {
-    val_t radius;
+	val_t radius;
 };
 
 struct FIZZIKS_API Polygon
 {
-    std::vector<Vec2> vertices;
-    val_t effRadius;
+	std::vector<Vec2> vertices;
+	val_t effRadius;
 };
 
 enum class FIZZIKS_API ShapeType
 {
-    CIRCLE, POLYGON
+	CIRCLE, POLYGON
 };
 
 struct FIZZIKS_API Shape
 {
-    ShapeType type;
-    std::variant<Circle, Polygon> data;
+	ShapeType type;
+	std::variant<Circle, Polygon> data;
 };
 
 // handles convex and concave compound shapes
 struct FIZZIKS_API Compound
 {
-    std::vector<Shape> convexPieces;
+	std::vector<Shape> convexPieces;
 };
 
 struct FIZZIKS_API AABB
 {
-    val_t hw = 0;
-    val_t hh = 0;
-    
-    Vec2 offset = Vec2::Zero();
+	val_t hw = 0;
+	val_t hh = 0;
+	
+	Vec2 offset = Vec2::Zero();
 
-    bool operator==(const AABB&) const = default;
+	bool operator==(const AABB&) const = default;
 
-    val_t area() const { return 4 * hw * hh; }
-    val_t perimeter() const { return 2 * (hw + hh); }
+	val_t area() const { return 4 * hw * hh; }
+	val_t perimeter() const { return 2 * (hw + hh); }
 };
 
 struct FIZZIKS_API Contact 
 {
-    Vec2 contactPointWorldA, contactPointWorldB;
-    Vec2 contactPointLocalA, contactPointLocalB;  
-    Vec2 normal; 
-    Vec2 tangent;
-    val_t penetration;  
+	Vec2 contactPointWorldA, contactPointWorldB;
+	Vec2 contactPointLocalA, contactPointLocalB;  
+	Vec2 normal; 
+	Vec2 tangent;
+	val_t penetration;  
 
-    uint32_t featureA, featureB; // for tracking specific collisions
+	uint32_t featureA, featureB; // for tracking specific collisions
 
-    bool overlaps;
+	bool overlaps;
 };
 
 FIZZIKS_API Shape createCircle(val_t radius);
 FIZZIKS_API Shape createRect(val_t width, val_t height);
 FIZZIKS_API Shape createPolygon(const std::vector<Vec2>& vertices);
 FIZZIKS_API AABB createAABB(val_t width, val_t height, const Vec2& offset = { 0, 0 });
-
-FIZZIKS_API Shape rotateShape(const Shape& shape, val_t rot);
 
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 
