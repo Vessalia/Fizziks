@@ -17,6 +17,7 @@ Options:
   --build-dir DIR   Set build directory              (default: build)
   -h, --help        Show this help message
 USAGE
+  read -r -p "Press Enter to close..."
   exit 0
 }
  
