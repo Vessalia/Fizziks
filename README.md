@@ -95,9 +95,10 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
-- RigidBody layermasking
-- BVH raycasting/user data + callback abstraction
 - Logging (currently none)
+- Improve User RigidBody instantiation process
+- BVH raycasting/user data + callback abstraction
+- RigidBody layermasking
 - Nearphase groups for multi-threading
 - Collision event callbacks
 - Testing
