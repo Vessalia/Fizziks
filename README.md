@@ -18,7 +18,7 @@ Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for
 - Only tested on Windows
 
 ### Build Steps
-Fizziks is built using CMake
+Fizziks is built using CMake. Use the provided build script or:
 ```bash
 git clone https://github.com/Vessalia/Fizziks.git
 cd Fizziks
