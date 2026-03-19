@@ -95,6 +95,7 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
+- Fix awkward shape/position + rotation disconnection
 - Logging (currently none)
 - Improve User RigidBody instantiation process
 - BVH raycasting/user data + callback abstraction
