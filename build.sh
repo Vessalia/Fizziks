@@ -64,6 +64,7 @@ done
 step "Copy dist"
 if [[ -d "$BUILD_DIR/dist" ]]; then
   log "Copying $BUILD_DIR/dist → ./dist"
+  rm -rf ./dist
   cp -r "$BUILD_DIR/dist" ./dist
   log "Done."
 else

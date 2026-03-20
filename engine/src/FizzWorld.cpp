@@ -111,34 +111,24 @@ std::vector<Collider> FizzWorldImpl::body_colliders(const RigidBodyImpl& rb) con
 	else	  return null_body.colliders;
 }
 
-const AABB FizzWorldImpl::get_bounds(const BodyData* body, bool compute) const
+const AABB FizzWorldImpl::compute_bounds(BodyData* body)
 {
-	if (compute) return compute_bounds(body);
-	else		 return body->bounds;
-}
-
-const AABB FizzWorldImpl::compute_bounds(const BodyData* body) const
-{
-	AABB bounds{ 0, 0, Vec2::Zero() };
-	if (body->colliders.size() == 0) return bounds;
+	if (body->colliders.size() == 0) return {};
 
 	Vec2 min = vec_max(), max = vec_min();
 	for (auto collider : body->colliders)
 	{
 		AABB minorBounds = getEncapsulatingAABB(collider.shape, collider.pos, body->rotation);
-		Vec2 pos = body->position + collider.pos + minorBounds.offset;
+		Vec2 world = body->position + collider.pos;
 
-		min.x = std::min(min.x, pos.x - minorBounds.hw);
-		min.y = std::min(min.y, pos.y - minorBounds.hh);
-
-		max.x = std::max(max.x, pos.x + minorBounds.hw);
-		max.y = std::max(max.y, pos.y + minorBounds.hh);
+		min.x = std::min(min.x, world.x + minorBounds.min.x);
+		min.y = std::min(min.y, world.y + minorBounds.min.y);
+		max.x = std::max(max.x, world.x + minorBounds.max.x);
+		max.y = std::max(max.y, world.y + minorBounds.max.y);
 	}
-	bounds.hw  = (max.x - min.x) / 2;
-	bounds.hh = (max.y - min.y) / 2;
-	bounds.offset = min + Vec2(bounds.hw, bounds.hh) - (body->position + body->centroid);
-
-	return bounds;
+	
+	body->bounds = createAABB(min, max);
+	return body->bounds;
 }
 
 const FizzWorldImpl::BodyData* FizzWorldImpl::get_body(const RigidBodyImpl& rb) const
@@ -236,31 +226,31 @@ Vec2 FizzWorldImpl::body_centroidPosition(const RigidBodyImpl& rb) const
 }
 
 Vec2 FizzWorldImpl::body_velocity(const RigidBodyImpl& rb) const 
-{ 
+{
 	auto* body = get_body(rb);
 	if (body) return body->velocity;
 	else	  return null_body.velocity;
 }
 void FizzWorldImpl::body_velocity(const RigidBodyImpl& rb, const Vec2& vel) 
-{ 
+{
 	auto* body = get_body(rb);
 	if (body) body->velocity = vel;
 }
 
 val_t FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb) const 
-{ 
+{
 	auto* body = get_body(rb);
 	if (body) return body->angularVelocity;
 	else	  return null_body.angularVelocity;
 }
 void FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb, val_t angVel) 
-{ 
+{
 	auto* body = get_body(rb);
 	if (body) body->angularVelocity = angVel;
 }
 
 val_t FizzWorldImpl::body_mass(const RigidBodyImpl& rb) const 
-{ 
+{
 	auto* body = get_body(rb);
 	if (body) return 1 / body->invMass;
 	else	  return 1 / null_body.invMass;
@@ -656,7 +646,7 @@ void FizzWorldImpl::simulate_bodies(val_t dt, const Vec2& gravity)
 		bool posUpdate = prevPos != body.position;
 		bool rotUpdate = prevRot != body.rotation; 
 		if(posUpdate || rotUpdate) 
-			broadphase->update(ID, get_bounds(&body, rotUpdate), body.position + body.centroid);
+			broadphase->update(ID, compute_bounds(&body));
 	}
 }
 
@@ -695,7 +685,7 @@ RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
 	b.accumForce = Vec2::Zero();
 	b.accumTorque = 0;
 	set_body(&b, def);
-	broadphase->add(ID, b.bounds, b.position + b.centroid + b.bounds.offset);
+	broadphase->add(ID, b.bounds);
 	activeBodies.push_back(std::move(b));
 
 	Handle handle{ static_cast<uint32_t>(activeHandles.size()), 0 };
@@ -770,7 +760,7 @@ void FizzWorld::tick(val_t dt)
 	impl->tick(dt, Gravity);
 }
 
-std::vector<std::pair<AABB, Vec2>> FizzWorld::getBroadphaseDebugInfo() const
+std::vector<AABB> FizzWorld::getBroadphaseDebugInfo() const
 {
 	return impl->broadphase->getDebugInfo();
 }
