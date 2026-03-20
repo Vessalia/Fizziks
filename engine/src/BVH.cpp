@@ -6,10 +6,10 @@
 
 namespace Fizziks::internal
 {
-uint32_t BVH::allocateLeaf(uint32_t ID, const Entry& entry)
+uint32_t BVH::allocateLeaf(uint32_t ID, const AABB& bounds)
 {
 	Node leaf;
-	leaf.bounds = entry;
+	leaf.bounds = bounds;
 	leaf.bodyID = ID;
 	nodes.push_back(leaf);
 	uint32_t index = nodes.size() - 1;
@@ -38,9 +38,9 @@ val_t BVH::cost() const
 	return result;
 }
 
-val_t BVH::cost(const Entry& entry) const
+val_t BVH::cost(const AABB& bounds) const
 {
-	return entry.first.area();
+	return bounds.area();
 }
 
 val_t BVH::deltaCost(uint32_t sibling, uint32_t node) const
@@ -48,16 +48,9 @@ val_t BVH::deltaCost(uint32_t sibling, uint32_t node) const
 	return cost(mergeBounds(sibling, node)) - cost(nodes[sibling].bounds);
 }
 
-BVH::Entry BVH::mergeBounds(uint32_t node1, uint32_t node2) const
+AABB BVH::mergeBounds(uint32_t node1, uint32_t node2) const
 {
-	const auto& [b1, p1] = nodes[node1].bounds;
-	const auto& [b2, p2] = nodes[node2].bounds;
-	return merge(b1, p1, b2, p2);
-}
-
-BVH::Entry BVH::mergeBounds(const Entry& e1, const Entry& e2) const
-{
-	return merge(e1.first, e1.second, e2.first, e2.second);
+	return merge(nodes[node1].bounds, nodes[node2].bounds);
 }
 
 val_t epsilon = 0.001;
@@ -116,7 +109,7 @@ void BVH::refitRemove(uint32_t from)
 	{
 		if (nodes[i].isleaf) continue;
 
-		const Entry newBounds = mergeBounds(nodes[i].child1, nodes[i].child2);
+		const AABB newBounds = mergeBounds(nodes[i].child1, nodes[i].child2);
 		nodes[i].bounds = newBounds;
 	}
 }
@@ -144,8 +137,8 @@ void BVH::rotate(uint32_t index)
 	Node& C = nodes[A.child2];
 
 	val_t AO = cost(A.bounds);
-	val_t DB = cost(mergeBounds(D.bounds, B.bounds));
-	val_t DC = cost(mergeBounds(D.bounds, C.bounds));
+	val_t DB = cost(merge(D.bounds, B.bounds));
+	val_t DC = cost(merge(D.bounds, C.bounds));
 
 	if (AO <= DB && AO <= DC)
 	{
@@ -170,14 +163,15 @@ void BVH::rotate(uint32_t index)
 constexpr val_t FAT_FACTOR = 1.05;
 static AABB fatten(const AABB& aabb)
 {
-	return { FAT_FACTOR * aabb.hw, FAT_FACTOR * aabb.hh, aabb.offset };
+    Vec2 center = { aabb.min.x + aabb.hw, aabb.min.y + aabb.hh };
+    return createAABB(aabb.hw * 2 * FAT_FACTOR, aabb.hh * 2 * FAT_FACTOR, center);
 }
 
-uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
+uint32_t BVH::add(uint32_t ID, const AABB& aabb)
 {
-	const Entry entry = { fatten(aabb), at };
+	const AABB bounds = fatten(aabb);
 
-	uint32_t leaf = allocateLeaf(ID, entry);
+	uint32_t leaf = allocateLeaf(ID, bounds);
 
 	if (nodes.size() == 1)
 	{
@@ -192,8 +186,7 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb, const Vec2& at)
 	int oldParent = nodes[sibling].parent;
 	int newParent = allocateInternalNode();
 	nodes[newParent].parent = oldParent;
-	const auto& [siblingBox, siblingAt] = nodes[sibling].bounds;
-	nodes[newParent].bounds = merge(entry.first, at, siblingBox, siblingAt);
+	nodes[newParent].bounds = merge(bounds, nodes[sibling].bounds);
 	
 	if (oldParent != BVH::INVALID) // the sibling wasn't the root
 	{
@@ -332,23 +325,23 @@ void BVH::replace(uint32_t prevID, uint32_t newID)
 	moveBuffer.push(newID);
 }
 
-void BVH::update(uint32_t ID, const AABB& aabb, const Vec2& at)
+void BVH::update(uint32_t ID, const AABB& aabb)
 {
 	auto it = indexFromID.find(ID);
 	if (it == indexFromID.end()) return;
 
 	uint32_t index = it->second;
 	Node& node = nodes[index];
-	if (contains(node.bounds.first, node.bounds.second, aabb, at)) return;
+	if (contains(node.bounds, aabb)) return;
 
-	Entry newBounds = { fatten(aabb), at };
+	AABB newBounds = fatten(aabb);
 	node.bounds = newBounds;
 	if (node.parent == BVH::INVALID) return;
 	else
 	{
 		auto& t = pairMap[ID];
 		removeNode(ID, true);
-		add(ID, aabb, at);
+		add(ID, aabb);
 	}
 }
 
@@ -434,7 +427,6 @@ CollisionPairs BVH::computePairs(void)
 		removePairs(movedID);
 		const uint32_t movedIndex = indexFromID[movedID];
 		const Node& moved = nodes[movedIndex];
-		const auto [box, pos] = moved.bounds;
 
 		if (!nodes[root].isleaf)
 		{
@@ -448,8 +440,7 @@ CollisionPairs BVH::computePairs(void)
 			if (index == movedIndex) continue;
 
 			const Node& node = nodes[index];
-			const auto [oBox, oPos] = node.bounds;
-			if (node.bodyID == movedID || !overlaps(box, pos, oBox, oPos)) continue;
+			if (node.bodyID == movedID || !overlaps(moved.bounds, node.bounds)) continue;
 
 			if (node.isleaf)
 			{
@@ -478,9 +469,8 @@ uint32_t BVH::pick(const Vec2& point) const
 		uint32_t idx = stack.top(); stack.pop();
 
 		const Node& node = nodes[idx];
-		const auto [aabb, pos] = node.bounds;
 
-		if (!contains(aabb, pos, point)) continue;
+		if (!contains(node.bounds, point)) continue;
 		if (node.isleaf) return node.bodyID;
 
 		stack.push(node.child1);
@@ -490,7 +480,7 @@ uint32_t BVH::pick(const Vec2& point) const
 	return INVALID;
 }
 
-std::vector<uint32_t> BVH::query(const AABB& aabb, const Vec2& pos) const
+std::vector<uint32_t> BVH::query(const AABB& aabb) const
 {
 	std::vector<uint32_t> results;
 	if (root == INVALID) return results;
@@ -503,9 +493,8 @@ std::vector<uint32_t> BVH::query(const AABB& aabb, const Vec2& pos) const
 		uint32_t idx = stack.top(); stack.pop();
 
 		const Node& node = nodes[idx];
-		const auto [box, p] = node.bounds;
 
-		if (!overlaps(box, p, aabb, pos)) continue;
+		if (!overlaps(aabb, node.bounds)) continue;
 		if (node.isleaf)
 		{
 			results.push_back(node.bodyID);
@@ -534,9 +523,7 @@ RaycastResult BVH::raycast(const Ray& ray) const
 		uint32_t idx = stack.top(); stack.pop();
 
 		const Node& node = nodes[idx];
-		const auto [aabb, pos] = node.bounds;
-
-		val_t t = raytest(ray, aabb, pos);
+		val_t t = raytest(ray, node.bounds);
 		if (t < 0 || t > closestT || t > maxT) continue;
 		if (node.isleaf)
 		{
@@ -560,9 +547,9 @@ RaycastResult BVH::raycast(const Ray& ray) const
 	return res;
 }
 
-std::vector<std::pair<AABB, Vec2>> BVH::getDebugInfo() const
+std::vector<AABB> BVH::getDebugInfo() const
 {
-	std::vector<std::pair<AABB, Vec2>> debug;
+	std::vector<AABB> debug;
 	for (int i = 0; i < nodes.size(); ++i)
 	{
 		debug.push_back(nodes[i].bounds);

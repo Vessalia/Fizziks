@@ -20,5 +20,5 @@ struct FIZZIKS_API RaycastResult
 	Vec2 normal;
 };
 
-val_t raytest(const Ray& ray, const AABB& aabb, const Vec2& pos);
+val_t raytest(const Ray& ray, const AABB& aabb);
 }

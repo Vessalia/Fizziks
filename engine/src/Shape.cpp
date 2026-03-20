@@ -87,9 +87,16 @@ Shape createPolygon(const std::vector<Vec2>& vertices)
 	return { ShapeType::POLYGON, Polygon{ verts, effRadius } };
 }
 
-AABB createAABB(val_t width, val_t height, const Vec2& offset)
+AABB createAABB(val_t width, val_t height, const Vec2& pos)
 {
-	return { width / 2, height / 2, offset };
+	const Vec2 extent = { width / 2, height / 2 };
+	return { pos - extent, pos + extent, width / 2, height / 2 };
+}
+
+AABB createAABB(const Vec2& min, const Vec2& max)
+{
+	const Vec2 extent = max - min;
+	return { min, max, extent.x / 2, extent.y / 2 };
 }
 
 val_t getMoI(const Shape& shape, val_t mass)
@@ -130,7 +137,7 @@ val_t getMoI(const Shape& shape, val_t mass)
 	return MoI;
 }
 
-AABB getEncapsulatingAABBFast(const Shape& s)
+AABB getEncapsulatingAABBFast(const Shape& s, const Vec2& centroid)
 {
 	val_t rad = 0;
 	if (s.type == ShapeType::CIRCLE)
@@ -142,13 +149,7 @@ AABB getEncapsulatingAABBFast(const Shape& s)
 		rad = std::get<Polygon>(s.data).effRadius;
 	}
 
-	AABB aabb;
-	if (!rad) return aabb;
-
-	aabb.hw  = rad;
-	aabb.hh = rad;
-
-	return aabb;
+	return createAABB(2 * rad, 2 * rad, centroid);
 }
 
 AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
@@ -169,16 +170,12 @@ AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
 			max.y = std::max(max.y, transformed.y);
 		}
 		
-		aabb.hw  = (max.x - min.x) / 2;
-		aabb.hh = (max.y - min.y) / 2;
-
-		aabb.offset = (min + max) / 2 - centroid;
+		aabb = createAABB(min + centroid, max + centroid);
 	}
 	else if (s.type == ShapeType::CIRCLE)
 	{
-		auto& circle = std::get<Circle>(s.data);
-		aabb.hw  = circle.radius;
-		aabb.hh = circle.radius;
+		const val_t diameter = 2 * std::get<Circle>(s.data).radius;
+		aabb = createAABB(diameter, diameter, centroid);
 	}
 
 	return aabb;
@@ -187,46 +184,32 @@ AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
 AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight)
 {
 	if (tight) return getEncapsulatingAABBTight(s, centroid, rot);
-	else	   return getEncapsulatingAABBFast(s);
+	else	   return getEncapsulatingAABBFast(s, centroid);
 }
 
-bool overlaps(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
+bool overlaps(const AABB& a, const AABB& b)
 {
-	bool overlapX = abs(p1.x - p2.x) <= a.hw  + b.hw;
-	bool overlapY = abs(p1.y - p2.y) <= a.hh + b.hh;
+	bool overlapX = a.min.x <= b.max.x && b.min.x <= a.max.x;
+	bool overlapY = a.min.y <= b.max.y && b.min.y <= a.max.y;
 	return overlapX && overlapY;
 }
-bool contains(const AABB& a, const Vec2& pos, const Vec2& point)
+bool contains(const AABB& a, const Vec2& point)
 {
-	bool overlapX = abs(pos.x - point.x) <= a.hw;
-	bool overlapY = abs(pos.y - point.y) <= a.hh;
-	return overlapX && overlapY;
+	bool containX = a.min.x <= point.x && point.x <= a.max.x;
+	bool containY = a.min.y <= point.y && point.y <= a.max.y;
+	return containX && containY;
 }
-bool contains(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
+bool contains(const AABB& a, const AABB& b)
 {
-	bool containX = abs(p2.x - p1.x) + b.hw <= a.hw;
-	bool containY = abs(p2.y - p1.y) + b.hh <= a.hh;
+	bool containX = a.min.x <= b.min.x && b.max.x <= a.max.x;
+	bool containY = a.min.y <= b.min.y && b.max.y <= a.max.y;
 	return containX && containY;
 }
 AABB merge(const AABB& a, const AABB& b)
 {
-	return 
-	{ 
-		std::max(a.hw, b.hw), 
-		std::max(a.hh, b.hh)
-	};
-}
-std::pair<AABB, Vec2> merge(const AABB& a, const Vec2& p1, const AABB& b, const Vec2& p2)
-{
-	val_t minX = std::min(p1.x - a.hw, p2.x - b.hw);
-	val_t minY = std::min(p1.y - a.hh, p2.y - b.hh);
-	val_t maxX = std::max(p1.x + a.hw, p2.x + b.hw);
-	val_t maxY = std::max(p1.y + a.hh, p2.y + b.hh);
-
-	AABB aabb = { (maxX - minX) / 2, (maxY - minY) / 2 };
-	Vec2 pos = Vec2((minX + maxX) / 2, (minY + maxY) / 2);
-
-	return { aabb, pos };
+	const Vec2 min = { std::min(a.min.x, b.min.x), std::min(a.min.y, b.min.y) };
+	const Vec2 max = { std::max(a.max.x, b.max.x), std::max(a.max.y, b.max.y) };
+	return createAABB(min, max);
 }
 
 #pragma region CSO support

@@ -134,8 +134,7 @@ private:
 	void add_collider(BodyData* body, const Collider& collider);
 	std::vector<Collider> body_colliders(const RigidBodyImpl& rb) const;
 
-	const AABB get_bounds(const BodyData* body, bool compute) const;
-	const AABB compute_bounds(const BodyData* body) const;
+	const AABB compute_bounds(BodyData* body);
 
 	void apply_force(const RigidBodyImpl& rb, const Vec2& force, const Vec2& at);
 
