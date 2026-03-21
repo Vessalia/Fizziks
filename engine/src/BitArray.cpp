@@ -323,7 +323,7 @@ BitArray& BitArray::trim()
 
 unsigned long BitArray::getMSB() const
 {
-	return bitCount ? bitCount - 1 : 0;
+	return bitCount ? static_cast<unsigned long>(bitCount - 1) : 0;
 }
 
 unsigned long BitArray::getLSB() const
@@ -332,7 +332,7 @@ unsigned long BitArray::getLSB() const
 	{
 		auto byte = bytes[i];
 		if (byte.any())
-			return i * BYTE_SIZE + LSB(byte.to_ulong());
+			return static_cast<unsigned long>(i * BYTE_SIZE) + LSB(byte.to_ulong());
 	}
 
 	return 0;

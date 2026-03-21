@@ -6,7 +6,7 @@
 
 namespace Fizziks
 {
-const val_t epsilon = 0.0001; // should probably be tunable?
+const val_t epsilon = val_t(0.0001); // should probably be tunable?
 const Vec2 origin = Vec2::Zero();
 const int maxIterationsGJK = 30;
 const int maxIterationsEPA = 30;
@@ -105,7 +105,7 @@ val_t getMoI(const Shape& shape, val_t mass)
 	if (shape.type == ShapeType::CIRCLE)
 	{
 		Circle c = std::get<Circle>(shape.data);
-		MoI = 0.5 * mass * c.radius * c.radius;
+		MoI = val_t(0.5) * mass * c.radius * c.radius;
 	}
 	else if (shape.type == ShapeType::POLYGON)
 	{
@@ -367,7 +367,7 @@ void reduceSimplex(Simplex& simplex, Vec2& dir)
 	}
 	else if (simplex.size() > 1)
 	{
-		ASSERT_AND_CRASH("invalid state reached in GJK");
+		FIZZIKS_ASSERT_AND_CRASH("invalid state reached in GJK");
 	}
 }
 
@@ -567,7 +567,7 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 	{
 		// since s1 and s2 is convex, so is their minkowski difference,
 		// so we don't need to remove any vertices
-		int insert = (facet.from + 1) % simplex.size();
+		size_t insert = (facet.from + 1) % simplex.size();
 		simplex.insert(simplex.begin() + insert, support);
 		facet = closestFacet(simplex, origin);
 		lastSupport = support;

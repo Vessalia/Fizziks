@@ -18,7 +18,7 @@ namespace Fizziks
 class FIZZIKS_API FizzWorld
 {
 public:
-	Vec2 Gravity = {0, -9.81};
+	Vec2 Gravity = {0, val_t(-9.81)};
 
 	enum class AccelStruct
 	{

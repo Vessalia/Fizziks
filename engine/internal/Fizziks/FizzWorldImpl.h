@@ -57,7 +57,7 @@ private:
 
 	struct CollisionManifold
 	{
-		size_t bodyAId, bodyBId;
+		uint32_t bodyAId, bodyBId;
 
 		Allocator::Block allocContact;
 		size_t numBlocks = 0;
@@ -109,7 +109,7 @@ private:
 	Vec2 get_worldPos(const BodyData& body, const Vec2& colliderPos) const;
 	val_t get_worldRotation(const BodyData& body, const Collider& collider) const;
 
-	CollisionManifold get_manifold(size_t idA, size_t idB, size_t allocIndex) const;
+	CollisionManifold get_manifold(uint32_t idA, uint32_t idB, size_t allocIndex) const;
 	void detect_collisions();
 	ContactKey makeContactKey(const CollisionResolution& resolution) const;
 	CollisionResolution collision_preStep(uint32_t idA, uint32_t idB, uint32_t collIdA, uint32_t collIdB, const Contact& constact, val_t dt);

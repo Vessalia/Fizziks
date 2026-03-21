@@ -308,7 +308,7 @@ val_t FizzWorldImpl::get_worldRotation(const BodyData& body, const Collider& col
 	return clamp_angle(body.rotation + collider.rotation);
 }
 
-FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t idB, size_t allocIndex) const
+FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint32_t idB, size_t allocIndex) const
 {
 	CollisionManifold manifold;
 	manifold.bodyAId = idA;
@@ -405,11 +405,11 @@ ContactKey FizzWorldImpl::makeContactKey(const CollisionResolution& resolution) 
 	return { resolution.bodyAId, resolution.bodyBId, resolution.collIdA, resolution.collIdB, resolution.contact.featureA, resolution.contact.featureB };
 }
 
-val_t beta = 0.2;
-val_t restitutionThreshold = 0.001;
-val_t slopPen = 0.01;
-val_t slopRes = 0.01;
-val_t warmStart = 0.75;
+val_t beta = val_t(0.2);
+val_t restitutionThreshold = val_t(0.001);
+val_t slopPen = val_t(0.01);
+val_t slopRes = val_t(0.01);
+val_t warmStart = val_t(0.75);
 // precompute inverse effective mass (JM^-1J^T)^-1 and bias term
 // J = [-n^T -(rA x n)^T n^T (rB x n)^T]
 // M^-1 = [Ma^-1 0 0 0]
@@ -593,8 +593,8 @@ void FizzWorldImpl::resolve_collisions(val_t dt)
 		{
 			const auto& collContact = collContacts[i];
 			collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, 
-			collContact.collAId, collContact.collBId, 
-			collContact.contact, dt));
+															 collContact.collAId, collContact.collBId, 
+															 collContact.contact, dt));
 		}
 	}
 	collisionManifolds.clear();
@@ -625,7 +625,7 @@ void FizzWorldImpl::handle_collisions(val_t dt)
 
 void FizzWorldImpl::simulate_bodies(val_t dt, const Vec2& gravity)
 {
-	for (size_t ID = 0; ID < activeBodies.size(); ++ID)
+	for (uint32_t ID = 0; ID < activeBodies.size(); ++ID)
 	{
 		auto& body = activeBodies[ID];
 		if (body.bodyType == BodyType::STATIC) continue;
@@ -666,7 +666,7 @@ void FizzWorldImpl::destroy_bodies()
 			activeBodies.pop_back();
 			activeList.pop_back();
 			broadphase->remove(swapIndex);
-			broadphase->replace(activeBodies.size(), swapIndex);
+			broadphase->replace(static_cast<uint32_t>(activeBodies.size()), swapIndex);
 			if (swapIndex < activeBodies.size())
 			{
 				uint32_t movedIndex = activeList[swapIndex];
@@ -680,7 +680,7 @@ void FizzWorldImpl::destroy_bodies()
 
 RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
 {
-	uint32_t ID = activeBodies.size();
+	uint32_t ID = static_cast<uint32_t>(activeBodies.size());
 	BodyData b;
 	b.accumForce = Vec2::Zero();
 	b.accumTorque = 0;

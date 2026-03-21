@@ -17,18 +17,18 @@ class ScopeProfiler
 public:
 	using clock = std::chrono::steady_clock;
 
-	ScopeProfiler(std::string_view label, const char* functionSignature, bool average = false)
+	ScopeProfiler(std::string_view label, const char* functionSignature, bool useAverage = false)
 	: label(label)
 	, functionSignature(functionSignature)
 	, start(clock::now())
-	, average(average) { }
+	, useAverage(useAverage) { }
 
 	~ScopeProfiler()
 	{
 		const auto end = clock::now();
 		const auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-		if (average)
+		if (useAverage)
 		{
 			if (!averages.contains(label))
 			{
@@ -62,7 +62,7 @@ public:
 private:
 	static std::unordered_map<std::string_view, std::pair<long long, long long>> averages;
 
-	bool average;
+	bool useAverage;
 	std::string_view label;
 	const char* functionSignature;
 	clock::time_point start;

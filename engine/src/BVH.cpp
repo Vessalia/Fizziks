@@ -12,7 +12,7 @@ uint32_t BVH::allocateLeaf(uint32_t ID, const AABB& bounds)
 	leaf.bounds = bounds;
 	leaf.bodyID = ID;
 	nodes.push_back(leaf);
-	uint32_t index = nodes.size() - 1;
+	uint32_t index = static_cast<uint32_t>(nodes.size() - 1);
 	indexFromID[ID] = index;
 
 	return index;
@@ -24,13 +24,13 @@ uint32_t BVH::allocateInternalNode()
 	node.isleaf = false;
 	nodes.push_back(node);
 
-	return nodes.size() - 1;
+	return static_cast<uint32_t>(nodes.size() - 1);
 }
 
 val_t BVH::cost() const
 {
 	val_t result = 0;
-	for (int i = 0; i < nodes.size(); ++i)
+	for (uint32_t i = 0; i < nodes.size(); ++i)
 	{
 		if (!nodes[i].isleaf && i != root) result += cost(nodes[i].bounds);
 	}
@@ -53,7 +53,7 @@ AABB BVH::mergeBounds(uint32_t node1, uint32_t node2) const
 	return merge(nodes[node1].bounds, nodes[node2].bounds);
 }
 
-val_t epsilon = 0.001;
+val_t epsilon = val_t(0.001);
 uint32_t BVH::pickBestSibling(uint32_t nodeIndex) const
 {
 	struct Candidate
@@ -160,7 +160,7 @@ void BVH::rotate(uint32_t index)
 	A.bounds = mergeBounds(A.child1, A.child2);
 }
 
-constexpr val_t FAT_FACTOR = 1.05;
+constexpr val_t FAT_FACTOR = val_t(1.05);
 static AABB fatten(const AABB& aabb)
 {
     Vec2 center = { aabb.min.x + aabb.hw, aabb.min.y + aabb.hh };
@@ -183,8 +183,8 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb)
 	uint32_t sibling = pickBestSibling(leaf);
 
 	// Stage 2: create a new parent
-	int oldParent = nodes[sibling].parent;
-	int newParent = allocateInternalNode();
+	uint32_t oldParent = nodes[sibling].parent;
+	uint32_t newParent = allocateInternalNode();
 	nodes[newParent].parent = oldParent;
 	nodes[newParent].bounds = merge(bounds, nodes[sibling].bounds);
 	
@@ -217,7 +217,7 @@ void BVH::removeNodeAt(uint32_t index)
 {
 	if (nodes[index].isleaf) indexFromID.erase(nodes[index].bodyID);
 
-	uint32_t last = nodes.size() - 1;
+	uint32_t last = static_cast<uint32_t>(nodes.size() - 1);
 	if (index != last) 
 	{
 		Node& moved = nodes[last];
@@ -285,9 +285,9 @@ bool BVH::removeNode(uint32_t bodyID, bool temp)
 	uint32_t front = std::min(leaf, parent);
 	uint32_t back = std::max(leaf, parent);
 	removeNodeAt(back); // possibly the back node, remove it first
-	if (sibling == nodes.size()) sibling = back; // sibling got swapped
+	if (sibling == static_cast<uint32_t>(nodes.size())) sibling = back; // sibling got swapped
 	removeNodeAt(front);
-	if (sibling == nodes.size()) sibling = front;
+	if (sibling == static_cast<uint32_t>(nodes.size())) sibling = front;
 
 	// Refit upward (removeNodeAt may have invalidated parent, sibling, or grandparent)
 	if (sibling != root) refitRemove(nodes[sibling].parent);
@@ -339,7 +339,6 @@ void BVH::update(uint32_t ID, const AABB& aabb)
 	if (node.parent == BVH::INVALID) return;
 	else
 	{
-		auto& t = pairMap[ID];
 		removeNode(ID, true);
 		add(ID, aabb);
 	}
@@ -351,7 +350,7 @@ void BVH::addPair(uint32_t idA, uint32_t idB)
 
 	const CollisionPair pair = { idA, idB };
 	const InternalPair internalPair = { pair, static_cast<uint32_t>(pairMap[idA].size()), static_cast<uint32_t>(pairMap[idB].size()) };
-	uint32_t idx = collPairs.size();
+	uint32_t idx = static_cast<uint32_t>(collPairs.size());
 
 	collPairs.push_back(pair);
 	internalPairs.push_back(internalPair);
@@ -396,7 +395,7 @@ void BVH::removePair(uint32_t index)
 	fixAdj(da, dead.indexA);
 	fixAdj(db, dead.indexB);
 
-	uint32_t last = internalPairs.size() - 1;
+	uint32_t last = static_cast<uint32_t>(internalPairs.size() - 1);
 
 	if (index < last)
 	{
@@ -419,7 +418,7 @@ CollisionPairs BVH::computePairs(void)
 	if (!moveBuffer.size()) return collPairs;
 
 	std::vector<uint32_t> stack;
-	stack.reserve(std::log2(nodes.size()));
+	stack.reserve(static_cast<size_t>(std::log2(nodes.size())));
 	while (!moveBuffer.empty())
 	{
 		uint32_t movedID = moveBuffer.front(); moveBuffer.pop();

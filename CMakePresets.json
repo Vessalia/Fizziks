@@ -1,58 +1,42 @@
 ﻿{
   "version": 3,
   "configurePresets": [
-	{
-	  "name": "windows-base",
-	  "description": "Target Windows with the Visual Studio development environment.",
-	  "hidden": true,
-	  "generator": "Ninja",
-	  "binaryDir": "${sourceDir}/build/${presetName}",
-	  "installDir": "${sourceDir}/install/${presetName}",
-	  "cacheVariables": {
-	"CMAKE_C_COMPILER": "cl.exe",
-	"CMAKE_CXX_COMPILER": "cl.exe"
-	  },
-	  "condition": {
-	"type": "equals",
-	"lhs": "${hostSystemName}",
-	"rhs": "Windows"
-	  }
-	},
-	{
-	  "name": "x64-debug",
-	  "displayName": "x64 Debug",
-	  "description": "Target Windows (64-bit) with the Visual Studio development environment. (Debug)",
-	  "inherits": "windows-base",
-	  "architecture": {
-	"value": "x64",
-	"strategy": "external"
-	  },
-	  "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
-	},
-	{
-	  "name": "x64-release",
-	  "displayName": "x64 Release",
-	  "description": "Target Windows (64-bit) with the Visual Studio development environment. (RelWithDebInfo)",
-	  "inherits": "x64-debug",
-	  "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
-	},
-	{
-	  "name": "x86-debug",
-	  "displayName": "x86 Debug",
-	  "description": "Target Windows (32-bit) with the Visual Studio development environment. (Debug)",
-	  "inherits": "windows-base",
-	  "architecture": {
-	"value": "x86",
-	"strategy": "external"
-	  },
-	  "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
-	},
-	{
-	  "name": "x86-release",
-	  "displayName": "x86 Release",
-	  "description": "Target Windows (32-bit) with the Visual Studio development environment. (RelWithDebInfo)",
-	  "inherits": "x86-debug",
-	  "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
-	}
+    {
+      "name": "windows-base",
+      "description": "Target Windows with the Visual Studio development environment.",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+
+    { "name": "x64-base",              "hidden": true, "inherits": "windows-base",     "architecture": { "value": "x64", "strategy": "external" } },
+    { "name": "x64-shared-base",       "hidden": true, "inherits": "x64-base",         "cacheVariables": { "BUILD_SHARED_LIBS": "ON"  } },
+    { "name": "x64-static-base",       "hidden": true, "inherits": "x64-base",         "cacheVariables": { "BUILD_SHARED_LIBS": "OFF" } },
+    { "name": "x64-shared-eigen-base", "hidden": true, "inherits": "x64-shared-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "OFF"  } },
+    { "name": "x64-shared-glm-base",   "hidden": true, "inherits": "x64-shared-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "ON"   } },
+    { "name": "x64-static-eigen-base", "hidden": true, "inherits": "x64-static-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "OFF"  } },
+    { "name": "x64-static-glm-base",   "hidden": true, "inherits": "x64-static-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "ON"   } },
+
+    { "name": "x64-shared-eigen-debug",          "displayName": "x64 Shared Eigen Debug",                   "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug"          } },
+    { "name": "x64-shared-eigen-relwithdebinfo", "displayName": "x64 Shared Eigen Release with Debug Info", "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+    { "name": "x64-shared-glm-debug",            "displayName": "x64 Shared GLM Debug",                     "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug"          } },
+    { "name": "x64-shared-glm-relwithdebinfo",   "displayName": "x64 Shared GLM Release with Debug Info",   "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+
+    { "name": "x64-shared-eigen-release",        "displayName": "x64 Shared Eigen Release",                 "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+    { "name": "x64-shared-glm-release",          "displayName": "x64 Shared GLM Release",                   "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+    { "name": "x64-static-eigen-release",        "displayName": "x64 Static Eigen Release",                 "inherits": "x64-static-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+    { "name": "x64-static-glm-release",          "displayName": "x64 Static GLM Release",                   "inherits": "x64-static-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+    { "name": "x64-static-eigen-relwithdebinfo", "displayName": "x64 Static Eigen Release with Debug Info", "inherits": "x64-static-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+    { "name": "x64-static-glm-relwithdebinfo",   "displayName": "x64 Static GLM Release with Debug Info",   "inherits": "x64-static-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } }
   ]
 }

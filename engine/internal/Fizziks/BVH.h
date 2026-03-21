@@ -29,7 +29,7 @@ private:
         uint32_t indexA, indexB; // adjacency list back reference
 	};
 
-	static constexpr uint32_t INVALID = -1;
+	static constexpr uint32_t INVALID = static_cast<uint32_t>(-1);
 	struct Node
 	{
         AABB bounds;
