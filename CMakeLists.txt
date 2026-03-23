@@ -50,8 +50,6 @@ if(FIZZIKS_BUILD_DIST)
 	set(DIST_INCLUDE_DIR ${DIST_DIR}/include/Fizziks)
 
 	set(DIST_LIB_DIR ${DIST_DIR}/lib/$<CONFIG>)
-	set(DIST_BIN_DIR ${DIST_DIR}/bin/$<CONFIG>)
-	set(DIST_LIB_DIR ${DIST_DIR}/lib/$<CONFIG>)
 	if(BUILD_SHARED_LIBS)
 		set(DIST_BIN_DIR ${DIST_DIR}/bin/$<CONFIG>)
 		set(DIST_PDB_DIR ${DIST_DIR}/bin/$<CONFIG>)
