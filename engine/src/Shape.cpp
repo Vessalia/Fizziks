@@ -1,5 +1,6 @@
 #include <Fizziks/Shape.h>
 #include <Fizziks/MathUtils.h>
+#include <Fizziks/Log.h>
 
 #include <algorithm>
 #include <array>
@@ -367,6 +368,7 @@ void reduceSimplex(Simplex& simplex, Vec2& dir)
 	}
 	else if (simplex.size() > 1)
 	{
+		FIZZIKS_LOG_CRITICAL("simplex of size {:d} invalid for GJK", simplex.size());
 		FIZZIKS_ASSERT_AND_CRASH("invalid state reached in GJK");
 	}
 }
@@ -394,6 +396,7 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, const Ma
 		if (direction == Vec2::Zero()) return { true, std::move(simplex) };
 	}
 
+	FIZZIKS_LOG_WARNING("Max GJK iterations surpassed");
 	return { false, std::move(simplex) };
 }
 
@@ -531,13 +534,14 @@ uint32_t getFeature(const Shape& shape, const Vec2& pos, const Vec2& normal)
 		Vec2 AP = pos - A;
 
 		val_t dot = AP.dot(AB);
-		if (crossproduct(AB, AP) > epsilon ||            // make sure point is on feature edge
-		   dot < 0 || dot > AB.dot(AB) ||                // make sure point is between A and B
-		   std::abs(AB.dot(normal)) > epsilon) continue; // normal check picks dominant feature at vertices
+		if (crossproduct(AB, AP) > epsilon ||             // make sure point is on feature edge
+			dot < 0 || dot > AB.dot(AB) ||                // make sure point is between A and B
+			std::abs(AB.dot(normal)) > epsilon) continue; // normal check picks dominant feature at vertices
 
 		return i;
 	}
 
+	FIZZIKS_LOG_WARNING("EPA could not find feature edge for shape at ({:.2f}, {:.2f})", pos.x, pos.y);
 	return UINT32_MAX;
 }
 
@@ -573,6 +577,9 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 		lastSupport = support;
 		support = getCSOSupport(s1, p1, r1, s2, p2, r2, facet.dir);
 	}
+
+	if (iterations == maxIterationsEPA + 1)
+		FIZZIKS_LOG_WARNING("Max EPA iterations surpassed");
 
 	// closest edge of final simplex to the origin
 	facet = closestFacet(simplex, origin);

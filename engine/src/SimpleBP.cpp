@@ -1,5 +1,6 @@
 #include <Fizziks/SimpleBP.h>
 #include <Fizziks/MathUtils.h>
+#include <Fizziks/Log.h>
 
 namespace Fizziks::internal
 {
@@ -41,6 +42,7 @@ uint32_t SimpleBP::pick(const Vec2& point) const
 			return id;
 	}
 
+	FIZZIKS_LOG_INFO("No body to pick at position ({:.2f}, {:.2f})", point.x, point.y);
 	return fizzmax<uint32_t>();
 }
 
