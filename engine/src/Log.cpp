@@ -14,6 +14,12 @@ namespace Fizziks
 {
 void addLogSink(LogSink sink, SinkOptions options)
 {
+	if (options.level == LogLevel::NONE)
+	{
+		FIZZIKS_LOG_ERROR("Cannot log events at level {}", toString(LogLevel::NONE));
+		return;
+	}
+
 	auto& state = internal::globalLogState();
 	std::unique_lock lock(state.mutex);
 

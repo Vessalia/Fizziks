@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Fizziks/FizzLog.h>
+#include <Fizziks/Log.h>
 #include <array>
 #include <vector>
 #include <format>

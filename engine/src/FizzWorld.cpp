@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include <Fizziks/ScopeProfiler.h>
+#include <Fizziks/FizzLog.h>
 
 namespace Fizziks::internal
 {
@@ -716,6 +717,11 @@ void FizzWorldImpl::tick_end()
 
 void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 {
+	if (currstep == 0)
+	{
+		FIZZIKS_LOG_INFO("First world tick called!");
+	}
+
 	accumulator += dt;
 	while (accumulator >= timestep)
 	{
@@ -735,7 +741,16 @@ namespace Fizziks
 FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel) 
 	: impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep, accel)) { }
 
-FizzWorld::~FizzWorld() { if (impl) { delete impl; } impl = nullptr;  }
+FizzWorld::~FizzWorld() 
+{ 
+	if (impl) 
+	{ 
+		delete impl; 
+	} 
+	impl = nullptr;
+
+	FIZZIKS_LOG_INFO("World destroyed");
+}
 
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {

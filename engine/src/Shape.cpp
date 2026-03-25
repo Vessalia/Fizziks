@@ -1,6 +1,6 @@
 #include <Fizziks/Shape.h>
 #include <Fizziks/MathUtils.h>
-#include <Fizziks/Log.h>
+#include <Fizziks/FizzLog.h>
 
 #include <algorithm>
 #include <array>
@@ -521,28 +521,40 @@ Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, const Mat2& r1,
 	return contact;
 }
 
+val_t facingWeight = val_t(1);
+val_t proxWeight = val_t(0.1);
 uint32_t getFeature(const Shape& shape, const Vec2& pos, const Vec2& normal)
 {
 	if (shape.type == ShapeType::CIRCLE) return 0;
 
 	auto& vertices = std::get<Polygon>(shape.data).vertices;
-	for (int i = 0; i < vertices.size(); ++i)
+
+	uint32_t bestIndex = 0;
+	val_t bestScore = fizzmax<val_t>();
+	for (uint32_t i = 0; i < static_cast<uint32_t>(vertices.size()); ++i)
 	{
 		Vec2 A = vertices[i];
 		Vec2 B = vertices[(i + 1) % vertices.size()];
 		Vec2 AB = B - A;
 		Vec2 AP = pos - A;
 
-		val_t dot = AP.dot(AB);
-		if (crossproduct(AB, AP) > epsilon ||             // make sure point is on feature edge
-			dot < 0 || dot > AB.dot(AB) ||                // make sure point is between A and B
-			std::abs(AB.dot(normal)) > epsilon) continue; // normal check picks dominant feature at vertices
+		Vec2 edgeNormal = Vec2(AB.y, -AB.x);
+		val_t edgeLen = edgeNormal.norm();
+		if (edgeLen < epsilon) continue;
 
-		return i;
+		val_t facing = edgeNormal.dot(normal) / edgeLen;
+		val_t dist = std::abs(crossproduct(AB, AP)) / edgeLen;
+		val_t proximity = 1.0f / (1.0f + dist);
+
+		val_t score = facingWeight * facing + proxWeight * proximity;
+		if (score > bestScore)
+		{
+			bestScore = score;
+			bestIndex = i;
+		}
 	}
 
-	FIZZIKS_LOG_WARNING("EPA could not find feature edge for shape at ({:.2f}, {:.2f})", pos.x, pos.y);
-	return UINT32_MAX;
+	return bestIndex;
 }
 
 Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
