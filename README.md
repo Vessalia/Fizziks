@@ -96,8 +96,7 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
-- Tests
-- Improve User RigidBody instantiation process
+- Provide builder optional pattern for creating RigidBodys(?)
 - BVH raycasting/user data + callback abstraction
 - Handle convex polygons
 - RigidBody layermasking
