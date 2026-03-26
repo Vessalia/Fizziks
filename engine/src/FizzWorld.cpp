@@ -350,7 +350,6 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint3
 
 void FizzWorldImpl::detect_collisions()
 {
-	//PROFILE_FUNCTION_AVG();
 	// broadphase detection
 	const CollisionPairs broadPairs = broadphase->computePairs();
 	if (broadPairs.size() == 0) return;

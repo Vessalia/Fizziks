@@ -68,7 +68,7 @@ namespace Fizziks::internal::ops
 inline Vec2  lerp        (const Vec2& a, const Vec2& b, val_t t) { return map(vec_lerp(map(a), map(b), t)); }
 inline val_t dot         (const Vec2& a, const Vec2& b)          { return vec_dot(map(a), map(b)); }
 inline val_t cross       (const Vec2& a, const Vec2& b)          { return a.x * b.y - a.y * b.x; }
-inline Vec2 cross        (const Vec2& v, val_t z)                { return {z * -v.y, z * v.x}; }
+inline Vec2  cross       (const Vec2& v, val_t z)                { return {z * -v.y, z * v.x}; }
 inline val_t norm        (const Vec2& v)                         { return vec_norm(map(v)); }
 inline val_t squaredNorm (const Vec2& v)                         { return vec_norm2(map(v)); }
 inline Vec2  normalized  (const Vec2& v)                         { return map(vec_normalize(map(v))); }

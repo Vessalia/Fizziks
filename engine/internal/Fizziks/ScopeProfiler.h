@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string_view>
 #include <unordered_map>
+#include <dequeue>
 
 #if defined(_MSC_VER)
 #define PROFILE_FUNCTION_SIGNATURE __FUNCSIG__
@@ -17,11 +18,12 @@ class ScopeProfiler
 public:
 	using clock = std::chrono::steady_clock;
 
-	ScopeProfiler(std::string_view label, const char* functionSignature, bool useAverage = false)
+	ScopeProfiler(std::string_view label, const char* functionSignature, bool useAverage = false, int windowSize = 100)
 	: label(label)
 	, functionSignature(functionSignature)
 	, start(clock::now())
-	, useAverage(useAverage) { }
+	, useAverage(useAverage)
+	, windowSize(windowSize) { }
 
 	~ScopeProfiler()
 	{
@@ -30,17 +32,21 @@ public:
 
 		if (useAverage)
 		{
-			if (!averages.contains(label))
+			auto window = averages[label];
+
+			averages[label].push(microseconds);
+			while (averages[label].size() > windowSize)
 			{
-				averages[label] = { microseconds, 1 };
-			}
-			else
-			{
-				averages[label].first += microseconds;
-				++averages[label].second;
+				averages[label].pop();
 			}
 
-			auto average = averages[label].first / averages[label].second;
+			long long average = 0;
+			for (long long measurement : window)
+			{
+				average += measure
+			}
+			average /= window.size();
+
 			print(average);
 		}
 		else
@@ -60,9 +66,10 @@ public:
 	}
 
 private:
-	static std::unordered_map<std::string_view, std::pair<long long, long long>> averages;
+	static std::unordered_map<std::string_view, std::dequeue<long long>> averages;
 
 	bool useAverage;
+	uint16_t windowSize;
 	std::string_view label;
 	const char* functionSignature;
 	clock::time_point start;
@@ -75,10 +82,16 @@ private:
 	ScopeProfiler PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE)
 
 #define PROFILE_SCOPE_AVG(label) \
-	ScopeProfiler PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE, true)
+	ScopeProfiler profile = PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE, true)
+
+#define PROFILE_SCOPE_AVG(label, windowSize) \
+	ScopeProfiler profile = PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE, true, windowSize)
 
 #define PROFILE_FUNCTION() \
 	PROFILE_SCOPE(__func__)
 
 #define PROFILE_FUNCTION_AVG() \
 	PROFILE_SCOPE_AVG(__func__)
+
+#define PROFILE_FUNCTION_AVG(windowSize) \
+	PROFILE_SCOPE_AVG(__func__, windowSize)
