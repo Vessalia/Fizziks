@@ -44,7 +44,7 @@ Vec2 getCentroid(const std::vector<Vec2>& vertices)
 		const Vec2& v0 = vertices[i];
 		const Vec2& v1 = vertices[(i + 1) % n];
 
-		val_t cross = crossproduct(v0, v1);
+		val_t cross = v0.cross(v1);
 		centroid += (v0 + v1) * cross;
 		area += cross;
 	}
@@ -119,7 +119,7 @@ val_t getMoI(const Shape& shape, val_t mass)
 		{
 			const auto& v0 = p.vertices[i];
 			const auto& v1 = p.vertices[(i + 1) % p.vertices.size()];
-			const val_t cross = crossproduct(v0, v1);
+			const val_t cross = v0.cross(v1);
 
 			area += cross;
 			cx += (v0.x + v1.x) * cross;
@@ -273,7 +273,7 @@ void enforceCCWWinding(Simplex& simplex)
 	else if (simplex.size() == 3) // need 3rd point to be the newest one (don't move) for GJK simplex reduction alg
 	{
 		Vec2 A = simplex[0].CSO, B = simplex[1].CSO, C = simplex[2].CSO;
-		val_t cross = crossproduct(B - A, C - A);
+		val_t cross = (B - A).cross(C - A);
 		if (cross < 0) std::swap(simplex[0], simplex[1]);
 	}
 	else
@@ -286,7 +286,7 @@ void enforceCCWWinding(Simplex& simplex)
 			const Vec2& a = simplex[i].CSO;
 			const Vec2& b = simplex[(i + 1) % simplex.size()].CSO;
 
-			signedArea += crossproduct(a, b);
+			signedArea += a.cross(b);
 		}
 
 		// If clockwise, reverse to make CCW
@@ -396,7 +396,7 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, const Ma
 		if (direction == Vec2::Zero()) return { true, std::move(simplex) };
 	}
 
-	FIZZIKS_LOG_WARNING("Max GJK iterations surpassed");
+	FIZZIKS_LOG_DEBUG("Max GJK iterations surpassed");
 	return { false, std::move(simplex) };
 }
 
@@ -543,7 +543,7 @@ uint32_t getFeature(const Shape& shape, const Vec2& pos, const Vec2& normal)
 		if (edgeLen < epsilon) continue;
 
 		val_t facing = edgeNormal.dot(normal) / edgeLen;
-		val_t dist = std::abs(crossproduct(AB, AP)) / edgeLen;
+		val_t dist = std::abs(AB.cross(AP)) / edgeLen;
 		val_t proximity = 1.0f / (1.0f + dist);
 
 		val_t score = facingWeight * facing + proxWeight * proximity;
@@ -591,7 +591,7 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 	}
 
 	if (iterations == maxIterationsEPA + 1)
-		FIZZIKS_LOG_WARNING("Max EPA iterations surpassed");
+		FIZZIKS_LOG_DEBUG("Max EPA iterations surpassed");
 
 	// closest edge of final simplex to the origin
 	facet = closestFacet(simplex, origin);

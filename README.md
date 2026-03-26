@@ -10,6 +10,7 @@ Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for
 - Constraint solving (currently just for contacts)
 - Material properties (restitution, friction, etc.)
 - No external dependencies
+- Thread safe logging
 
 ## Building
 ### Requirements
@@ -95,7 +96,7 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
-- Logging (currently none)
+- Tests
 - Improve User RigidBody instantiation process
 - BVH raycasting/user data + callback abstraction
 - Handle convex polygons

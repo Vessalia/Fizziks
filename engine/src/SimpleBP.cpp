@@ -1,6 +1,6 @@
 #include <Fizziks/SimpleBP.h>
 #include <Fizziks/MathUtils.h>
-#include <Fizziks/Log.h>
+#include <Fizziks/FizzLog.h>
 
 namespace Fizziks::internal
 {

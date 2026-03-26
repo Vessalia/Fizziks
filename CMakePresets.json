@@ -1,42 +1,85 @@
 ﻿{
-  "version": 3,
-  "configurePresets": [
-    {
-      "name": "windows-base",
-      "description": "Target Windows with the Visual Studio development environment.",
-      "hidden": true,
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "installDir": "${sourceDir}/install/${presetName}",
-      "cacheVariables": {
-        "CMAKE_C_COMPILER": "cl.exe",
-        "CMAKE_CXX_COMPILER": "cl.exe"
-      },
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    },
+	"version": 3,
+	"configurePresets": [
+		{
+			"name": "windows-base",
+			"description": "Target Windows with the Visual Studio development environment.",
+			"hidden": true,
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"installDir": "${sourceDir}/install/${presetName}",
+			"cacheVariables": {
+			"CMAKE_C_COMPILER": "cl.exe",
+			"CMAKE_CXX_COMPILER": "cl.exe",
+			"CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+			},
+			"condition": {
+			"type": "equals",
+			"lhs": "${hostSystemName}",
+			"rhs": "Windows"
+			}
+		},
 
-    { "name": "x64-base",              "hidden": true, "inherits": "windows-base",     "architecture": { "value": "x64", "strategy": "external" } },
-    { "name": "x64-shared-base",       "hidden": true, "inherits": "x64-base",         "cacheVariables": { "BUILD_SHARED_LIBS": "ON"  } },
-    { "name": "x64-static-base",       "hidden": true, "inherits": "x64-base",         "cacheVariables": { "BUILD_SHARED_LIBS": "OFF" } },
-    { "name": "x64-shared-eigen-base", "hidden": true, "inherits": "x64-shared-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "OFF"  } },
-    { "name": "x64-shared-glm-base",   "hidden": true, "inherits": "x64-shared-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "ON"   } },
-    { "name": "x64-static-eigen-base", "hidden": true, "inherits": "x64-static-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "OFF"  } },
-    { "name": "x64-static-glm-base",   "hidden": true, "inherits": "x64-static-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "ON"   } },
+		{ "name": "x64-base",              "hidden": true, "inherits": "windows-base",     "architecture": { "value": "x64", "strategy": "external" } },
+		{ "name": "x64-shared-base",       "hidden": true, "inherits": "x64-base",         "cacheVariables": { "BUILD_SHARED_LIBS": "ON"  } },
+		{ "name": "x64-static-base",       "hidden": true, "inherits": "x64-base",         "cacheVariables": { "BUILD_SHARED_LIBS": "OFF" } },
+		{ "name": "x64-shared-eigen-base", "hidden": true, "inherits": "x64-shared-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "OFF" } },
+		{ "name": "x64-shared-glm-base",   "hidden": true, "inherits": "x64-shared-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "ON"  } },
+		{ "name": "x64-static-eigen-base", "hidden": true, "inherits": "x64-static-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "OFF" } },
+		{ "name": "x64-static-glm-base",   "hidden": true, "inherits": "x64-static-base",  "cacheVariables": { "FIZZIKS_USE_GLM": "ON"  } },
 
-    { "name": "x64-shared-eigen-debug",          "displayName": "x64 Shared Eigen Debug",                   "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug"          } },
-    { "name": "x64-shared-eigen-relwithdebinfo", "displayName": "x64 Shared Eigen Release with Debug Info", "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
-    { "name": "x64-shared-glm-debug",            "displayName": "x64 Shared GLM Debug",                     "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug"          } },
-    { "name": "x64-shared-glm-relwithdebinfo",   "displayName": "x64 Shared GLM Release with Debug Info",   "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+		{ "name": "x64-shared-eigen-debug",          "displayName": "x64 Shared Eigen Debug",                   "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug"          } },
+		{ "name": "x64-shared-eigen-relwithdebinfo", "displayName": "x64 Shared Eigen Release with Debug Info", "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+		{ "name": "x64-shared-glm-debug",            "displayName": "x64 Shared GLM Debug",                     "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug"          } },
+		{ "name": "x64-shared-glm-relwithdebinfo",   "displayName": "x64 Shared GLM Release with Debug Info",   "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+		{ "name": "x64-shared-eigen-release",        "displayName": "x64 Shared Eigen Release",                 "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+		{ "name": "x64-shared-glm-release",          "displayName": "x64 Shared GLM Release",                   "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+		{ "name": "x64-static-eigen-release",        "displayName": "x64 Static Eigen Release",                 "inherits": "x64-static-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+		{ "name": "x64-static-glm-release",          "displayName": "x64 Static GLM Release",                   "inherits": "x64-static-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
+		{ "name": "x64-static-eigen-relwithdebinfo", "displayName": "x64 Static Eigen Release with Debug Info", "inherits": "x64-static-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+		{ "name": "x64-static-glm-relwithdebinfo",   "displayName": "x64 Static GLM Release with Debug Info",   "inherits": "x64-static-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
 
-    { "name": "x64-shared-eigen-release",        "displayName": "x64 Shared Eigen Release",                 "inherits": "x64-shared-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
-    { "name": "x64-shared-glm-release",          "displayName": "x64 Shared GLM Release",                   "inherits": "x64-shared-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
-    { "name": "x64-static-eigen-release",        "displayName": "x64 Static Eigen Release",                 "inherits": "x64-static-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
-    { "name": "x64-static-glm-release",          "displayName": "x64 Static GLM Release",                   "inherits": "x64-static-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "Release"        } },
-    { "name": "x64-static-eigen-relwithdebinfo", "displayName": "x64 Static Eigen Release with Debug Info", "inherits": "x64-static-eigen-base", "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
-    { "name": "x64-static-glm-relwithdebinfo",   "displayName": "x64 Static GLM Release with Debug Info",   "inherits": "x64-static-glm-base",   "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } }
-  ]
+		{ "name": "x64-shared-eigen-debug-tests",                          "inherits": "x64-shared-eigen-debug",          "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-shared-eigen-relwithdebinfo-tests", "hidden": true, "inherits": "x64-shared-eigen-relwithdebinfo", "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-shared-eigen-release-tests",        "hidden": true, "inherits": "x64-shared-eigen-release",        "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-shared-glm-debug-tests",                            "inherits": "x64-shared-glm-debug",            "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-shared-glm-relwithdebinfo-tests",   "hidden": true, "inherits": "x64-shared-glm-relwithdebinfo",   "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-shared-glm-release-tests",          "hidden": true, "inherits": "x64-shared-glm-release",          "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-static-eigen-relwithdebinfo-tests", "hidden": true, "inherits": "x64-static-eigen-relwithdebinfo", "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-static-eigen-release-tests",        "hidden": true, "inherits": "x64-static-eigen-release",        "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-static-glm-relwithdebinfo-tests",   "hidden": true, "inherits": "x64-static-glm-relwithdebinfo",   "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } },
+		{ "name": "x64-static-glm-release-tests",          "hidden": true, "inherits": "x64-static-glm-release",          "cacheVariables": { "FIZZIKS_BUILD_TESTS": "ON" } }
+	],
+
+	"buildPresets": [
+		{ "name": "build-x64-shared-eigen-debug-tests",          "displayName": "Build Tests x64 Shared Eigen Debug",                   "configurePreset": "x64-shared-eigen-debug-tests"          },
+		{ "name": "build-x64-shared-eigen-relwithdebinfo-tests", "displayName": "Build Tests x64 Shared Eigen Release with Debug Info", "configurePreset": "x64-shared-eigen-relwithdebinfo-tests" },
+		{ "name": "build-x64-shared-eigen-release-tests",        "displayName": "Build Tests x64 Shared Eigen Release",                 "configurePreset": "x64-shared-eigen-release-tests"        },
+		{ "name": "build-x64-shared-glm-debug-tests",            "displayName": "Build Tests x64 Shared GLM Debug",                     "configurePreset": "x64-shared-glm-debug-tests"            },
+		{ "name": "build-x64-shared-glm-relwithdebinfo-tests",   "displayName": "Build Tests x64 Shared GLM Release with Debug Info",   "configurePreset": "x64-shared-glm-relwithdebinfo-tests"   },
+		{ "name": "build-x64-shared-glm-release-tests",          "displayName": "Build Tests x64 Shared GLM Release",                   "configurePreset": "x64-shared-glm-release-tests"          },
+		{ "name": "build-x64-static-eigen-relwithdebinfo-tests", "displayName": "Build Tests x64 Static Eigen Release with Debug Info", "configurePreset": "x64-static-eigen-relwithdebinfo-tests" },
+		{ "name": "build-x64-static-eigen-release-tests",        "displayName": "Build Tests x64 Static Eigen Release",                 "configurePreset": "x64-static-eigen-release-tests"        },
+		{ "name": "build-x64-static-glm-relwithdebinfo-tests",   "displayName": "Build Tests x64 Static GLM Release with Debug Info",   "configurePreset": "x64-static-glm-relwithdebinfo-tests"   },
+		{ "name": "build-x64-static-glm-release-tests",          "displayName": "Build Tests x64 Static GLM Release",                   "configurePreset": "x64-static-glm-release-tests"          }
+	],
+
+	"testPresets": [
+		{
+			"name": "test-base",
+			"hidden": true,
+			"output": { "outputOnFailure": true },
+			"execution": { "noTestsAction": "error", "stopOnFailure": false }
+		},
+		{ "name": "test-x64-shared-eigen-debug",          "displayName": "Test x64 Shared Eigen Debug",                   "inherits": "test-base", "configurePreset": "x64-shared-eigen-debug-tests"          },
+		{ "name": "test-x64-shared-eigen-relwithdebinfo", "displayName": "Test x64 Shared Eigen Release with Debug Info", "inherits": "test-base", "configurePreset": "x64-shared-eigen-relwithdebinfo-tests" },
+		{ "name": "test-x64-shared-eigen-release",        "displayName": "Test x64 Shared Eigen Release",                 "inherits": "test-base", "configurePreset": "x64-shared-eigen-release-tests"        },
+		{ "name": "test-x64-shared-glm-debug",            "displayName": "Test x64 Shared GLM Debug",                     "inherits": "test-base", "configurePreset": "x64-shared-glm-debug-tests"            },
+		{ "name": "test-x64-shared-glm-relwithdebinfo",   "displayName": "Test x64 Shared GLM Release with Debug Info",   "inherits": "test-base", "configurePreset": "x64-shared-glm-relwithdebinfo-tests"   },
+		{ "name": "test-x64-shared-glm-release",          "displayName": "Test x64 Shared GLM Release",                   "inherits": "test-base", "configurePreset": "x64-shared-glm-release-tests"          },
+		{ "name": "test-x64-static-eigen-relwithdebinfo", "displayName": "Test x64 Static Eigen Release with Debug Info", "inherits": "test-base", "configurePreset": "x64-static-eigen-relwithdebinfo-tests" },
+		{ "name": "test-x64-static-eigen-release",        "displayName": "Test x64 Static Eigen Release",                 "inherits": "test-base", "configurePreset": "x64-static-eigen-release-tests"        },
+		{ "name": "test-x64-static-glm-relwithdebinfo",   "displayName": "Test x64 Static GLM Release with Debug Info",   "inherits": "test-base", "configurePreset": "x64-static-glm-relwithdebinfo-tests"   },
+		{ "name": "test-x64-static-glm-release",          "displayName": "Test x64 Static GLM Release",                   "inherits": "test-base", "configurePreset": "x64-static-glm-release-tests"          }
+	]
 }

@@ -65,7 +65,7 @@ void FizzWorldImpl::apply_force(const RigidBodyImpl& rb, const Vec2& force, cons
 	{
 		body->accumForce += force;
 		Vec2 r = at - (body->position + body->centroid);
-		body->accumTorque += crossproduct(r, force);
+		body->accumTorque += r.cross(force);
 	}
 }
 
@@ -451,13 +451,13 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 		if (bodyA.bodyType == BodyType::DYNAMIC)
 		{
 			bodyA.velocity -= impulse * bodyA.invMass;
-			bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
+			bodyA.angularVelocity -= rA.cross(impulse) * bodyA.invMoI;
 		}
 
 		if (bodyB.bodyType == BodyType::DYNAMIC)
 		{
 			bodyB.velocity += impulse * bodyB.invMass;
-			bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
+			bodyB.angularVelocity += rB.cross(impulse) * bodyB.invMoI;
 		}
 	}
 	else
@@ -466,10 +466,10 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 		resolution.tangentImpulse = 0;
 	}
 
-	val_t rnA = crossproduct(rA, contact.normal);
-	val_t rtA = crossproduct(rA, contact.tangent);
-	val_t rnB = crossproduct(rB, contact.normal);
-	val_t rtB = crossproduct(rB, contact.tangent);
+	val_t rnA = rA.cross(contact.normal);
+	val_t rtA = rA.cross(contact.tangent);
+	val_t rnB = rB.cross(contact.normal);
+	val_t rtB = rB.cross(contact.tangent);
 
 	val_t effMass        = bodyA.invMass + bodyA.invMoI * rnA * rnA +
 						   bodyB.invMass + bodyB.invMoI * rnB * rnB;
@@ -480,8 +480,8 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 	resolution.invEffTangentMass = effTangentMass > 0 ? 1 / effTangentMass : fizzmax<val_t>();
 
 	val_t baumgarte = -beta / dt * std::max(contact.penetration - slopPen, static_cast<val_t>(0));
-	Vec2 vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
-	Vec2 vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+	Vec2 vA = bodyA.velocity + rA.cross(bodyA.angularVelocity);
+	Vec2 vB = bodyB.velocity + rB.cross(bodyB.angularVelocity);
 	Vec2 dv = vB - vA;
 	val_t closingVel = std::max(contact.normal.dot(dv) - slopRes, static_cast<val_t>(0));
 	val_t restitution = (closingVel > restitutionThreshold) ? closingVel * std::min(bodyA.restitution, bodyB.restitution) : 0;
@@ -502,8 +502,8 @@ void FizzWorldImpl::solve_normalConstraint(CollisionResolution& resolution)
 
 	Vec2 rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
 	Vec2 rB = contact.contactPointWorldB - (bodyB.position + bodyB.centroid);
-	Vec2 vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
-	Vec2 vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+	Vec2 vA = bodyA.velocity + rA.cross(bodyA.angularVelocity);
+	Vec2 vB = bodyB.velocity + rB.cross(bodyB.angularVelocity);
 	Vec2 dv = vB - vA;
 	val_t Jv = dv.dot(contact.normal);
 
@@ -517,13 +517,13 @@ void FizzWorldImpl::solve_normalConstraint(CollisionResolution& resolution)
 	if (bodyA.bodyType == BodyType::DYNAMIC)
 	{
 		bodyA.velocity -= impulse * bodyA.invMass;
-		bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
+		bodyA.angularVelocity -= rA.cross(impulse) * bodyA.invMoI;
 	}
 
 	if (bodyB.bodyType == BodyType::DYNAMIC)
 	{
 		bodyB.velocity += impulse * bodyB.invMass;
-		bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
+		bodyB.angularVelocity += rB.cross(impulse) * bodyB.invMoI;
 	}
 }
 
@@ -536,8 +536,8 @@ void FizzWorldImpl::solve_frictionConstraint(CollisionResolution& resolution)
 
 	Vec2 rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
 	Vec2 rB = contact.contactPointWorldB - (bodyB.position + bodyB.centroid);
-	Vec2 vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
-	Vec2 vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+	Vec2 vA = bodyA.velocity + rA.cross(bodyA.angularVelocity);
+	Vec2 vB = bodyB.velocity + rB.cross(bodyB.angularVelocity);
 	Vec2 dv = vB - vA;
 	val_t Jvt = dv.dot(contact.tangent);
 
@@ -564,13 +564,13 @@ void FizzWorldImpl::solve_frictionConstraint(CollisionResolution& resolution)
 	if (bodyA.bodyType == BodyType::DYNAMIC)
 	{
 		bodyA.velocity -= impulse * bodyA.invMass;
-		bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
+		bodyA.angularVelocity -= rA.cross(impulse) * bodyA.invMoI;
 	}
 
 	if (bodyB.bodyType == BodyType::DYNAMIC)
 	{
 		bodyB.velocity += impulse * bodyB.invMass;
-		bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
+		bodyB.angularVelocity += rB.cross(impulse) * bodyB.invMoI;
 	}
 }
 

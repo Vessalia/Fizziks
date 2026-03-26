@@ -51,8 +51,6 @@ inline constexpr val_t rad2deg(val_t rad)
 }
 
 FIZZIKS_API int mod(int a, int b);
-FIZZIKS_API val_t crossproduct(const Vec2& a, const Vec2& b);
-FIZZIKS_API Vec2 crossproduct(val_t w, const Vec2& r);
 // (a x b) x c = b(a.c) - a(b.c)
 FIZZIKS_API Vec2 lefttriplecross(const Vec2& a, const Vec2& b, const Vec2& c);
 // a x (b x c) = b(a.c) - c(a.b)

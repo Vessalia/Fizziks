@@ -19,7 +19,17 @@ target_link_libraries(FizziksTests PRIVATE
 	GTest::gtest_main
 )
 
+target_include_directories(FizziksTests PRIVATE
+	${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_compile_features(FizziksTests PRIVATE cxx_std_20)
+
+add_custom_command(TARGET FizziksTests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:Fizziks>
+        $<TARGET_FILE_DIR:FizziksTests>
+)
 
 include(GoogleTest)
 gtest_discover_tests(FizziksTests)
