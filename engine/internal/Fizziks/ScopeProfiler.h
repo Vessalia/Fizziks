@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string_view>
 #include <unordered_map>
-#include <dequeue>
+#include <deque>
 
 #if defined(_MSC_VER)
 #define PROFILE_FUNCTION_SIGNATURE __FUNCSIG__
@@ -34,16 +34,16 @@ public:
 		{
 			auto window = averages[label];
 
-			averages[label].push(microseconds);
+			averages[label].push_front(microseconds);
 			while (averages[label].size() > windowSize)
 			{
-				averages[label].pop();
+				averages[label].pop_back();
 			}
 
 			long long average = 0;
 			for (long long measurement : window)
 			{
-				average += measure
+				average += measurement
 			}
 			average /= window.size();
 
@@ -66,7 +66,7 @@ public:
 	}
 
 private:
-	static std::unordered_map<std::string_view, std::dequeue<long long>> averages;
+	static std::unordered_map<std::string_view, std::deque<long long>> averages;
 
 	bool useAverage;
 	uint16_t windowSize;
