@@ -43,7 +43,7 @@ public:
 			long long average = 0;
 			for (long long measurement : window)
 			{
-				average += measurement
+				average += measurement;
 			}
 			average /= window.size();
 
