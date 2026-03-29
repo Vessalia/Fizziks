@@ -1,12 +1,18 @@
 #include <Fizziks/Ray.h>
 #include <Fizziks/Vec.h>
 #include <Fizziks/MathUtils.h>
+#include <Fizziks/FizzLog.h>
 
 namespace Fizziks
 {
 val_t raytest(const Ray& _ray, const AABB& aabb)
 {
-	if (!_ray.dir.norm()) return -1;
+	if (!_ray.dir.norm()) 
+	{
+		FIZZIKS_LOG_WARNING("Ray of length 0 is poorly defined and cannot properly test for intersections");
+		return -1;
+	}
+
 	Ray ray = _ray;
 	ray.dir.normalize();
 	
@@ -41,7 +47,11 @@ val_t raytest(const Ray& _ray, const AABB& aabb)
 	val_t tclose = std::max(tminX, tminY); // furthest entry, need to enter both slabs to intersect the AABB
 	val_t tfar   = std::min(tmaxX, tmaxY); // closest  exit , first slab exited exits the AABB
 
-	if (tfar < tclose || tfar < 0) return -1;  // miss or behind
+	if (tfar < tclose || tfar < 0) 
+	{
+		FIZZIKS_LOG_INFO("Raycast miss");
+		return -1;  // miss or behind
+	}
 
 	return (tclose >= 0) ? tclose : 0;
 }

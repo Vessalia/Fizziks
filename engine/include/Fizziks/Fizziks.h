@@ -10,19 +10,16 @@
 	#if defined (FIZZIKS_BUILDING_DLL)
 	#define FIZZIKS_API __declspec(dllexport)
 	#else
-	#define FIZZIKS_API
+	#define FIZZIKS_API __declspec(dllimport)
 	#endif
 #else  
 	#define FIZZIKS_API __attribute__((visibility("default")))
 #endif
 
-namespace Fizziks
-{
-#define ASSERT_AND_CRASH(msg)\
+#define FIZZIKS_ASSERT_AND_CRASH(msg)\
 do {\
 	assert(false && msg);\
-	int* crash = nullptr;\
-	*crash;\
+	std::abort();\
 } while(0)
 
 #ifdef FIZZIKS_PRECISION_MODE
@@ -30,4 +27,3 @@ do {\
 #else
 	using val_t = float;
 #endif
-}

@@ -38,11 +38,11 @@ struct FIZZIKS_API BodyDef
 	val_t gravityScale = 1;
 
 	// need to move this over to colliders
-	val_t restitution = 0.2;
-	val_t staticFrictionCoeff = 0.2;
-	val_t dynamicFrictionCoeff = 0.1;
-	val_t linearDamping = 0.05;
-	val_t angularDamping = 0.05;
+	val_t restitution = val_t(0.2);
+	val_t staticFrictionCoeff = val_t(0.2);
+	val_t dynamicFrictionCoeff = val_t(0.1);
+	val_t linearDamping = val_t(0.05);
+	val_t angularDamping = val_t(0.05);
 
 	BodyType bodyType = BodyType::DYNAMIC;
 

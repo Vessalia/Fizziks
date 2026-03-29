@@ -35,8 +35,11 @@ ThreadPool::ThreadPool(size_t num_threads)
 
 ThreadPool::~ThreadPool()
 {
-	std::unique_lock<std::mutex> lock(queue_mutex);
-	stop = true;
+	{
+		std::unique_lock<std::mutex> lock(queue_mutex);
+		stop = true;
+	}
+	
 	cv.notify_all();
 	for (auto& thread : threads) thread.join();
 }

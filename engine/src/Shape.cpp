@@ -1,12 +1,13 @@
 #include <Fizziks/Shape.h>
 #include <Fizziks/MathUtils.h>
+#include <Fizziks/FizzLog.h>
 
 #include <algorithm>
 #include <array>
 
 namespace Fizziks
 {
-const val_t epsilon = 0.0001; // should probably be tunable?
+const val_t epsilon = val_t(0.0001); // should probably be tunable?
 const Vec2 origin = Vec2::Zero();
 const int maxIterationsGJK = 30;
 const int maxIterationsEPA = 30;
@@ -43,7 +44,7 @@ Vec2 getCentroid(const std::vector<Vec2>& vertices)
 		const Vec2& v0 = vertices[i];
 		const Vec2& v1 = vertices[(i + 1) % n];
 
-		val_t cross = crossproduct(v0, v1);
+		val_t cross = v0.cross(v1);
 		centroid += (v0 + v1) * cross;
 		area += cross;
 	}
@@ -105,7 +106,7 @@ val_t getMoI(const Shape& shape, val_t mass)
 	if (shape.type == ShapeType::CIRCLE)
 	{
 		Circle c = std::get<Circle>(shape.data);
-		MoI = 0.5 * mass * c.radius * c.radius;
+		MoI = val_t(0.5) * mass * c.radius * c.radius;
 	}
 	else if (shape.type == ShapeType::POLYGON)
 	{
@@ -118,7 +119,7 @@ val_t getMoI(const Shape& shape, val_t mass)
 		{
 			const auto& v0 = p.vertices[i];
 			const auto& v1 = p.vertices[(i + 1) % p.vertices.size()];
-			const val_t cross = crossproduct(v0, v1);
+			const val_t cross = v0.cross(v1);
 
 			area += cross;
 			cx += (v0.x + v1.x) * cross;
@@ -272,7 +273,7 @@ void enforceCCWWinding(Simplex& simplex)
 	else if (simplex.size() == 3) // need 3rd point to be the newest one (don't move) for GJK simplex reduction alg
 	{
 		Vec2 A = simplex[0].CSO, B = simplex[1].CSO, C = simplex[2].CSO;
-		val_t cross = crossproduct(B - A, C - A);
+		val_t cross = (B - A).cross(C - A);
 		if (cross < 0) std::swap(simplex[0], simplex[1]);
 	}
 	else
@@ -285,7 +286,7 @@ void enforceCCWWinding(Simplex& simplex)
 			const Vec2& a = simplex[i].CSO;
 			const Vec2& b = simplex[(i + 1) % simplex.size()].CSO;
 
-			signedArea += crossproduct(a, b);
+			signedArea += a.cross(b);
 		}
 
 		// If clockwise, reverse to make CCW
@@ -367,7 +368,8 @@ void reduceSimplex(Simplex& simplex, Vec2& dir)
 	}
 	else if (simplex.size() > 1)
 	{
-		ASSERT_AND_CRASH("invalid state reached in GJK");
+		FIZZIKS_LOG_CRITICAL("simplex of size {:d} invalid for GJK", simplex.size());
+		FIZZIKS_ASSERT_AND_CRASH("invalid state reached in GJK");
 	}
 }
 
@@ -394,6 +396,7 @@ std::pair<bool, Simplex> getGJKSimplex(const Shape& s1, const Vec2& p1, const Ma
 		if (direction == Vec2::Zero()) return { true, std::move(simplex) };
 	}
 
+	FIZZIKS_LOG_DEBUG("Max GJK iterations surpassed");
 	return { false, std::move(simplex) };
 }
 
@@ -518,27 +521,40 @@ Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, const Mat2& r1,
 	return contact;
 }
 
+val_t facingWeight = val_t(1);
+val_t proxWeight = val_t(0.1);
 uint32_t getFeature(const Shape& shape, const Vec2& pos, const Vec2& normal)
 {
 	if (shape.type == ShapeType::CIRCLE) return 0;
 
 	auto& vertices = std::get<Polygon>(shape.data).vertices;
-	for (int i = 0; i < vertices.size(); ++i)
+
+	uint32_t bestIndex = 0;
+	val_t bestScore = fizzmax<val_t>();
+	for (uint32_t i = 0; i < static_cast<uint32_t>(vertices.size()); ++i)
 	{
 		Vec2 A = vertices[i];
 		Vec2 B = vertices[(i + 1) % vertices.size()];
 		Vec2 AB = B - A;
 		Vec2 AP = pos - A;
 
-		val_t dot = AP.dot(AB);
-		if (crossproduct(AB, AP) > epsilon ||            // make sure point is on feature edge
-		   dot < 0 || dot > AB.dot(AB) ||                // make sure point is between A and B
-		   std::abs(AB.dot(normal)) > epsilon) continue; // normal check picks dominant feature at vertices
+		Vec2 edgeNormal = Vec2(AB.y, -AB.x);
+		val_t edgeLen = edgeNormal.norm();
+		if (edgeLen < epsilon) continue;
 
-		return i;
+		val_t facing = edgeNormal.dot(normal) / edgeLen;
+		val_t dist = std::abs(AB.cross(AP)) / edgeLen;
+		val_t proximity = 1.0f / (1.0f + dist);
+
+		val_t score = facingWeight * facing + proxWeight * proximity;
+		if (score > bestScore)
+		{
+			bestScore = score;
+			bestIndex = i;
+		}
 	}
 
-	return UINT32_MAX;
+	return bestIndex;
 }
 
 Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
@@ -567,12 +583,15 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 	{
 		// since s1 and s2 is convex, so is their minkowski difference,
 		// so we don't need to remove any vertices
-		int insert = (facet.from + 1) % simplex.size();
+		size_t insert = (facet.from + 1) % simplex.size();
 		simplex.insert(simplex.begin() + insert, support);
 		facet = closestFacet(simplex, origin);
 		lastSupport = support;
 		support = getCSOSupport(s1, p1, r1, s2, p2, r2, facet.dir);
 	}
+
+	if (iterations == maxIterationsEPA + 1)
+		FIZZIKS_LOG_DEBUG("Max EPA iterations surpassed");
 
 	// closest edge of final simplex to the origin
 	facet = closestFacet(simplex, origin);

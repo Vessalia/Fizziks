@@ -1,5 +1,6 @@
 #include <Fizziks/SimpleBP.h>
 #include <Fizziks/MathUtils.h>
+#include <Fizziks/FizzLog.h>
 
 namespace Fizziks::internal
 {
@@ -41,6 +42,7 @@ uint32_t SimpleBP::pick(const Vec2& point) const
 			return id;
 	}
 
+	FIZZIKS_LOG_INFO("No body to pick at position ({:.2f}, {:.2f})", point.x, point.y);
 	return fizzmax<uint32_t>();
 }
 
@@ -103,11 +105,12 @@ RaycastResult SimpleBP::raycast(const Ray& _ray) const
 		val_t hitT = (tclose >= 0) ? tclose : 0;
 		if (hitT >= closestT) continue;
 
-		val_t sx    = std::copysign(1.0, ray.dir.x);
-		val_t sy    = std::copysign(1.0, ray.dir.y);
-		val_t entry = (tminX > tminY) ? 1.0 : 0.0; // 1 if x, 0 if y
-		val_t sign  = (tclose >= 0.0) ? -1.0 : 1.0; // -1 if start outside, +1 if start inside
-		Vec2 normal = sign * Vec2(entry * sx, (1.0 - entry) * sy);
+		const val_t one = val_t(1.0);
+		val_t sx    = std::copysign(one, ray.dir.x);
+		val_t sy    = std::copysign(one, ray.dir.y);
+		val_t entry = (tminX > tminY) ? one : 0; // 1 if x, 0 if y
+		val_t sign  = (tclose >= 0.0) ? -one : one; // -1 if start outside, +1 if start inside
+		Vec2 normal = sign * Vec2(entry * sx, (one - entry) * sy);
 
 		closest.hit    = true;
 		closest.ID     = id;

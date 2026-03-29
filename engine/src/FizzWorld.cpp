@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include <Fizziks/ScopeProfiler.h>
+#include <Fizziks/FizzLog.h>
 
 namespace Fizziks::internal
 {
@@ -64,7 +65,7 @@ void FizzWorldImpl::apply_force(const RigidBodyImpl& rb, const Vec2& force, cons
 	{
 		body->accumForce += force;
 		Vec2 r = at - (body->position + body->centroid);
-		body->accumTorque += crossproduct(r, force);
+		body->accumTorque += r.cross(force);
 	}
 }
 
@@ -308,7 +309,7 @@ val_t FizzWorldImpl::get_worldRotation(const BodyData& body, const Collider& col
 	return clamp_angle(body.rotation + collider.rotation);
 }
 
-FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t idB, size_t allocIndex) const
+FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint32_t idB, size_t allocIndex) const
 {
 	CollisionManifold manifold;
 	manifold.bodyAId = idA;
@@ -349,7 +350,6 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(size_t idA, size_t 
 
 void FizzWorldImpl::detect_collisions()
 {
-	//PROFILE_FUNCTION_AVG();
 	// broadphase detection
 	const CollisionPairs broadPairs = broadphase->computePairs();
 	if (broadPairs.size() == 0) return;
@@ -405,11 +405,11 @@ ContactKey FizzWorldImpl::makeContactKey(const CollisionResolution& resolution) 
 	return { resolution.bodyAId, resolution.bodyBId, resolution.collIdA, resolution.collIdB, resolution.contact.featureA, resolution.contact.featureB };
 }
 
-val_t beta = 0.2;
-val_t restitutionThreshold = 0.001;
-val_t slopPen = 0.01;
-val_t slopRes = 0.01;
-val_t warmStart = 0.75;
+val_t beta = val_t(0.2);
+val_t restitutionThreshold = val_t(0.001);
+val_t slopPen = val_t(0.01);
+val_t slopRes = val_t(0.01);
+val_t warmStart = val_t(0.75);
 // precompute inverse effective mass (JM^-1J^T)^-1 and bias term
 // J = [-n^T -(rA x n)^T n^T (rB x n)^T]
 // M^-1 = [Ma^-1 0 0 0]
@@ -450,13 +450,13 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 		if (bodyA.bodyType == BodyType::DYNAMIC)
 		{
 			bodyA.velocity -= impulse * bodyA.invMass;
-			bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
+			bodyA.angularVelocity -= rA.cross(impulse) * bodyA.invMoI;
 		}
 
 		if (bodyB.bodyType == BodyType::DYNAMIC)
 		{
 			bodyB.velocity += impulse * bodyB.invMass;
-			bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
+			bodyB.angularVelocity += rB.cross(impulse) * bodyB.invMoI;
 		}
 	}
 	else
@@ -465,10 +465,10 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 		resolution.tangentImpulse = 0;
 	}
 
-	val_t rnA = crossproduct(rA, contact.normal);
-	val_t rtA = crossproduct(rA, contact.tangent);
-	val_t rnB = crossproduct(rB, contact.normal);
-	val_t rtB = crossproduct(rB, contact.tangent);
+	val_t rnA = rA.cross(contact.normal);
+	val_t rtA = rA.cross(contact.tangent);
+	val_t rnB = rB.cross(contact.normal);
+	val_t rtB = rB.cross(contact.tangent);
 
 	val_t effMass        = bodyA.invMass + bodyA.invMoI * rnA * rnA +
 						   bodyB.invMass + bodyB.invMoI * rnB * rnB;
@@ -479,8 +479,8 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 	resolution.invEffTangentMass = effTangentMass > 0 ? 1 / effTangentMass : fizzmax<val_t>();
 
 	val_t baumgarte = -beta / dt * std::max(contact.penetration - slopPen, static_cast<val_t>(0));
-	Vec2 vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
-	Vec2 vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+	Vec2 vA = bodyA.velocity + rA.cross(bodyA.angularVelocity);
+	Vec2 vB = bodyB.velocity + rB.cross(bodyB.angularVelocity);
 	Vec2 dv = vB - vA;
 	val_t closingVel = std::max(contact.normal.dot(dv) - slopRes, static_cast<val_t>(0));
 	val_t restitution = (closingVel > restitutionThreshold) ? closingVel * std::min(bodyA.restitution, bodyB.restitution) : 0;
@@ -501,8 +501,8 @@ void FizzWorldImpl::solve_normalConstraint(CollisionResolution& resolution)
 
 	Vec2 rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
 	Vec2 rB = contact.contactPointWorldB - (bodyB.position + bodyB.centroid);
-	Vec2 vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
-	Vec2 vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+	Vec2 vA = bodyA.velocity + rA.cross(bodyA.angularVelocity);
+	Vec2 vB = bodyB.velocity + rB.cross(bodyB.angularVelocity);
 	Vec2 dv = vB - vA;
 	val_t Jv = dv.dot(contact.normal);
 
@@ -516,13 +516,13 @@ void FizzWorldImpl::solve_normalConstraint(CollisionResolution& resolution)
 	if (bodyA.bodyType == BodyType::DYNAMIC)
 	{
 		bodyA.velocity -= impulse * bodyA.invMass;
-		bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
+		bodyA.angularVelocity -= rA.cross(impulse) * bodyA.invMoI;
 	}
 
 	if (bodyB.bodyType == BodyType::DYNAMIC)
 	{
 		bodyB.velocity += impulse * bodyB.invMass;
-		bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
+		bodyB.angularVelocity += rB.cross(impulse) * bodyB.invMoI;
 	}
 }
 
@@ -535,8 +535,8 @@ void FizzWorldImpl::solve_frictionConstraint(CollisionResolution& resolution)
 
 	Vec2 rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
 	Vec2 rB = contact.contactPointWorldB - (bodyB.position + bodyB.centroid);
-	Vec2 vA = bodyA.velocity + crossproduct(bodyA.angularVelocity, rA);
-	Vec2 vB = bodyB.velocity + crossproduct(bodyB.angularVelocity, rB);
+	Vec2 vA = bodyA.velocity + rA.cross(bodyA.angularVelocity);
+	Vec2 vB = bodyB.velocity + rB.cross(bodyB.angularVelocity);
 	Vec2 dv = vB - vA;
 	val_t Jvt = dv.dot(contact.tangent);
 
@@ -563,13 +563,13 @@ void FizzWorldImpl::solve_frictionConstraint(CollisionResolution& resolution)
 	if (bodyA.bodyType == BodyType::DYNAMIC)
 	{
 		bodyA.velocity -= impulse * bodyA.invMass;
-		bodyA.angularVelocity -= crossproduct(rA, impulse) * bodyA.invMoI;
+		bodyA.angularVelocity -= rA.cross(impulse) * bodyA.invMoI;
 	}
 
 	if (bodyB.bodyType == BodyType::DYNAMIC)
 	{
 		bodyB.velocity += impulse * bodyB.invMass;
-		bodyB.angularVelocity += crossproduct(rB, impulse) * bodyB.invMoI;
+		bodyB.angularVelocity += rB.cross(impulse) * bodyB.invMoI;
 	}
 }
 
@@ -593,8 +593,8 @@ void FizzWorldImpl::resolve_collisions(val_t dt)
 		{
 			const auto& collContact = collContacts[i];
 			collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, 
-			collContact.collAId, collContact.collBId, 
-			collContact.contact, dt));
+															 collContact.collAId, collContact.collBId, 
+															 collContact.contact, dt));
 		}
 	}
 	collisionManifolds.clear();
@@ -625,7 +625,7 @@ void FizzWorldImpl::handle_collisions(val_t dt)
 
 void FizzWorldImpl::simulate_bodies(val_t dt, const Vec2& gravity)
 {
-	for (size_t ID = 0; ID < activeBodies.size(); ++ID)
+	for (uint32_t ID = 0; ID < activeBodies.size(); ++ID)
 	{
 		auto& body = activeBodies[ID];
 		if (body.bodyType == BodyType::STATIC) continue;
@@ -666,7 +666,7 @@ void FizzWorldImpl::destroy_bodies()
 			activeBodies.pop_back();
 			activeList.pop_back();
 			broadphase->remove(swapIndex);
-			broadphase->replace(activeBodies.size(), swapIndex);
+			broadphase->replace(static_cast<uint32_t>(activeBodies.size()), swapIndex);
 			if (swapIndex < activeBodies.size())
 			{
 				uint32_t movedIndex = activeList[swapIndex];
@@ -680,7 +680,7 @@ void FizzWorldImpl::destroy_bodies()
 
 RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
 {
-	uint32_t ID = activeBodies.size();
+	uint32_t ID = static_cast<uint32_t>(activeBodies.size());
 	BodyData b;
 	b.accumForce = Vec2::Zero();
 	b.accumTorque = 0;
@@ -716,6 +716,11 @@ void FizzWorldImpl::tick_end()
 
 void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 {
+	if (currstep == 0)
+	{
+		FIZZIKS_LOG_INFO("First world tick called!");
+	}
+
 	accumulator += dt;
 	while (accumulator >= timestep)
 	{
@@ -735,7 +740,16 @@ namespace Fizziks
 FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel) 
 	: impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep, accel)) { }
 
-FizzWorld::~FizzWorld() { if (impl) { delete impl; } impl = nullptr;  }
+FizzWorld::~FizzWorld() 
+{ 
+	if (impl) 
+	{ 
+		delete impl; 
+	} 
+	impl = nullptr;
+
+	FIZZIKS_LOG_INFO("World destroyed");
+}
 
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {
