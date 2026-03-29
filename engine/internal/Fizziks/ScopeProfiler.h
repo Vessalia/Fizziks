@@ -18,7 +18,7 @@ class ScopeProfiler
 public:
 	using clock = std::chrono::steady_clock;
 
-	ScopeProfiler(std::string_view label, const char* functionSignature, bool useAverage = false, int windowSize = 100)
+	ScopeProfiler(std::string_view label, const char* functionSignature, bool useAverage = false, uint16_t windowSize = 100)
 	: label(label)
 	, functionSignature(functionSignature)
 	, start(clock::now())
@@ -32,12 +32,12 @@ public:
 
 		if (useAverage)
 		{
-			auto window = averages[label];
-
 			averages[label].push_front(microseconds);
-			while (averages[label].size() > windowSize)
+			auto& window = averages[label];
+
+			while (window.size() > windowSize)
 			{
-				averages[label].pop_back();
+				window.pop_back();
 			}
 
 			long long average = 0;
@@ -81,17 +81,11 @@ private:
 #define PROFILE_SCOPE(label) \
 	ScopeProfiler PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE)
 
-#define PROFILE_SCOPE_AVG(label) \
-	ScopeProfiler profile = PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE, true)
-
-#define PROFILE_SCOPE_AVG(label, windowSize) \
-	ScopeProfiler profile = PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE, true, windowSize)
+#define PROFILE_SCOPE_AVG(label, ...) \
+    ScopeProfiler PROFILE_CONCAT(scopeProfiler, __LINE__)(label, PROFILE_FUNCTION_SIGNATURE, true, ##__VA_ARGS__)
 
 #define PROFILE_FUNCTION() \
 	PROFILE_SCOPE(__func__)
 
-#define PROFILE_FUNCTION_AVG() \
-	PROFILE_SCOPE_AVG(__func__)
-
-#define PROFILE_FUNCTION_AVG(windowSize) \
-	PROFILE_SCOPE_AVG(__func__, windowSize)
+#define PROFILE_FUNCTION_AVG(...) \
+    PROFILE_SCOPE_AVG(__func__, ##__VA_ARGS__)
