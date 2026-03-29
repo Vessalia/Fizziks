@@ -32,6 +32,7 @@ cmake --build build
 - `./build.sh [-h|--help]` - `-h` displays build options for the build script
 - `BUILD_SHARED_LIBS=ON` - build as a shared library
 - `FIZZIKS_BUILD_DIST=ON` - build a distributable
+- `FIZZIKS_USE_GLM=ON` - switch the math backend from Eigen to GLM (this is pretty unnecessary, but I did it so it's here now)
 
 ## Usage
 - **RigidBody** - A user facing representation of a physics body. Implemented as a handle to the actual data stored in the `FizzWorld` it was created from.
