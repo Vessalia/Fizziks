@@ -74,6 +74,8 @@ if(FIZZIKS_BUILD_DIST)
 			"${DIST_INCLUDE_DIR}"
 		COMMENT "Copying Fizziks public headers to dist"
 	)
+
+	add_dependencies(fizziks_copy_headers Fizziks)
 endif()
 
 # Install rules

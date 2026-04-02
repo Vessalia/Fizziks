@@ -463,6 +463,4 @@ build/*
 .vscode
 *.sln
 
-dist/Fizziks/include
-dist/Fizziks/bin
-dist/Fizziks/lib
+dist/*

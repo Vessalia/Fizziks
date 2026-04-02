@@ -40,7 +40,7 @@ cmake --build build
 - **Vec** - An alias to the underlying math library implementation of vectors and their math.
 - **Shape** - Represents a generic shape. Does not store positional or rotational information. Polygon vertices are with respect to the shapes centroid.
 - **Collider** - Represents a collidable shape in the `FizzWorld`. Since a `RigidBody` can contain multiple colliders, physical/spatial information needs to be assigned per collider.
-- **BodyDef** - Used to initialize `RigidBody`s. 
+- **BodyDef** - Used to initialize `RigidBody`s.
 
 ## Example Usage
 ```c++
@@ -97,9 +97,8 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
-- Provide optional builder pattern for creating RigidBodys(?)
-- BVH raycasting/user data + callback abstraction
 - Handle convex polygons
+- BVH raycasting/user data + callback abstraction
 - RigidBody layermasking
 - Nearphase groups for multi-threading
 - Collision event callbacks

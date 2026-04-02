@@ -18,10 +18,10 @@ static RigidBody makeDynamicCircle(FizzWorld& world, val_t radius, const Vec2& p
 	def.initPosition = pos;
 	def.bodyType = BodyType::DYNAMIC;
 	def.gravityScale = 0;
-	def.colliderDefs = { col };
 	def.restitution = 0;
-	def.staticFrictionCoeff = 0;
-	def.dynamicFrictionCoeff = 0;
+	col.staticFrictionCoeff = 0;
+	col.dynamicFrictionCoeff = 0;
+	def.colliderDefs = { col };
 	def.linearDamping = 0;
 	def.angularDamping = 0;
 	return world.createBody(def);

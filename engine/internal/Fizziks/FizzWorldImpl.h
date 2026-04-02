@@ -37,8 +37,6 @@ private:
 		val_t gravityScale;
 
 		val_t restitution;
-		val_t staticFriction;
-		val_t dynamicFriction;
 		val_t linearDamping;
 		val_t angularDamping;
 

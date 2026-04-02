@@ -5,6 +5,7 @@ FetchContent_Declare(
 	GIT_TAG        v1.15.2
 )
 FetchContent_MakeAvailable(googletest)
+include(GoogleTest)
 
 file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS
 	unit/*.cpp
@@ -26,10 +27,15 @@ target_include_directories(FizziksTests PRIVATE
 target_compile_features(FizziksTests PRIVATE cxx_std_20)
 
 add_custom_command(TARGET FizziksTests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:Fizziks>
-        $<TARGET_FILE_DIR:FizziksTests>
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		$<TARGET_FILE:Fizziks>
+		$<TARGET_FILE_DIR:FizziksTests>
 )
 
-include(GoogleTest)
-gtest_discover_tests(FizziksTests)
+gtest_discover_tests(FizziksTests
+	EXTRA_ARGS
+		--gtest_catch_exceptions=1
+		--gtest_color=yes
+	PROPERTIES
+		TIMEOUT 120
+)

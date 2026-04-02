@@ -23,7 +23,7 @@ const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
 	fizzmax<val_t>(), fizzmax<val_t>(),
 	fizzmax<val_t>(), fizzmax<val_t>(),
 	fizzmax<val_t>(),
-	fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(),
+	fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(),
 	{},
 	{},
 	BodyType::STATIC
@@ -187,8 +187,6 @@ void FizzWorldImpl::set_body(BodyData* body, const BodyDef& def)
 	}
 
 	body->restitution = def.restitution;
-	body->staticFriction = def.staticFrictionCoeff;
-	body->dynamicFriction = def.dynamicFrictionCoeff;
 	body->linearDamping = def.linearDamping;
 	body->angularDamping = def.angularDamping;
 
@@ -531,6 +529,8 @@ void FizzWorldImpl::solve_frictionConstraint(CollisionResolution& resolution)
 {
 	auto& bodyA = activeBodies[resolution.bodyAId];
 	auto& bodyB = activeBodies[resolution.bodyBId];
+	auto& collA = bodyA.colliders[resolution.collIdA];
+	auto& collB = bodyB.colliders[resolution.collIdB];
 	const auto& contact = resolution.contact;
 
 	Vec2 rA = contact.contactPointWorldA - (bodyA.position + bodyA.centroid);
@@ -544,8 +544,8 @@ void FizzWorldImpl::solve_frictionConstraint(CollisionResolution& resolution)
 	val_t oldImpulse = resolution.tangentImpulse;
 	val_t newImpulse = resolution.tangentImpulse + lambdaT;
 
-	val_t maxStatic = std::min(bodyA.staticFriction, bodyB.staticFriction) * resolution.normalImpulse;
-	val_t maxDynamic = std::min(bodyA.dynamicFriction, bodyB.dynamicFriction) * resolution.normalImpulse;
+	val_t maxStatic = std::min(collA.staticFrictionCoeff, collB.staticFrictionCoeff) * resolution.normalImpulse;
+	val_t maxDynamic = std::min(collA.dynamicFrictionCoeff, collB.dynamicFrictionCoeff) * resolution.normalImpulse;
 
 	if (std::abs(newImpulse) <= maxStatic)
 	{
