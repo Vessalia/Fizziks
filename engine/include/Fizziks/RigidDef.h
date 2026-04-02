@@ -50,5 +50,5 @@ struct FIZZIKS_API BodyDef
 	std::vector<Collider> colliderDefs = {};
 };
 
-FIZZIKS_API Collider createCollider(const Shape& shape, val_t rotation = 0, val_t mass = 0, const Vec2& pos = Vec2::Zero());
+FIZZIKS_API Collider createCollider(const Shape& shape, val_t mass = 0, val_t rotation = 0, const Vec2& pos = Vec2::Zero());
 }
