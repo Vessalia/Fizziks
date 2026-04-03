@@ -99,13 +99,10 @@ A demo of how to use this library can be found [here](https://github.com/Vessali
 ## Future Work
 - Handle convex polygons
 - BVH raycasting/user data + callback abstraction
-- RigidBody layermasking
+  - Collision event callbacks
+  - RigidBody layermasking
 - Nearphase groups for multi-threading
-- Collision event callbacks
-- Testing
 - Contact joints
-- Improved CMake
-- Math backend selection
 
 ## References
 - [Ming-Lun "Allen" Chou's Game Physics Series](https://allenchou.net/game-physics-series/)
