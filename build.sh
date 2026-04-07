@@ -5,6 +5,8 @@ set -euo pipefail
 BUILD_DIST=ON
 SHARED_LIBS=ON
 USE_GLM=OFF
+CONFIG=""
+LOG_LEVEL=-1
 BUILD_DIR=""
 ASSETS_DIR=""
 RUN_TESTS=OFF
@@ -34,9 +36,11 @@ Usage: $(basename "$0") [OPTIONS]
 
 Options:
   --preset NAME     Use a CMake preset (skips manual config flags)
+  --config CONFIG   Build a specific config only    (default: all)
   --no-dist         Disable FIZZIKS_BUILD_DIST      (default: ON)
   --no-shared       Disable BUILD_SHARED_LIBS       (default: ON)
   --use-glm         Enable FIZZIKS_USE_GLM          (default: OFF)
+  --log-level LEVEL Set the log level               (default: -1)
   --run-tests       Build and run tests             (default: OFF)
   --build-dir DIR   Set build directory             (default: build | preset name)
   --assets-dir DIR  Set assets directory            (default: assets)
@@ -60,9 +64,11 @@ while [[ $# -gt 0 ]]; do
     --preset)      PRESET="$2";     shift ;;
     --build-dir)   BUILD_DIR="$2";  shift ;;
 	--assets-dir)  ASSETS_DIR="$2"; shift ;;
+	--config)      CONFIG="$2";     shift ;;
     --no-dist)     BUILD_DIST=OFF;  MANUAL_FLAGS=true;;
     --no-shared)   SHARED_LIBS=OFF; MANUAL_FLAGS=true;;
     --use-glm)     USE_GLM=ON;      MANUAL_FLAGS=true;;
+	--log-level)   LOG_LEVEL="$2";  MANUAL_FLAGS=true;;
     --run-tests)   RUN_TESTS=ON;    MANUAL_FLAGS=true;;
     -h|--help)     usage ;;
     *) echo "Unknown option: $1" >&2; usage ;;
@@ -72,7 +78,7 @@ done
 
 # warn if manual-mode flags were passed alongside a preset
 if [[ -n "$PRESET" && "$MANUAL_FLAGS" == true ]]; then
-  echo "⚠  --no-dist, --no-shared, --use-glm, --run-tests are ignored when --preset is used" >&2
+  echo "⚠  --no-dist, --no-shared, --use-glm, --log-level, --run-tests are ignored when --preset is used" >&2
 fi
 
 # ── Test runner ───────────────────────────────────────────────────────────────
@@ -114,6 +120,8 @@ step "Configure"
 log "FIZZIKS_BUILD_DIST  = $BUILD_DIST"
 log "BUILD_SHARED_LIBS   = $SHARED_LIBS"
 log "FIZZIKS_USE_GLM     = $USE_GLM"
+log "Config              = ${CONFIG:-All}"
+log "FIZZIKS_LOG_LEVEL   = ${LOG_LEVEL}"
 log "FIZZIKS_BUILD_TESTS = $RUN_TESTS"
 log "Build directory     = $BUILD_DIR"
 log "Assets directory    = $ASSETS_DIR"
@@ -124,12 +132,18 @@ cmake -S . -B "$BUILD_DIR" \
   -DFIZZIKS_BUILD_DIST="$BUILD_DIST" \
   -DBUILD_SHARED_LIBS="$SHARED_LIBS" \
   -DFIZZIKS_BUILD_TESTS="$RUN_TESTS" \
-  -DFIZZIKS_USE_GLM="$USE_GLM"
+  -DFIZZIKS_USE_GLM="$USE_GLM"\
+  -DFIZZIKS_LOG_LEVEL="$LOG_LEVEL"
 
-for config in Debug Release RelWithDebInfo MinSizeRel; do
-  step "Build · $config"
-  cmake --build "$BUILD_DIR" --config "$config"
-done
+if [[ -n "$CONFIG" ]]; then
+  step "Build · $CONFIG"
+  cmake --build "$BUILD_DIR" --config "$CONFIG"
+else
+  for config in Debug Release RelWithDebInfo MinSizeRel; do
+    step "Build · $config"
+    cmake --build "$BUILD_DIR" --config "$config"
+  done
+fi
 
 
 if [[ "$RUN_TESTS" == ON ]]; then

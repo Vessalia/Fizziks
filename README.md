@@ -9,8 +9,9 @@ Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for
 - Impulse-based + warm-started collision resolution
 - Constraint solving (currently just for contacts)
 - Material properties (restitution, friction, etc.)
-- No external dependencies
+- No external dependencies required for integration
 - Thread safe logging
+- Google test suite
 
 ## Building
 ### Requirements
@@ -33,6 +34,15 @@ cmake --build build
 - `BUILD_SHARED_LIBS=ON` - build as a shared library
 - `FIZZIKS_BUILD_DIST=ON` - build a distributable
 - `FIZZIKS_USE_GLM=ON` - switch the math backend from Eigen to GLM (this is pretty unnecessary, but I did it so it's here now)
+- `ACTIVE_LOG_LEVEL=X` - sets the active log level. Levels are inclusive, meaning level 3 includes levels 1 and 2. Valid levels are:
+  - `X = -1`, corresponding to the default logging level for your config
+  - `X = 0`, corresponding to no logging
+  - `X = 1`, corresponding to only critical failure messages
+  - `X = 2`, corresponding to error messages
+  - `X = 3`, corresponding to warning messages
+  - `X = 4`, corresponding to info messages
+  - `X = 5`, corresponding to debug messages
+  - The build will fail if X is not one of these values
 
 ## Usage
 - **RigidBody** - A user facing representation of a physics body. Implemented as a handle to the actual data stored in the `FizzWorld` it was created from.
@@ -60,13 +70,13 @@ int main(int argc, char** argv)
 
 	BodyDef def;
 	small.colliderDefs.push_back({ 
-		createCollider(createRect(0.25, 0.25), 1, 0), Vec2::Zero() 
+		createCollider(createRect(0.25, 0.25), 1), Vec2::Zero() 
 	});
 	bodies.push_back(world.createBody(small));
 
 	BodyDef big;
 	big.colliderDefs.push_back({ 
-		createCollider(createCircle(1.4), 10, 0), Vec2::Zero() 
+		createCollider(createCircle(1.4), 10), Vec2::Zero() 
 	});
 	big.initPosition = { 20, 5 };
 	big.initVelocity = { -3, 0 };

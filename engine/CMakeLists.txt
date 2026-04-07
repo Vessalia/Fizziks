@@ -34,15 +34,26 @@ else()
 	)
 endif()
 
+# Allow manual override of log level (-1 means "use config default")
+set(FIZZIKS_LOG_LEVEL -1 CACHE STRING "Override ACTIVE_LOG_LEVEL (leave -1 to use config defaults)")
+
+if(NOT FIZZIKS_LOG_LEVEL EQUAL -1)
+    if(FIZZIKS_LOG_LEVEL LESS 0 OR FIZZIKS_LOG_LEVEL GREATER 5)
+        message(FATAL_ERROR "FIZZIKS_LOG_LEVEL must be -1 (default) or in range [0, 5]")
+    endif()
+endif()
+
 # Compile definitions
 target_compile_definitions(Fizziks
-	PRIVATE
-		$<$<BOOL:${BUILD_SHARED_LIBS}>:FIZZIKS_BUILDING_DLL>
-
-		$<$<CONFIG:Debug>:          ACTIVE_LOG_LEVEL=5>
-		$<$<CONFIG:RelWithDebInfo>: ACTIVE_LOG_LEVEL=2>
-		$<$<CONFIG:Release>:        ACTIVE_LOG_LEVEL=1>
-		$<$<CONFIG:MinSizeRel>:     ACTIVE_LOG_LEVEL=1>
+    PRIVATE
+        $<$<BOOL:${BUILD_SHARED_LIBS}>:FIZZIKS_BUILDING_DLL>
+        $<IF:$<EQUAL:${FIZZIKS_LOG_LEVEL},-1>,
+            $<$<CONFIG:Debug>:          ACTIVE_LOG_LEVEL=5>
+            $<$<CONFIG:RelWithDebInfo>: ACTIVE_LOG_LEVEL=2>
+            $<$<CONFIG:Release>:        ACTIVE_LOG_LEVEL=1>
+            $<$<CONFIG:MinSizeRel>:     ACTIVE_LOG_LEVEL=1>,
+            ACTIVE_LOG_LEVEL=${FIZZIKS_LOG_LEVEL}
+        >
 )
 
 # Dependencies

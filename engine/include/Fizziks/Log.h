@@ -40,5 +40,12 @@ FIZZIKS_API void clearLogSinks();
 }
 
 #ifndef ACTIVE_LOG_LEVEL
-#define ACTIVE_LOG_LEVEL static_cast<int>(Fizziks::LogLevel::ERROR)
+	#define ACTIVE_LOG_LEVEL static_cast<int>(Fizziks::LogLevel::ERROR)
 #endif
+
+static_assert
+(
+	ACTIVE_LOG_LEVEL >= static_cast<int>(Fizziks::LogLevel::NONE) &&
+	ACTIVE_LOG_LEVEL <= static_cast<int>(Fizziks::LogLevel::DEBUG),
+	"ACTIVE_LOG_LEVEL must be in the range [0, 5] (Fizziks::LogLevel::NONE to Fizziks::LogLevel::DEBUG)"
+);
