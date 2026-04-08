@@ -1,9 +1,12 @@
 #include <Fizziks/Shape.h>
+#include <Fizziks/FizzShape.h>
 #include <Fizziks/MathUtils.h>
 #include <Fizziks/FizzLog.h>
 
 #include <algorithm>
 #include <array>
+
+#define is_a(T, D) (std::holds_alternative<T>(D.data))
 
 namespace Fizziks
 {
@@ -54,7 +57,7 @@ Vec2 getCentroid(const std::vector<Vec2>& vertices)
 
 Shape createCircle(val_t radius)
 {
-	return { ShapeType::CIRCLE, Circle{ radius } };
+	return { Circle{ radius } };
 }
 
 Shape createRect(val_t width, val_t height)
@@ -85,67 +88,22 @@ Shape createPolygon(const std::vector<Vec2>& vertices)
 		effRadius = std::max(effRadius, vert.norm());
 	}
 
-	return { ShapeType::POLYGON, Polygon{ verts, effRadius } };
-}
-
-AABB createAABB(val_t width, val_t height, const Vec2& pos)
-{
-	const Vec2 extent = { width / 2, height / 2 };
-	return { pos - extent, pos + extent, width / 2, height / 2 };
-}
-
-AABB createAABB(const Vec2& min, const Vec2& max)
-{
-	const Vec2 extent = max - min;
-	return { min, max, extent.x / 2, extent.y / 2 };
+	return { Polygon{ verts, effRadius } };
 }
 
 val_t getMoI(const Shape& shape, val_t mass)
 {
-	val_t MoI = 0;
-	if (shape.type == ShapeType::CIRCLE)
-	{
-		Circle c = std::get<Circle>(shape.data);
-		MoI = val_t(0.5) * mass * c.radius * c.radius;
-	}
-	else if (shape.type == ShapeType::POLYGON)
-	{
-		Polygon p = std::get<Polygon>(shape.data);
-
-		val_t area = 0;
-		val_t cx = 0, cy = 0;
-
-		for(int i = 0; i < p.vertices.size(); ++i)
-		{
-			const auto& v0 = p.vertices[i];
-			const auto& v1 = p.vertices[(i + 1) % p.vertices.size()];
-			const val_t cross = v0.cross(v1);
-
-			area += cross;
-			cx += (v0.x + v1.x) * cross;
-			cy += (v0.y + v1.y) * cross;
-
-			MoI += (v0.x * v0.x + v0.x * v1.x + v1.x * v1.x + 
-			v0.y * v0.y + v0.y * v1.y + v1.y * v1.y) * cross;
-		}
-
-		cx /= (3 * area);
-		cy /= (3 * area);
-
-		MoI = MoI / 12 - mass * (cx * cx + cy * cy);
-	}
-
-	return MoI;
+	return internal::getMoI(internal::toInternal(shape), mass);
 }
 
 AABB getEncapsulatingAABBFast(const Shape& s, const Vec2& centroid)
 {
 	val_t rad = 0;
-	if (s.type == ShapeType::CIRCLE)
+	if (is_a(Circle, s))
 	{
 		rad = std::get<Circle>(s.data).radius;
 	}
-	else if (s.type == ShapeType::POLYGON)
+	else if (is_a(Polygon, s))
 	{
 		rad = std::get<Polygon>(s.data).effRadius;
 	}
@@ -157,7 +115,7 @@ AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
 {
 	AABB aabb;
 
-	if (s.type == ShapeType::POLYGON)
+	if (is_a(Polygon, s))
 	{
 		auto& polygon = std::get<Polygon>(s.data);
 
@@ -173,7 +131,7 @@ AABB getEncapsulatingAABBTight(const Shape& s, const Vec2& centroid, val_t rot)
 		
 		aabb = createAABB(min + centroid, max + centroid);
 	}
-	else if (s.type == ShapeType::CIRCLE)
+	else if (is_a(Circle, s))
 	{
 		const val_t diameter = 2 * std::get<Circle>(s.data).radius;
 		aabb = createAABB(diameter, diameter, centroid);
@@ -188,31 +146,6 @@ AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool 
 	else	   return getEncapsulatingAABBFast(s, centroid);
 }
 
-bool overlaps(const AABB& a, const AABB& b)
-{
-	bool overlapX = a.min.x <= b.max.x && b.min.x <= a.max.x;
-	bool overlapY = a.min.y <= b.max.y && b.min.y <= a.max.y;
-	return overlapX && overlapY;
-}
-bool contains(const AABB& a, const Vec2& point)
-{
-	bool containX = a.min.x <= point.x && point.x <= a.max.x;
-	bool containY = a.min.y <= point.y && point.y <= a.max.y;
-	return containX && containY;
-}
-bool contains(const AABB& a, const AABB& b)
-{
-	bool containX = a.min.x <= b.min.x && b.max.x <= a.max.x;
-	bool containY = a.min.y <= b.min.y && b.max.y <= a.max.y;
-	return containX && containY;
-}
-AABB merge(const AABB& a, const AABB& b)
-{
-	const Vec2 min = { std::min(a.min.x, b.min.x), std::min(a.min.y, b.min.y) };
-	const Vec2 max = { std::max(a.max.x, b.max.x), std::max(a.max.y, b.max.y) };
-	return createAABB(min, max);
-}
-
 #pragma region CSO support
 
 Vec2 getSupport(const Shape& shape, const Mat2& rot, const Vec2& direction)
@@ -220,11 +153,11 @@ Vec2 getSupport(const Shape& shape, const Mat2& rot, const Vec2& direction)
 	Vec2 result = Vec2::Zero();
 	Vec2 dir = rot.transposed() * direction;
 
-	if(shape.type == ShapeType::CIRCLE)
+	if(is_a(Circle, shape))
 	{
 		result = dir.normalized() * std::get<Circle>(shape.data).radius;
 	}
-	else if (shape.type == ShapeType::POLYGON)
+	else if (is_a(Polygon, shape))
 	{
 		const auto& p = std::get<Polygon>(shape.data);
 		val_t bestProj = -fizzmax<val_t>();
@@ -525,7 +458,7 @@ val_t facingWeight = val_t(1);
 val_t proxWeight = val_t(0.1);
 uint32_t getFeature(const Shape& shape, const Vec2& pos, const Vec2& normal)
 {
-	if (shape.type == ShapeType::CIRCLE) return 0;
+	if (is_a(Circle, shape)) return 0;
 
 	auto& vertices = std::get<Polygon>(shape.data).vertices;
 
@@ -562,10 +495,10 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 {
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
 
-	if (s1.type == ShapeType::CIRCLE && s2.type == ShapeType::CIRCLE)
+	if (is_a(Circle, s1) && is_a(Circle, s2))
 	{
 		return getCircleCircleContact(std::get<Circle>(s1.data), p1, r1,
-			   std::get<Circle>(s2.data), p2, r2);
+									  std::get<Circle>(s2.data), p2, r2);
 	}
 
 	Contact contact;
@@ -627,4 +560,101 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 }
 
 #pragma endregion
+}
+
+namespace Fizziks::internal
+{
+bool isConvex(const Polygon& poly)
+{
+	int sign = 0;
+	int size = poly.vertices.size();
+	for (int i = 0; i < size; ++i)
+	{
+		auto& a = poly.vertices[i];
+		auto& b = poly.vertices[(i + 1) % size];
+		auto& c = poly.vertices[(i + 2) % size];
+
+		val_t cross = (c - b).cross(b - a);
+		if (std::abs(cross) > epsilon)
+		{
+			if (sign == 0) sign = (cross > 0) ? 1 : -1;
+			else if ((cross > 0) != (sign > 0)) return false;
+		}
+	}
+
+	return true;
+}
+
+Compound decomposePolygon(const Polygon& poly)
+{
+	return {};
+}
+
+Polygon recomposePolygon(const Compound& comp)
+{
+	return {};
+}
+
+InternalShape toInternal(const Shape& shape)
+{
+	InternalShape in;
+	if (is_a(Circle, shape)) in.data = std::get<Circle>(shape.data);
+	else if (is_a(Polygon, shape))
+	{
+		Polygon poly = std::get<Polygon>(shape.data);
+
+		if (isConvex(poly)) in.data = poly;
+		else				in.data = decomposePolygon(poly);
+	}
+
+	return in;
+}
+
+Shape toExternal(const InternalShape& shape)
+{
+	Shape out;
+	if (is_a(Circle, shape)) out.data = std::get<Circle>(shape.data);
+	else if (is_a(Polygon, shape)) out.data = std::get<Polygon>(shape.data);
+	else if (is_a(Compound, shape)) out.data = recomposePolygon(std::get<Compound>(shape.data));
+
+	return out;
+}
+
+val_t getMoI(const InternalShape& shape, val_t mass)
+{
+	val_t MoI = 0;
+	if (is_a(Circle, shape))
+	{
+		Circle c = std::get<Circle>(shape.data);
+		MoI = val_t(0.5) * mass * c.radius * c.radius;
+	}
+	else if (is_a(Polygon, shape))
+	{
+		Polygon p = std::get<Polygon>(shape.data);
+
+		val_t area = 0;
+		val_t cx = 0, cy = 0;
+
+		for(int i = 0; i < p.vertices.size(); ++i)
+		{
+			const auto& v0 = p.vertices[i];
+			const auto& v1 = p.vertices[(i + 1) % p.vertices.size()];
+			const val_t cross = v0.cross(v1);
+
+			area += cross;
+			cx += (v0.x + v1.x) * cross;
+			cy += (v0.y + v1.y) * cross;
+
+			MoI += (v0.x * v0.x + v0.x * v1.x + v1.x * v1.x + 
+			v0.y * v0.y + v0.y * v1.y + v1.y * v1.y) * cross;
+		}
+
+		cx /= (3 * area);
+		cy /= (3 * area);
+
+		MoI = MoI / 12 - mass * (cx * cx + cy * cy);
+	}
+
+	return MoI;
+}
 }

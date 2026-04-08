@@ -31,15 +31,39 @@ RigidBody& RigidBody::applyForce(const Vec2& force, const Vec2& at)
 	return *this;
 }
 
-RigidBody& RigidBody::addCollider(const Collider& collider)
+RigidBody& RigidBody::addCollider(const ColliderDef& def)
 {
+	internal::Collider collider = internal::buildCollider(def);
 	WORLD->add_collider(*THIS, collider);
 	return *this;
 }
-
-std::vector<Collider> RigidBody::colliders() const
+RigidBody& RigidBody::removeCollider(uint32_t ID)
 {
-	return WORLD->body_colliders(*THIS);
+	WORLD->remove_collider(*THIS, ID);
+	return *this;
+}
+ColliderDef RigidBody::getCollider(uint32_t ID) const
+{
+	internal::Collider collider = WORLD->get_collider(*THIS, ID);
+	return internal::toColliderDef(collider);
+}
+RigidBody& RigidBody::setCollider(uint32_t ID, const ColliderDef& def)
+{
+	internal::Collider collider = internal::buildCollider(def);
+	WORLD->set_collider(*THIS, ID, collider);
+	return *this;
+}
+std::vector<ColliderDef> RigidBody::colliders() const
+{
+	std::vector<ColliderDef> defs;
+	std::vector<internal::Collider> colliders = WORLD->body_colliders(*THIS);
+
+	for (const auto& collider : colliders)
+	{
+		defs.push_back(internal::toColliderDef(collider));
+	}
+
+	return defs;
 }
 
 Vec2 RigidBody::position() const 

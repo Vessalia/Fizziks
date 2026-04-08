@@ -1,5 +1,6 @@
 #pragma once
 #include <Fizziks/RigidBodyImpl.h>
+#include <Fizziks/Collider.h>
 #include <Fizziks/BroadPhase.h>
 #include <Fizziks/Handle.h>
 #include <Fizziks/MathUtils.h>
