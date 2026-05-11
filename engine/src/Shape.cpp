@@ -142,7 +142,7 @@ Shape toExternal(const Ellipse& e)
 
 #pragma endregion
 
-#pragma region Polygon Primitive ops
+#pragma region Polygon ops
 
 val_t getMoI(const Polygon& p, val_t mass)
 {
