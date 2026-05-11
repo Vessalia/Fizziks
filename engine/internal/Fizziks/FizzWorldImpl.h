@@ -131,6 +131,9 @@ private:
 
 	void add_collider(const RigidBodyImpl& rb, const Collider& collider);
 	void add_collider(BodyData* body, const Collider& collider);
+	void remove_collider(const RigidBodyImpl& rb, uint32_t ID);
+	Collider get_collider(const RigidBodyImpl& rb, uint32_t ID);
+	void set_collider(const RigidBodyImpl& rb, uint32_t ID, const Collider& collider);
 	std::vector<Collider> body_colliders(const RigidBodyImpl& rb) const;
 
 	const AABB compute_bounds(BodyData* body);

@@ -17,21 +17,23 @@ struct FIZZIKS_API Circle
 struct FIZZIKS_API Polygon
 {
 	std::vector<Vec2> vertices;
-	val_t effRadius;
 };
 
-struct FIZZIKS_API Shape
+struct FIZZIKS_API Capsule
 {
-	std::variant<Circle, Polygon> data;
+	val_t width;
+	val_t height;
 };
+
+using Shape = std::variant<Circle, Polygon, Capsule>;
 
 struct FIZZIKS_API Contact 
 {
 	Vec2 contactPointWorldA, contactPointWorldB;
-	Vec2 contactPointLocalA, contactPointLocalB;  
-	Vec2 normal; 
+	Vec2 contactPointLocalA, contactPointLocalB;
+	Vec2 normal;
 	Vec2 tangent;
-	val_t penetration;  
+	val_t penetration;
 
 	uint32_t featureA, featureB; // for tracking specific collisions
 
@@ -41,6 +43,7 @@ struct FIZZIKS_API Contact
 FIZZIKS_API Shape createCircle(val_t radius);
 FIZZIKS_API Shape createRect(val_t width, val_t height);
 FIZZIKS_API Shape createPolygon(const std::vector<Vec2>& vertices);
+FIZZIKS_API Shape createCapsule(val_t width, val_t height);
 
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 

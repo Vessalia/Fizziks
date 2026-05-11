@@ -6,8 +6,9 @@ namespace Fizziks
 {
 struct FIZZIKS_API ColliderDef
 {
-	// ignored on initialization. Used for directly setting colliders
+	// inferred from other values i.e., ignored when set by user
 	uint32_t ID;
+	val_t MoI;
 
 	// Physics-related part
 	val_t mass;

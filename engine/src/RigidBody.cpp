@@ -45,7 +45,7 @@ RigidBody& RigidBody::removeCollider(uint32_t ID)
 ColliderDef RigidBody::getCollider(uint32_t ID) const
 {
 	internal::Collider collider = WORLD->get_collider(*THIS, ID);
-	return internal::toColliderDef(collider);
+	return internal::toColliderDef(ID, collider);
 }
 RigidBody& RigidBody::setCollider(uint32_t ID, const ColliderDef& def)
 {
@@ -58,9 +58,9 @@ std::vector<ColliderDef> RigidBody::colliders() const
 	std::vector<ColliderDef> defs;
 	std::vector<internal::Collider> colliders = WORLD->body_colliders(*THIS);
 
-	for (const auto& collider : colliders)
+	for (uint32_t ID = 0; ID < colliders.size(); ++ID)
 	{
-		defs.push_back(internal::toColliderDef(collider));
+		defs.push_back(internal::toColliderDef(ID, colliders[ID]));
 	}
 
 	return defs;

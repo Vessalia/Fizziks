@@ -1,5 +1,6 @@
 #pragma once
 #include <Fizziks/FizzShape.h>
+#include <Fizziks/RigidDef.h>
 
 namespace Fizziks::internal
 {
@@ -21,5 +22,5 @@ struct Collider
 };
 
 Collider buildCollider(const ColliderDef& def);
-ColliderDef toColliderDef(const Collider& collider);
+ColliderDef toColliderDef(uint32_t ID, const Collider& collider);
 }

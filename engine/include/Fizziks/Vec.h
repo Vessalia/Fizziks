@@ -86,6 +86,14 @@ struct FIZZIKS_API Mat2
 		return mat;
 	}
 
+	static constexpr Mat2 Shear(val_t shx, val_t shy)
+	{
+		Mat2 mat;
+		mat.m00 = 1;   mat.m01 = shx;
+		mat.m10 = shy; mat.m11 = 1;
+		return mat;
+	}
+
 	Vec2 col(int i) const;
 	Vec2 row(int i) const;
 

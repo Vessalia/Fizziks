@@ -45,23 +45,23 @@ endif()
 
 # Compile definitions
 target_compile_definitions(Fizziks
-    PRIVATE
-        $<$<BOOL:${BUILD_SHARED_LIBS}>:FIZZIKS_BUILDING_DLL>
-        $<IF:$<EQUAL:${FIZZIKS_LOG_LEVEL},-1>,
-            $<$<CONFIG:Debug>:          ACTIVE_LOG_LEVEL=5>
-            $<$<CONFIG:RelWithDebInfo>: ACTIVE_LOG_LEVEL=2>
-            $<$<CONFIG:Release>:        ACTIVE_LOG_LEVEL=1>
-            $<$<CONFIG:MinSizeRel>:     ACTIVE_LOG_LEVEL=1>,
-            ACTIVE_LOG_LEVEL=${FIZZIKS_LOG_LEVEL}
-        >
+	PRIVATE
+		$<$<BOOL:${BUILD_SHARED_LIBS}>:FIZZIKS_BUILDING_DLL>
+		$<IF:$<EQUAL:${FIZZIKS_LOG_LEVEL},-1>,
+			$<$<CONFIG:Debug>:          ACTIVE_LOG_LEVEL=5>
+			$<$<CONFIG:RelWithDebInfo>: ACTIVE_LOG_LEVEL=2>
+			$<$<CONFIG:Release>:        ACTIVE_LOG_LEVEL=1>
+			$<$<CONFIG:MinSizeRel>:     ACTIVE_LOG_LEVEL=1>,
+			ACTIVE_LOG_LEVEL=${FIZZIKS_LOG_LEVEL}
+		>
 )
 
 # Dependencies
 option(FIZZIKS_USE_GLM "Use GLM as the math backend instead of Eigen" OFF)
 
 if(FIZZIKS_USE_GLM)
-    target_link_libraries(Fizziks PRIVATE glm::glm)
-    target_compile_definitions(Fizziks PRIVATE FIZZIKS_USE_GLM)
+	target_link_libraries(Fizziks PRIVATE glm::glm)
+	target_compile_definitions(Fizziks PRIVATE FIZZIKS_USE_GLM)
 else()
-    target_link_libraries(Fizziks PRIVATE Eigen3::Eigen)
+	target_link_libraries(Fizziks PRIVATE Eigen3::Eigen)
 endif()

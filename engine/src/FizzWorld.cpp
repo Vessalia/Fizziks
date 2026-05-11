@@ -105,6 +105,48 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 	body->invMoI = 1 / MoI;
 }
 
+void FizzWorldImpl::remove_collider(const RigidBodyImpl& rb, uint32_t ID)
+{
+	BodyData* body = get_body(rb);
+	if (!body) return;
+	std::vector<Collider>& colliders = body->colliders;
+	if(ID < 0 || colliders.size() < ID) 
+	{
+		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be removed", ID);
+		return;
+	}
+
+	colliders.erase(colliders.begin() + ID);
+}
+
+Collider FizzWorldImpl::get_collider(const RigidBodyImpl& rb, uint32_t ID)
+{
+	BodyData* body = get_body(rb);
+	if (!body) return {};
+	std::vector<Collider>& colliders = body->colliders;
+	if(ID < 0 || colliders.size() < ID) 
+	{
+		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be retrieved", ID);
+		return;
+	}
+
+	return colliders[ID];
+}
+
+void FizzWorldImpl::set_collider(const RigidBodyImpl& rb, uint32_t ID, const Collider& collider)
+{
+	BodyData* body = get_body(rb);
+	if (!body) return;
+	std::vector<Collider>& colliders = body->colliders;
+	if(ID < 0 || colliders.size() < ID) 
+	{
+		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be set", ID);
+		return;
+	}
+
+	colliders[ID] = collider;
+}
+
 std::vector<Collider> FizzWorldImpl::body_colliders(const RigidBodyImpl& rb) const
 {
 	auto* body = get_body(rb);
@@ -134,18 +176,34 @@ const AABB FizzWorldImpl::compute_bounds(BodyData* body)
 
 const FizzWorldImpl::BodyData* FizzWorldImpl::get_body(const RigidBodyImpl& rb) const
 {
-	if (rb.handle.index >= activeHandles.size()) return nullptr;
+	if (rb.handle.index < 0 || rb.handle.index >= activeHandles.size())
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 	Handle activeHandle = activeHandles[rb.handle.index];
-	if(activeHandle.gen != rb.handle.gen) return nullptr;
+	if(activeHandle.gen != rb.handle.gen)
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 
 	return &activeBodies[activeHandle.index];
 }
 
 FizzWorldImpl::BodyData* FizzWorldImpl::get_body(const RigidBodyImpl& rb)
 {
-	if (rb.handle.index >= activeHandles.size()) return nullptr;
+	if (rb.handle.index < 0 || rb.handle.index >= activeHandles.size())
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 	Handle activeHandle = activeHandles[rb.handle.index];
-	if(activeHandle.gen != rb.handle.gen) return nullptr;
+	if(activeHandle.gen != rb.handle.gen)
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 
 	return &activeBodies[activeHandle.index];
 }
@@ -173,9 +231,9 @@ void FizzWorldImpl::set_body(BodyData* body, const BodyDef& def)
 	body->mass = 0;
 	body->MoI = 0;
 
-	for(auto collider : def.colliderDefs)
+	for(auto colliderDef : def.colliderDefs)
 	{
-		add_collider(body, collider);
+		add_collider(body, buildCollider(colliderDef));
 	}
 
 	if(def.bodyType == BodyType::STATIC)
@@ -400,7 +458,12 @@ void FizzWorldImpl::detect_collisions()
 
 ContactKey FizzWorldImpl::makeContactKey(const CollisionResolution& resolution) const
 {
-	return { resolution.bodyAId, resolution.bodyBId, resolution.collIdA, resolution.collIdB, resolution.contact.featureA, resolution.contact.featureB };
+	return
+	{
+		resolution.bodyAId, 		 resolution.bodyBId,
+		resolution.collIdA, 		 resolution.collIdB,
+		resolution.contact.featureA, resolution.contact.featureB
+	};
 }
 
 val_t beta = val_t(0.2);
