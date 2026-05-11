@@ -270,7 +270,7 @@ AABB getEncapsulatingAABBTight(const Compound& cp, const Vec2& centroid, const M
 Vec2 support(const ConvexPiece& piece, const Vec2& dir)
 {
 	Vec2 localDir = piece.rot.transposed() * dir;
-	Vec2 localPoint = std::visit([&](const auto& shape) { return support(shape, localDir); }, piece.shape);
+	Vec2 localPoint = std::visit([&](const auto& shape) -> Vec2 { return support(shape, localDir); }, piece.shape);
 	return piece.rot * localPoint + piece.offset;
 }
 
@@ -457,7 +457,7 @@ val_t getMoI(const InternalShape& shape, val_t mass)
 
 AABB getEncapsulatingAABBFast(const InternalShape& shape, const Vec2& centroid)
 {
-	return std::visit([&centroid](const auto& s) {
+	return std::visit([&centroid](const auto& s) -> AABB {
 		return ops::getEncapsulatingAABBFast(s, centroid);
 	}, shape);
 }
@@ -465,7 +465,7 @@ AABB getEncapsulatingAABBFast(const InternalShape& shape, const Vec2& centroid)
 AABB getEncapsulatingAABBTight(const InternalShape& shape, const Vec2& centroid, val_t rot)
 {
 	const Mat2 rotation = Mat2::Rotation(rot);
-	return std::visit([&centroid, &rotation](const auto& s) {
+	return std::visit([&centroid, &rotation](const auto& s) -> AABB {
 		return ops::getEncapsulatingAABBTight(s, centroid, rotation);
 	}, shape);
 }
@@ -479,7 +479,7 @@ AABB getEncapsulatingAABB(const InternalShape& s, const Vec2& centroid, val_t ro
 Vec2 getSupport(const InternalShape& shape, const Mat2& rot, const Vec2& direction)
 {
 	const Vec2 dir = rot.transposed() * direction;
-	return std::visit([&dir](const auto& s) { return ops::support(s, dir); }, shape);
+	return std::visit([&dir](const auto& s) -> Vec2 { return ops::support(s, dir); }, shape);
 }
 
 SupportVertex getCSOSupport(const InternalShape& s1, const Vec2& p1, const Mat2& r1,
@@ -493,12 +493,12 @@ SupportVertex getCSOSupport(const InternalShape& s1, const Vec2& p1, const Mat2&
 
 uint32_t getFeature(const InternalShape& shape, const Vec2& pos, const Vec2& normal)
 {
-	return std::visit([&pos, &normal](const auto& s){ return getFeature(s, pos, normal); }, shape);
+	return std::visit([&pos, &normal](const auto& s) -> uint32_t { return getFeature(s, pos, normal); }, shape);
 }
 
 Shape toExternal(const InternalShape& shape)
 {
-	return std::visit([](const auto& s) { return toExternal(s); }, shape);
+	return std::visit([](const auto& s) -> Shape { return toExternal(s); }, shape);
 }
 
 #pragma region GJK
