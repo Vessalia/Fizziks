@@ -14,6 +14,18 @@ struct FIZZIKS_API Circle
 	val_t radius;
 };
 
+struct FIZZIKS_API Ellipse
+{
+	val_t rx;
+	val_t ry;
+};
+
+struct FIZZIKS_API Rect
+{
+	val_t width;
+	val_t height;
+};
+
 struct FIZZIKS_API Polygon
 {
 	std::vector<Vec2> vertices;
@@ -21,11 +33,12 @@ struct FIZZIKS_API Polygon
 
 struct FIZZIKS_API Capsule
 {
-	val_t width;
-	val_t height;
+	Ellipse topCap;
+	Ellipse bottomCap;
+	Rect body;
 };
 
-using Shape = std::variant<Circle, Polygon, Capsule>;
+using Shape = std::variant<Circle, Ellipse, Rect, Polygon, Capsule>;
 
 struct FIZZIKS_API Contact 
 {
@@ -40,10 +53,12 @@ struct FIZZIKS_API Contact
 	bool overlaps;
 };
 
-FIZZIKS_API Shape createCircle(val_t radius);
-FIZZIKS_API Shape createRect(val_t width, val_t height);
-FIZZIKS_API Shape createPolygon(const std::vector<Vec2>& vertices);
-FIZZIKS_API Shape createCapsule(val_t width, val_t height);
+FIZZIKS_API Circle createCircle(val_t radius);
+FIZZIKS_API Ellipse createEllipse(val_t rx, val_t ry);
+FIZZIKS_API Rect createRect(val_t width, val_t height);
+FIZZIKS_API Polygon createPolygon(const std::vector<Vec2>& vertices);
+FIZZIKS_API Capsule createCapsule(const Circle& cap, const Rect& body);
+FIZZIKS_API Capsule createCapsule(const Ellipse& cap, const Rect& body);
 
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 

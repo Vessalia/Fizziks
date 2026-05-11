@@ -8,9 +8,11 @@
 
 namespace Fizziks::internal
 {
-struct Circle
+struct Ellipse
 {
-	val_t radius;
+	bool userCircle;
+	val_t rx;
+	val_t ry;
 };
 
 struct Polygon
@@ -19,7 +21,7 @@ struct Polygon
 	val_t effectiveRadius;
 };
 
-using Primitive = std::variant<Circle, Polygon>;
+using Primitive = std::variant<Ellipse, Polygon>;
 
 // handles convex and concave compound shapes
 struct ConvexPiece
@@ -36,7 +38,7 @@ struct Compound
 	Shape external; // a bit heavy weight, but removes the issue of ambiguously rebuilding special shapes
 };
 
-using InternalShape = std::variant<Circle, Polygon, Compound>;
+using InternalShape = std::variant<Ellipse, Polygon, Compound>;
 
 InternalShape toInternal(const Shape& shape);
 Shape toExternal(const InternalShape& shape);

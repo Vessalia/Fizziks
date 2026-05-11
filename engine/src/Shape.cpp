@@ -9,9 +9,27 @@
 // External to internal mapping functions
 namespace Fizziks::internal
 {
-InternalShape toInternal(const Fizziks::Circle& c)
+Ellipse toInternal(const Fizziks::Circle& c)
 {
-	return Circle{ c.radius };
+	return Ellipse{ true, c.radius, c.radius };
+}
+
+Ellipse toInternal(const Fizziks::Ellipse& e)
+{
+	return Ellipse{ false, e.rx, e.ry };
+}
+
+Polygon toInternal(const Fizziks::Rect& r)
+{
+	std::vector<Vec2> vertices
+	{
+		{ -r.width / 2,  r.height / 2 },
+		{ -r.width / 2, -r.height / 2 },
+		{  r.width / 2, -r.height / 2 },
+		{  r.width / 2,  r.height / 2 }
+	};
+
+	return Polygon{ vertices, vertices[0].norm() };
 }
 
 InternalShape toInternal(const Fizziks::Polygon& p)
@@ -32,8 +50,9 @@ InternalShape toInternal(const Fizziks::Polygon& p)
 	}
 }
 
-InternalShape toInternal(const Fizziks::Capsule& cap)
+Compound toInternal(const Fizziks::Capsule& cap)
 {
+	here;
 	// need to implement ellipses
 }
 
@@ -66,36 +85,59 @@ AABB getEncapsulatingAABBFast(const T& s, const Vec2& centroid)
 
 #pragma region Primitive ops
 
-#pragma region Circle ops
+#pragma region Ellipse ops
 
-val_t getMoI(const Circle& c, val_t mass)
+val_t getMoI(const Ellipse& e, val_t mass)
 {
-	return val_t(0.5) * mass * c.radius * c.radius;
+	return val_t(0.25) * mass * (e.rx * e.rx + e.ry * e.ry);
 }
 
-AABB getEncapsulatingAABBFast(const Circle& c, const Vec2& centroid)
+AABB getEncapsulatingAABBFast(const Ellipse& e, const Vec2& centroid)
 {
-	return createAABB(2 * c.radius, 2 * c.radius, centroid);
+	return createAABB(2 * e.rx, 2 * e.ry, centroid);
 }
 
-AABB getEncapsulatingAABBTight(const Circle& c, const Vec2& centroid, const Mat2& rot)
+AABB getEncapsulatingAABBTight(const Ellipse& e, const Vec2& centroid, const Mat2& rot)
 {
-	return getEncapsulatingAABBFast(c, centroid);
+	return getEncapsulatingAABBFast(e, centroid);
 }
 
-Vec2 support(const Circle& c, const Vec2& dir)
+// Maximize objective f = dir . p, where p is a point on e
+// Constraint is g = (p.x/e.rx)^2 + (p.y/e.ry)^2 - 1 = 0
+// Lagrange multiplier : L(p.x, p.y, λ) = f + λg, ∇L = 0
+// ∇f = dir, ∇g = 2λ * (p.x/e.rx^2 + p.y/e.ry^2)
+// so s = dir . (e.rx^2 , e.ry^2) / 2λ
+// plug s into g to get λ: 1/2λ = 1 / sqrt((dir.x * e.rx)^2 + (dir.y * e.ry)^2)
+// Note: if e.rx = e.ry = r, then 1/2λ = 1 / (r * ||dir||)
+// then s = dir . (r^2, r^2) / (r * ||dir||) -> collapses to Circle case
+Vec2 support(const Ellipse& e, const Vec2& dir)
 {
-	return dir.normalized() * c.radius;
+	if (e.rx == e.ry)
+	{
+		return dir.normalized() * e.rx;
+	}
+	else
+	{
+		val_t lambdaFactor = 1 / sqrt(dir.x * dir.x * e.rx * e.rx + dir.y * dir.y * e.ry * e.ry);
+		return Vec2{ dir.x * e.rx * e.rx, dir.y * e.ry * e.ry } * lambdaFactor;
+	}
 }
 
-uint32_t getFeature(const Circle& c, const Vec2& pos, const Vec2& normal)
+uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 {
 	return 0;
 }
 
-Shape toExternal(const Circle& c)
+Shape toExternal(const Ellipse& e)
 {
-	return Fizziks::Circle{ c.radius };
+	if (e.userCircle && e.rx == e.ry)
+	{
+		return Fizziks::Circle{ e.rx };
+	}
+	else
+	{
+		return Fizziks::Ellipse{ e.rx, e.ry };
+	}
 }
 
 #pragma endregion
@@ -252,7 +294,7 @@ Vec2 support(const Compound& c, const Vec2& dir)
 
 uint32_t getFeature(const Compound& p, const Vec2& pos, const Vec2& normal)
 {
-
+	here;
 }
 
 Shape toExternal(const Compound& cp)
@@ -267,26 +309,6 @@ namespace Fizziks
 {
 const Vec2 origin = Vec2::Zero();
 const val_t epsilon = val_t(0.0001); // should probably be tunable?
-
-struct SupportVertex
-{
-	Vec2 CSO;
-	Vec2 A, B;
-
-	explicit operator Vec2() const
-	{
-		return CSO;
-	}
-
-	bool operator==(const SupportVertex&) const = default;
-};
-using Simplex = std::vector<SupportVertex>;
-
-struct Facet
-{
-	size_t from, to;
-	Vec2 dir;
-};
 
 // https://en.wikipedia.org/wiki/Centroid @ Of a polygon
 Vec2 getCentroid(const std::vector<Vec2>& vertices)
@@ -308,25 +330,22 @@ Vec2 getCentroid(const std::vector<Vec2>& vertices)
 	return area != 0 ? centroid / (3 * area) : origin;
 }
 
-Shape createCircle(val_t radius)
+Circle createCircle(val_t radius)
 {
-	return { Circle{ radius } };
+	return Circle{ radius };
 }
 
-Shape createRect(val_t width, val_t height)
+Ellipse createEllipse(val_t rx, val_t ry)
 {
-	std::vector<Vec2> vertices 
-	{
-		{ -width / 2,  height / 2 },
-		{ -width / 2, -height / 2 },
-		{  width / 2, -height / 2 },
-		{  width / 2,  height / 2 }
-	};
-
-	return createPolygon(vertices);
+	return Ellipse{ rx, ry };
 }
 
-Shape createPolygon(const std::vector<Vec2>& vertices)
+Rect createRect(val_t width, val_t height)
+{
+	return Rect{ width, height };
+}
+
+Polygon createPolygon(const std::vector<Vec2>& vertices)
 {
 	auto centroid = getCentroid(vertices);
 	auto verts = vertices;
@@ -336,6 +355,21 @@ Shape createPolygon(const std::vector<Vec2>& vertices)
 	}
 
 	return Polygon{ verts };
+}
+
+Capsule createCapsule(const Circle& cap, const Rect& body)
+{
+	return Capsule
+	{
+		createEllipse(cap.radius, cap.radius),
+		createEllipse(cap.radius, cap.radius),
+		body
+	};
+}
+
+Capsule createCapsule(const Ellipse& cap, const Rect& body)
+{
+	return Capsule{ cap, cap, body };
 }
 
 bool isConvex(const Polygon& poly)
@@ -361,11 +395,13 @@ bool isConvex(const Polygon& poly)
 
 internal::Compound decomposePolygon(const Polygon& poly)
 {
+	here;
 	return {};
 }
 
 Polygon recomposePolygon(const internal::Compound& comp)
 {
+	here;
 	return {};
 }
 
@@ -393,6 +429,26 @@ namespace Fizziks::internal
 {
 const int maxIterationsGJK = 30;
 const int maxIterationsEPA = 30;
+
+struct SupportVertex
+{
+	Vec2 CSO;
+	Vec2 A, B;
+
+	explicit operator Vec2() const
+	{
+		return CSO;
+	}
+
+	bool operator==(const SupportVertex&) const = default;
+};
+using Simplex = std::vector<SupportVertex>;
+
+struct Facet
+{
+	size_t from, to;
+	Vec2 dir;
+};
 
 val_t getMoI(const InternalShape& shape, val_t mass)
 {
@@ -680,15 +736,16 @@ Facet closestFacet(const Simplex& simplex, const Vec2& point)
 	return bestFacet;
 }
 
-Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, const Mat2& r1,
-							   const Circle& c2, const Vec2& p2, const Mat2& r2)
+// This is only valid for c1.rx = c1.ry AND c2.rx = c2.ry
+Contact getCircleCircleContact(const Ellipse& c1, const Vec2& p1, const Mat2& r1,
+							   const Ellipse& c2, const Vec2& p2, const Mat2& r2)
 {
 	Contact contact;
 	contact.overlaps = false;
 
 	Vec2 d = p2 - p1;
 	val_t dist2 = d.squaredNorm();
-	val_t r = c1.radius + c2.radius;
+	val_t r = c1.rx + c2.rx;
 
 	if (dist2 >= r * r) return contact;
 
@@ -700,8 +757,8 @@ Contact getCircleCircleContact(const Circle& c1, const Vec2& p1, const Mat2& r1,
 	contact.penetration = r - dist;
 	contact.tangent = { -norm.y, norm.x };
 
-	contact.contactPointWorldA = p1 + norm * c1.radius;
-	contact.contactPointWorldB = p2 - norm * c2.radius;
+	contact.contactPointWorldA = p1 + norm * c1.rx;
+	contact.contactPointWorldB = p2 - norm * c2.rx;
 
 	contact.contactPointLocalA = r1.transposed() * (contact.contactPointWorldA - p1);
 	contact.contactPointLocalB = r2.transposed() * (contact.contactPointWorldB - p2);
@@ -720,10 +777,11 @@ Contact getShapeContact(const InternalShape& s1, const Vec2& p1, val_t rot1,
 {
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
 
-	if (std::holds_alternative<Circle>(s1) && std::holds_alternative<Circle>(s2))
+	if (std::holds_alternative<Ellipse>(s1) && std::get<Ellipse>(s1).rx == std::get<Ellipse>(s1).ry &&
+		std::holds_alternative<Ellipse>(s2) && std::get<Ellipse>(s2).rx == std::get<Ellipse>(s2).ry)
 	{
-		return getCircleCircleContact(std::get<Circle>(s1), p1, r1,
-									  std::get<Circle>(s2), p2, r2);
+		return getCircleCircleContact(std::get<Ellipse>(s1), p1, r1,
+									  std::get<Ellipse>(s2), p2, r2);
 	}
 
 	Contact contact;
