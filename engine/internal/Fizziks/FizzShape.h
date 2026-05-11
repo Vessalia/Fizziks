@@ -35,7 +35,9 @@ struct Compound
 {
 	std::vector<ConvexPiece> pieces;
 	val_t effectiveRadius;
-	Shape external; // a bit heavy weight, but removes the issue of ambiguously rebuilding special shapes
+
+	// a bit heavy weight, but removes the issue of ambiguously rebuilding special shapes, and worrying about recomposing polygons
+	Shape external;
 };
 
 using InternalShape = std::variant<Ellipse, Polygon, Compound>;

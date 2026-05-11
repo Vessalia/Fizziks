@@ -50,10 +50,21 @@ InternalShape toInternal(const Fizziks::Polygon& p)
 	}
 }
 
-Compound toInternal(const Fizziks::Capsule& cap)
+Compound toInternal(const Fizziks::Capsule& cp)
 {
-	here;
-	// need to implement ellipses
+	const Ellipse cap { cp.body.width, cp.capHeight };
+	const Mat2 noRot = Mat2::Rotation(0);
+
+	ConvexPiece topCap { cap, Vec2(0,  cp.body.height / 2), noRot };
+	ConvexPiece body { toInternal(cp.body), Vec2::Zero(), noRot };
+	ConvexPiece bottomCap { cap, Vec2(0, -cp.body.height / 2), noRot };
+
+	return
+	{
+		{ topCap, body, bottomCap },
+		std::max(cp.body.width / 2, cp.body.height / 2 + cap.ry),
+		cp
+	};
 }
 
 InternalShape toInternal(const Fizziks::Shape& shape)
@@ -123,9 +134,19 @@ Vec2 support(const Ellipse& e, const Vec2& dir)
 	}
 }
 
+constexpr int bucketCount = 16; // should definitely be based on size somehow
 uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 {
-	return 0;
+	if (e.rx == e.ry)
+	{
+		return 0;
+	}
+	else
+	{
+		float angle = std::atan2(normal.y, normal.x);
+		int bucket = static_cast<int>((angle + PI) / (TWO_PI) * bucketCount) % bucketCount;
+		return static_cast<uint32_t>(bucket);
+	}
 }
 
 Shape toExternal(const Ellipse& e)
@@ -357,19 +378,9 @@ Polygon createPolygon(const std::vector<Vec2>& vertices)
 	return Polygon{ verts };
 }
 
-Capsule createCapsule(const Circle& cap, const Rect& body)
+Capsule createCapsule(val_t capHeight, const Rect& body)
 {
-	return Capsule
-	{
-		createEllipse(cap.radius, cap.radius),
-		createEllipse(cap.radius, cap.radius),
-		body
-	};
-}
-
-Capsule createCapsule(const Ellipse& cap, const Rect& body)
-{
-	return Capsule{ cap, cap, body };
+	return Capsule { capHeight, body };
 }
 
 bool isConvex(const Polygon& poly)
@@ -394,12 +405,6 @@ bool isConvex(const Polygon& poly)
 }
 
 internal::Compound decomposePolygon(const Polygon& poly)
-{
-	here;
-	return {};
-}
-
-Polygon recomposePolygon(const internal::Compound& comp)
 {
 	here;
 	return {};

@@ -33,8 +33,7 @@ struct FIZZIKS_API Polygon
 
 struct FIZZIKS_API Capsule
 {
-	Ellipse topCap;
-	Ellipse bottomCap;
+	val_t capHeight;
 	Rect body;
 };
 
@@ -57,8 +56,7 @@ FIZZIKS_API Circle createCircle(val_t radius);
 FIZZIKS_API Ellipse createEllipse(val_t rx, val_t ry);
 FIZZIKS_API Rect createRect(val_t width, val_t height);
 FIZZIKS_API Polygon createPolygon(const std::vector<Vec2>& vertices);
-FIZZIKS_API Capsule createCapsule(const Circle& cap, const Rect& body);
-FIZZIKS_API Capsule createCapsule(const Ellipse& cap, const Rect& body);
+FIZZIKS_API Capsule createCapsule(val_t capHeight, const Rect& body);
 
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 
