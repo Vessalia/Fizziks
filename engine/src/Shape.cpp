@@ -11,12 +11,12 @@ namespace Fizziks::internal
 {
 Ellipse toInternal(const Fizziks::Circle& c)
 {
-	return Ellipse{ true, c.radius, c.radius };
+	return Ellipse{ c.radius, c.radius };
 }
 
 Ellipse toInternal(const Fizziks::Ellipse& e)
 {
-	return Ellipse{ false, e.rx, e.ry };
+	return Ellipse{ e.rx, e.ry };
 }
 
 Polygon toInternal(const Fizziks::Rect& r)
@@ -32,7 +32,7 @@ Polygon toInternal(const Fizziks::Rect& r)
 	return Polygon{ vertices, vertices[0].norm() };
 }
 
-InternalShape toInternal(const Fizziks::Polygon& p)
+ShapeType toInternal(const Fizziks::Polygon& p)
 {
 	if (isConvex(p))
 	{
@@ -62,14 +62,19 @@ Compound toInternal(const Fizziks::Capsule& cp)
 	return
 	{
 		{ topCap, body, bottomCap },
-		std::max(cp.body.width / 2, cp.body.height / 2 + cap.ry),
-		cp
+		std::max(cp.body.width / 2, cp.body.height / 2 + cap.ry)
 	};
 }
 
 InternalShape toInternal(const Fizziks::Shape& shape)
 {
-	return std::visit([](const auto& s) -> InternalShape { return toInternal(s); }, shape);
+	return std::visit([](const auto& s) -> InternalShape 
+	{ 
+		InternalShape is;
+		is.data = toInternal(s);
+		is.external = s;
+		return is;
+	}, shape);
 }
 }
 
@@ -113,6 +118,7 @@ AABB getEncapsulatingAABBTight(const Ellipse& e, const Vec2& centroid, const Mat
 	return getEncapsulatingAABBFast(e, centroid);
 }
 
+// Reference: https://personal.math.ubc.ca/~CLP/CLP3/clp_3_mc/sec_Lagrange.html
 // Maximize objective f = dir . p, where p is a point on e
 // Constraint is g = (p.x/e.rx)^2 + (p.y/e.ry)^2 - 1 = 0
 // Lagrange multiplier : L(p.x, p.y, λ) = f + λg, ∇L = 0
@@ -146,18 +152,6 @@ uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 		float angle = std::atan2(normal.y, normal.x);
 		int bucket = static_cast<int>((angle + PI) / (TWO_PI) * bucketCount) % bucketCount;
 		return static_cast<uint32_t>(bucket);
-	}
-}
-
-Shape toExternal(const Ellipse& e)
-{
-	if (e.userCircle && e.rx == e.ry)
-	{
-		return Fizziks::Circle{ e.rx };
-	}
-	else
-	{
-		return Fizziks::Ellipse{ e.rx, e.ry };
 	}
 }
 
@@ -255,16 +249,17 @@ uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 	return bestIndex;
 }
 
-Shape toExternal(const Polygon& p)
-{
-	return Fizziks::Polygon{ p.vertices };
-}
-
 #pragma endregion
 
 #pragma endregion
 
 #pragma region Compound ops
+
+val_t getMoI(const Compound& cp, val_t mass)
+{
+	here;
+	return 0;
+}
 
 // has an effective radius, so no fast impl needed
 AABB getEncapsulatingAABBTight(const Compound& cp, const Vec2& centroid, const Mat2& rot)
@@ -316,11 +311,7 @@ Vec2 support(const Compound& c, const Vec2& dir)
 uint32_t getFeature(const Compound& p, const Vec2& pos, const Vec2& normal)
 {
 	here;
-}
-
-Shape toExternal(const Compound& cp)
-{
-	return cp.external;
+	return 0;
 }
 
 #pragma endregion
@@ -457,17 +448,17 @@ struct Facet
 
 val_t getMoI(const InternalShape& shape, val_t mass)
 {
-	return std::visit([mass](const auto& s){ return getMoI(s, mass); }, shape);
+	return std::visit([mass](const auto& s) -> val_t { return ops::getMoI(s, mass); }, shape.data);
 }
 
-AABB getEncapsulatingAABBFast(const InternalShape& shape, const Vec2& centroid)
+AABB getEncapsulatingAABBFast(const ShapeType& shape, const Vec2& centroid)
 {
 	return std::visit([&centroid](const auto& s) -> AABB {
 		return ops::getEncapsulatingAABBFast(s, centroid);
 	}, shape);
 }
 
-AABB getEncapsulatingAABBTight(const InternalShape& shape, const Vec2& centroid, val_t rot)
+AABB getEncapsulatingAABBTight(const ShapeType& shape, const Vec2& centroid, val_t rot)
 {
 	const Mat2 rotation = Mat2::Rotation(rot);
 	return std::visit([&centroid, &rotation](const auto& s) -> AABB {
@@ -477,18 +468,18 @@ AABB getEncapsulatingAABBTight(const InternalShape& shape, const Vec2& centroid,
 
 AABB getEncapsulatingAABB(const InternalShape& s, const Vec2& centroid, val_t rot, bool tight)
 {
-	if (tight) return getEncapsulatingAABBTight(s, centroid, rot);
-	else	   return getEncapsulatingAABBFast(s, centroid);
+	if (tight) return getEncapsulatingAABBTight(s.data, centroid, rot);
+	else	   return getEncapsulatingAABBFast(s.data, centroid);
 }
 
-Vec2 getSupport(const InternalShape& shape, const Mat2& rot, const Vec2& direction)
+Vec2 getSupport(const ShapeType& shape, const Mat2& rot, const Vec2& direction)
 {
 	const Vec2 dir = rot.transposed() * direction;
 	return std::visit([&dir](const auto& s) -> Vec2 { return ops::support(s, dir); }, shape);
 }
 
-SupportVertex getCSOSupport(const InternalShape& s1, const Vec2& p1, const Mat2& r1,
-							const InternalShape& s2, const Vec2& p2, const Mat2& r2, 
+SupportVertex getCSOSupport(const ShapeType& s1, const Vec2& p1, const Mat2& r1,
+							const ShapeType& s2, const Vec2& p2, const Mat2& r2, 
 							const Vec2& dir)
 {
 	Vec2 support1 = getSupport(s1, r1,  dir);
@@ -496,14 +487,14 @@ SupportVertex getCSOSupport(const InternalShape& s1, const Vec2& p1, const Mat2&
 	return { (r1 * support1 + p1) - (r2 * support2 + p2), support1, support2 };
 }
 
-uint32_t getFeature(const InternalShape& shape, const Vec2& pos, const Vec2& normal)
+uint32_t getFeature(const ShapeType& shape, const Vec2& pos, const Vec2& normal)
 {
 	return std::visit([&pos, &normal](const auto& s) -> uint32_t { return getFeature(s, pos, normal); }, shape);
 }
 
 Shape toExternal(const InternalShape& shape)
 {
-	return std::visit([](const auto& s) -> Shape { return toExternal(s); }, shape);
+	return shape.external;
 }
 
 #pragma region GJK
@@ -625,8 +616,8 @@ void reduceSimplex(Simplex& simplex, Vec2& dir)
 	}
 }
 
-std::pair<bool, Simplex> getGJKSimplex(const InternalShape& s1, const Vec2& p1, const Mat2& r1,
-									   const InternalShape& s2, const Vec2& p2, const Mat2& r2)
+std::pair<bool, Simplex> getGJKSimplex(const ShapeType& s1, const Vec2& p1, const Mat2& r1,
+									   const ShapeType& s2, const Vec2& p2, const Mat2& r2)
 {
 	Simplex simplex;
 	simplex.reserve(maxIterationsGJK / 2); // we'll usually exit early
@@ -656,7 +647,7 @@ bool shapesOverlap(const InternalShape& s1, const Vec2& p1, val_t rot1,
 				   const InternalShape& s2, const Vec2& p2, val_t rot2)
 {
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
-	const auto [overlaps, _] = getGJKSimplex(s1, p1, r1, s2, p2, r2);
+	const auto [overlaps, _] = getGJKSimplex(s1.data, p1, r1, s2.data, p2, r2);
 	return overlaps;
 }
 
@@ -671,8 +662,8 @@ const Vec2 neg_y = { 0, -1};
 const std::array<Vec2, 4> dirs = { pos_x, neg_x, pos_y, neg_y };
 const std::array<Vec2, 2> axes = { pos_x, pos_y };
 void blowupSimplex(Simplex& simplex,
-				   const InternalShape& s1, const Vec2& p1, const Mat2& r1,
-				   const InternalShape& s2, const Vec2& p2, const Mat2& r2)
+				   const ShapeType& s1, const Vec2& p1, const Mat2& r1,
+				   const ShapeType& s2, const Vec2& p2, const Mat2& r2)
 {
 	if (simplex.size() < 1 || simplex.size() > 2) return; // can only blow up a point or line
 
@@ -777,9 +768,10 @@ Contact getCircleCircleContact(const Ellipse& c1, const Vec2& p1, const Mat2& r1
 val_t facingWeight = val_t(1);
 val_t proxWeight = val_t(0.1);
 
-Contact getShapeContact(const InternalShape& s1, const Vec2& p1, val_t rot1,
-						const InternalShape& s2, const Vec2& p2, val_t rot2)
+Contact getShapeContact(const InternalShape& shape1, const Vec2& p1, val_t rot1,
+						const InternalShape& shape2, const Vec2& p2, val_t rot2)
 {
+	const ShapeType& s1 = shape1.data; const ShapeType& s2 = shape2.data;
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
 
 	if (std::holds_alternative<Ellipse>(s1) && std::get<Ellipse>(s1).rx == std::get<Ellipse>(s1).ry &&

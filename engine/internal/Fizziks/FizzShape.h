@@ -10,7 +10,6 @@ namespace Fizziks::internal
 {
 struct Ellipse
 {
-	bool userCircle;
 	val_t rx;
 	val_t ry;
 };
@@ -35,12 +34,15 @@ struct Compound
 {
 	std::vector<ConvexPiece> pieces;
 	val_t effectiveRadius;
-
-	// a bit heavy weight, but removes the issue of ambiguously rebuilding special shapes, and worrying about recomposing polygons
-	Shape external;
 };
 
-using InternalShape = std::variant<Ellipse, Polygon, Compound>;
+using ShapeType = std::variant<Ellipse, Polygon, Compound>;
+
+struct InternalShape
+{
+	ShapeType data;
+	Shape external;
+};
 
 InternalShape toInternal(const Shape& shape);
 Shape toExternal(const InternalShape& shape);
