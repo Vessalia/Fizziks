@@ -6,6 +6,15 @@
 #include <algorithm>
 #include <array>
 
+/*
+Current list of InternalShape operations required to be supported:
+- getEncapsulatingAABBFast
+- getEncapsulatingAABBTight
+- support
+
+- toExternal
+*/
+
 namespace Fizziks::internal::ops
 {
 template<typename T>
@@ -16,6 +25,8 @@ AABB getEncapsulatingAABBFast(const T& s, const Vec2& centroid)
 {
 	return createAABB(2 * s.effectiveRadius, 2 * s.effectiveRadius, centroid);
 }
+
+#pragma region Primitive ops
 
 #pragma region Circle ops
 
@@ -29,9 +40,19 @@ AABB getEncapsulatingAABBTight(const Circle& c, const Vec2& centroid, const Mat2
 	return getEncapsulatingAABBFast(c, centroid);
 }
 
+Vec2 support(const Circle& c, const Vec2& dir)
+{
+	return dir.normalized() * c.radius;
+}
+
+Shape toExternal(const Circle& c)
+{
+	return Fizziks::Circle{ c.radius };
+}
+
 #pragma endregion
 
-#pragma region Polygon ops
+#pragma region Polygon Primitive ops
 
 // has an effective radius, so no fast impl needed
 AABB getEncapsulatingAABBTight(const Polygon& p, const Vec2& centroid, const Mat2& rot)
@@ -48,6 +69,29 @@ AABB getEncapsulatingAABBTight(const Polygon& p, const Vec2& centroid, const Mat
 
 	return createAABB(min + centroid, max + centroid);
 }
+
+Vec2 support(const Polygon& p, const Vec2& dir)
+{
+	val_t bestProj = -fizzmax<val_t>();
+	Vec2 best = origin;
+	for (const auto& v : p.vertices)
+	{
+		val_t proj = v.dot(dir);
+		if (proj > bestProj)
+		{
+			bestProj = proj;
+			best = v;
+		}
+	}
+	return best;
+}
+
+Shape toExternal(const Polygon& p)
+{
+	return Fizziks::Polygon{ p.vertices };
+}
+
+#pragma endregion
 
 #pragma endregion
 
@@ -73,6 +117,36 @@ AABB getEncapsulatingAABBTight(const Compound& cp, const Vec2& centroid, const M
 	}
 
 	return createAABB(min, max);
+}
+
+Vec2 support(const ConvexPiece& piece, const Vec2& dir)
+{
+	Vec2 localDir = piece.rot.transposed() * dir;
+	Vec2 localPoint = std::visit([&](const auto& shape) { return support(shape, localDir); }, piece.shape);
+	return piece.rot * localPoint + piece.offset;
+}
+
+Vec2 support(const Compound& c, const Vec2& dir)
+{
+	val_t bestProj = -fizzmax<val_t>();
+	Vec2 best = origin;
+	for (const ConvexPiece& piece : c.pieces)
+	{
+		Vec2 candidate = support(piece, dir);
+		val_t proj = candidate.dot(dir);
+		if (proj > bestProj)
+		{
+			bestProj = proj;
+			best = candidate;
+		}
+	}
+
+	return best;
+}
+
+Shape toExternal(const Compound& cp)
+{
+	return cp.external;
 }
 
 #pragma endregion
@@ -199,76 +273,10 @@ AABB getEncapsulatingAABB(const InternalShape& s, const Vec2& centroid, val_t ro
 	else	   return getEncapsulatingAABBFast(s, centroid);
 }
 
-#pragma region CSO support
-
-Vec2 circleSupport(const Circle& c, const Vec2& dir)
-{
-	return dir.normalized() * c.radius;
-}
-
-Vec2 polygonSupport(const Polygon& p, const Vec2& dir)
-{
-	val_t bestProj = -fizzmax<val_t>();
-	Vec2 support = origin;
-	
-	for (const auto& v : p.vertices)
-	{
-		val_t proj = v.dot(dir);
-		if(proj > bestProj)
-		{
-			bestProj = proj;
-			support = v;
-		}
-	}
-
-	return support;
-}
-
-Vec2 convexPieceSupport(const ConvexPiece& piece, const Vec2& dir)
-{
-	Vec2 localDir = piece.rot.transposed() * dir;
-
-	Vec2 localPoint = origin;
-	if (is_a(Circle, piece.shape))  localPoint = circleSupport(std::get<Circle>(piece.shape.data), dir);
-	if (is_a(Polygon, piece.shape)) localPoint = polygonSupport(std::get<Polygon>(piece.shape.data), dir);
-
-	return piece.rot * localPoint + piece.offset;
-}
-
 Vec2 getSupport(const InternalShape& shape, const Mat2& rot, const Vec2& direction)
 {
-	Vec2 dir = rot.transposed() * direction;
-
-	if(is_a(Circle, shape))
-	{
-		return circleSupport(std::get<Circle>(shape.data), dir);
-	}
-	else if (is_a(Polygon, shape))
-	{
-		return polygonSupport(std::get<Polygon>(shape.data), dir);
-	}
-	else if (is_a(Compound, shape))
-	{
-		const auto& c = std::get<Compound>(shape.data);
-		val_t bestProj = -fizzmax<val_t>();
-		Vec2 support = origin;
-
-		for (const ConvexPiece& cp : c.convexPieces)
-		{
-			Vec2 candidate = convexPieceSupport(cp, dir);
-
-			val_t proj = candidate.dot(dir);
-			if (proj > bestProj)
-			{
-				bestProj = proj;
-				support = candidate;
-			}
-		}
-
-		return support;
-	}
-
-	return origin;
+	const Vec2 dir = rot.transposed() * direction;
+	return std::visit([&dir](const auto& s) { return ops::support(s, dir); }, shape);
 }
 
 SupportVertex getCSOSupport(const InternalShape& s1, const Vec2& p1, const Mat2& r1,
@@ -279,8 +287,6 @@ SupportVertex getCSOSupport(const InternalShape& s1, const Vec2& p1, const Mat2&
 	Vec2 support2 = getSupport(s2, r2, -dir);
 	return { (r1 * support1 + p1) - (r2 * support2 + p2), support1, support2 };
 }
-
-#pragma endregion
 
 #pragma region GJK
 
@@ -682,22 +688,6 @@ Compound decomposePolygon(const Polygon& poly)
 	return {};
 }
 
-Polygon toPolygon(const InternalShape& shape)
-{
-	return std::visit([](const auto& s) -> Polygon {
-		using T = std::decay_t<decltype(s)>;
-
-		if constexpr (std::is_same_v<T, Circle>)
-		{
-
-		}
-		else if constexpr (std::is_same_v<T, Polygon>)
-		{
-
-		}
-	}, shape);
-}
-
 Polygon recomposePolygon(const Compound& comp)
 {
 	return {};
@@ -721,7 +711,7 @@ InternalShape toInternal(const Shape& shape)
 				{
 					effRadius = std::max(effRadius, vert.norm());
 				}
-				return internal::Polygon{ s.verts, effRadius };
+				return internal::Polygon{ s.vertices, effRadius };
 			}
 			else
 			{
@@ -737,18 +727,7 @@ InternalShape toInternal(const Shape& shape)
 
 Shape toExternal(const InternalShape& shape)
 {
-	return std::visit([](const auto& s) -> Shape {
-		using T = std::decay_t<decltype(s)>;
-
-		if constexpr (std::is_same_v<T, Circle> || std::is_same_v<T, Polygon>)
-		{
-			return s;
-		}
-		else if constexpr (std::is_same_v<T, Compound>)
-		{
-
-		}
-	}, shape);
+	return std::visit([](const auto& s) { return toExternal(s); }, shape);
 }
 
 val_t getMoI(const InternalShape& shape, val_t mass)

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <Fizziks/Fizziks.h>
+#include <Fizziks/Shape.h>
+
 #include <vector>
 #include <variant>
 
@@ -30,6 +33,7 @@ struct Compound
 {
 	std::vector<ConvexPiece> pieces;
 	val_t effectiveRadius;
+	Shape external; // a bit heavy weight, but removes the issue of ambiguously rebuilding special shapes
 };
 
 using InternalShape = std::variant<Circle, Polygon, Compound>;
