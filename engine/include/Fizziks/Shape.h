@@ -60,7 +60,7 @@ FIZZIKS_API Capsule createCapsule(val_t capHeight, const Rect& body);
 
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 
-FIZZIKS_API AABB getEncapsulatingAABB(const Shape& s, const Vec2& centroid, val_t rot, bool tight = true);
+FIZZIKS_API AABB getBounds(const Shape& s, const Vec2& centroid, val_t rot, bool tight = true);
 
 FIZZIKS_API bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t r1, const Shape& s2, const Vec2& p2, val_t r2);
 FIZZIKS_API Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t r1, const Shape& s2, const Vec2& p2, val_t r2);

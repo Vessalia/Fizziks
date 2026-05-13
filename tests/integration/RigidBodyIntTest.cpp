@@ -320,15 +320,15 @@ TEST(AABBTest, EncapsulatingAABBContainsCircle)
 {
 	Shape s = createCircle(1.5);
 	Vec2 centre { 2.0, 3.0 };
-	AABB aabb = getEncapsulatingAABB(s, centre, 0.0);
+	AABB aabb = getBounds(s, centre, 0.0);
 	EXPECT_TRUE(contains(aabb, centre));
 }
 
 TEST(AABBTest, EncapsulatingAABBForRotatedBoxIsLargerThanUnrotated)
 {
 	Shape s = createRect(2.0, 1.0);
-	AABB tight0  = getEncapsulatingAABB(s, Vec2::Zero(), 0.0,     true);
-	AABB tight45 = getEncapsulatingAABB(s, Vec2::Zero(), PI / 4,  true);
+	AABB tight0  = getBounds(s, Vec2::Zero(), 0.0,     true);
+	AABB tight45 = getBounds(s, Vec2::Zero(), PI / 4,  true);
 	EXPECT_GT(tight45.area(), tight0.area());
 }
 
@@ -385,9 +385,9 @@ TEST_F(RotationIntegrationTest, EncapsulatingAABBUpdatesWithRotation)
 {
 	// A box that's rotating should have a broadening AABB over time
 	Shape s = createRect(2.0, 0.5);
-	AABB r0   = getEncapsulatingAABB(s, Vec2::Zero(), 0.0,     true);
-	AABB r45  = getEncapsulatingAABB(s, Vec2::Zero(), PI / 4,  true);
-	AABB r90  = getEncapsulatingAABB(s, Vec2::Zero(), PI / 2,  true);
+	AABB r0   = getBounds(s, Vec2::Zero(), 0.0,     true);
+	AABB r45  = getBounds(s, Vec2::Zero(), PI / 4,  true);
+	AABB r90  = getBounds(s, Vec2::Zero(), PI / 2,  true);
 	// at 45 degrees the AABB should be larger than axis-aligned
 	EXPECT_GT(r45.area(), r0.area());
 	// at 90 degrees it's axis-aligned again but with swapped dimensions

@@ -81,11 +81,13 @@ InternalShape toInternal(const Fizziks::Shape& shape)
 /*
 Current list of InternalShape operations required to be supported:
 - getMoI
-- getEncapsulatingAABBFast
-- getEncapsulatingAABBTight
+- getBoundsFast
+- getBoundsTight
 - support
 - getFeature
-- toExternal
+
+Current list of additional Primitive operations required to be supported:
+- contains
 */
 
 namespace Fizziks::internal::ops
@@ -94,7 +96,7 @@ template<typename T>
 concept HasEffectiveRadius = requires(T s) { s.effectiveRadius; };
 
 template<HasEffectiveRadius T>
-AABB getEncapsulatingAABBFast(const T& s, const Vec2& centroid)
+AABB getBoundsFast(const T& s, const Vec2& centroid)
 {
 	return createAABB(2 * s.effectiveRadius, 2 * s.effectiveRadius, centroid);
 }
@@ -103,19 +105,26 @@ AABB getEncapsulatingAABBFast(const T& s, const Vec2& centroid)
 
 #pragma region Ellipse ops
 
+bool contains(const Ellipse& e, const Vec2& p)
+{
+	val_t nx = p.x / e.rx;
+	val_t ny = p.y / e.ry;
+	return nx*nx + ny*ny <= 1;
+}
+
 val_t getMoI(const Ellipse& e, val_t mass)
 {
 	return val_t(0.25) * mass * (e.rx * e.rx + e.ry * e.ry);
 }
 
-AABB getEncapsulatingAABBFast(const Ellipse& e, const Vec2& centroid)
+AABB getBoundsFast(const Ellipse& e, const Vec2& centroid)
 {
 	return createAABB(2 * e.rx, 2 * e.ry, centroid);
 }
 
-AABB getEncapsulatingAABBTight(const Ellipse& e, const Vec2& centroid, const Mat2& rot)
+AABB getBoundsTight(const Ellipse& e, const Vec2& centroid, const Mat2& rot)
 {
-	return getEncapsulatingAABBFast(e, centroid);
+	return getBoundsFast(e, centroid);
 }
 
 // Reference: https://personal.math.ubc.ca/~CLP/CLP3/clp_3_mc/sec_Lagrange.html
@@ -136,7 +145,7 @@ Vec2 support(const Ellipse& e, const Vec2& dir)
 	else
 	{
 		val_t lambdaFactor = 1 / sqrt(dir.x * dir.x * e.rx * e.rx + dir.y * dir.y * e.ry * e.ry);
-		return Vec2{ dir.x * e.rx * e.rx, dir.y * e.ry * e.ry } * lambdaFactor;
+		return Vec2(dir.x * e.rx * e.rx, dir.y * e.ry * e.ry) * lambdaFactor;
 	}
 }
 
@@ -158,6 +167,17 @@ uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 #pragma endregion
 
 #pragma region Polygon ops
+
+bool contains(const Polygon& p, const Vec2& pt)
+{
+	for (int i = 0; i < p.vertices.size(); ++i)
+	{
+		Vec2 A = p.vertices[i];
+		Vec2 B = p.vertices[(i+1) % p.vertices.size()];
+		if ((B - A).cross(pt - A) < 0) return false;
+	}
+	return true;
+}
 
 val_t getMoI(const Polygon& p, val_t mass)
 {
@@ -187,7 +207,7 @@ val_t getMoI(const Polygon& p, val_t mass)
 }
 
 // has an effective radius, so no fast impl needed
-AABB getEncapsulatingAABBTight(const Polygon& p, const Vec2& centroid, const Mat2& rot)
+AABB getBoundsTight(const Polygon& p, const Vec2& centroid, const Mat2& rot)
 {
 	Vec2 min = vec_max(), max = vec_min();
 	for (const auto& vertex : p.vertices)
@@ -255,14 +275,47 @@ uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 
 #pragma region Compound ops
 
-val_t getMoI(const Compound& cp, val_t mass)
+constexpr val_t integrationStep = (val_t)(1.0 / 32);
+
+// numerical integration approach to avoid overcounting areas
+val_t getMoI(const Compound& c, val_t mass)
 {
-	here;
-	return 0;
+	AABB bounds = ops::getBoundsTight(c, Vec2::Zero(), Mat2::Identity());
+	val_t cellSize = c.effectiveRadius * integrationStep;
+	val_t cellArea = cellSize * cellSize;
+	int hits = 0;
+	val_t moiAccum = 0;
+
+	for (val_t x = bounds.min.x + cellSize / 2; x < bounds.max.x - cellSize / 2; x += cellSize)
+	{
+		for (val_t y = bounds.min.y + cellSize / 2; y < bounds.max.y - cellSize / 2; y += cellSize)
+		{
+			Vec2 r(x, y);
+			for (const auto& piece : c.pieces)
+			{
+				Vec2 local = piece.rot.transposed() * (r - piece.offset);
+				bool inside = std::visit([&](const auto& s) {
+					return contains(s, local);
+				}, piece.shape);
+
+				if (inside)
+				{
+					++hits;
+					moiAccum += r.squaredNorm(); // integrate by r^2dm
+					break;
+				}
+			}
+		}
+	}
+
+	val_t area = hits * cellArea;
+	val_t density = mass / area;
+	val_t moi = density * cellArea * moiAccum;
+	return moi;
 }
 
 // has an effective radius, so no fast impl needed
-AABB getEncapsulatingAABBTight(const Compound& cp, const Vec2& centroid, const Mat2& rot)
+AABB getBoundsTight(const Compound& cp, const Vec2& centroid, const Mat2& rot)
 {
 	Vec2 min = vec_max(), max = vec_min();
 	for (const ConvexPiece& piece : cp.pieces)
@@ -272,7 +325,7 @@ AABB getEncapsulatingAABBTight(const Compound& cp, const Vec2& centroid, const M
 
 		std::visit([&](const auto& shape)
 		{
-			AABB box = getEncapsulatingAABBTight(shape, offset, rotation);
+			AABB box = getBoundsTight(shape, offset, rotation);
 			min.x = std::min(min.x, box.min.x);
 			min.y = std::min(min.y, box.min.y);
 			max.x = std::max(max.x, box.max.x);
@@ -406,6 +459,11 @@ val_t getMoI(const Shape& shape, val_t mass)
 	return internal::getMoI(internal::toInternal(shape), mass);
 }
 
+AABB getBounds(const Shape& s, const Vec2& centroid, val_t rot, bool tight)
+{
+	return getBounds(internal::toInternal(s), centroid, rot, tight);
+}
+
 bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t r1,
 				   const Shape& s2, const Vec2& p2, val_t r2)
 {
@@ -451,25 +509,30 @@ val_t getMoI(const InternalShape& shape, val_t mass)
 	return std::visit([mass](const auto& s) -> val_t { return ops::getMoI(s, mass); }, shape.data);
 }
 
-AABB getEncapsulatingAABBFast(const ShapeType& shape, const Vec2& centroid)
+AABB getBoundsFast(const ShapeType& shape, const Vec2& centroid)
 {
 	return std::visit([&centroid](const auto& s) -> AABB {
-		return ops::getEncapsulatingAABBFast(s, centroid);
+		return ops::getBoundsFast(s, centroid);
 	}, shape);
 }
 
-AABB getEncapsulatingAABBTight(const ShapeType& shape, const Vec2& centroid, val_t rot)
+AABB getBoundsTight(const ShapeType& shape, const Vec2& centroid, val_t rot)
 {
 	const Mat2 rotation = Mat2::Rotation(rot);
 	return std::visit([&centroid, &rotation](const auto& s) -> AABB {
-		return ops::getEncapsulatingAABBTight(s, centroid, rotation);
+		return ops::getBoundsTight(s, centroid, rotation);
 	}, shape);
 }
 
-AABB getEncapsulatingAABB(const InternalShape& s, const Vec2& centroid, val_t rot, bool tight)
+AABB getBounds(const ShapeType& s, const Vec2& centroid, val_t rot, bool tight)
 {
-	if (tight) return getEncapsulatingAABBTight(s.data, centroid, rot);
-	else	   return getEncapsulatingAABBFast(s.data, centroid);
+	if (tight) return getBoundsTight(s, centroid, rot);
+	else	   return getBoundsFast(s, centroid);
+}
+
+AABB getBounds(const InternalShape& s, const Vec2& centroid, val_t rot, bool tight)
+{
+	return getBounds(s.data, centroid, rot, tight);
 }
 
 Vec2 getSupport(const ShapeType& shape, const Mat2& rot, const Vec2& direction)

@@ -49,6 +49,9 @@ Shape toExternal(const InternalShape& shape);
 
 FIZZIKS_API val_t getMoI(const InternalShape& shape, val_t mass);
 
+FIZZIKS_API AABB getBounds(const ShapeType& s, const Vec2& centroid, val_t rot, bool tight = true);
+FIZZIKS_API AABB getBounds(const InternalShape& s, const Vec2& centroid, val_t rot, bool tight = true);
+
 FIZZIKS_API bool shapesOverlap(const InternalShape& s1, const Vec2& p1, val_t r1, const InternalShape& s2, const Vec2& p2, val_t r2);
 FIZZIKS_API Contact getShapeContact(const InternalShape& s1, const Vec2& p1, val_t r1, const InternalShape& s2, const Vec2& p2, val_t r2);
 }

@@ -161,7 +161,7 @@ const AABB FizzWorldImpl::compute_bounds(BodyData* body)
 	Vec2 min = vec_max(), max = vec_min();
 	for (auto collider : body->colliders)
 	{
-		AABB minorBounds = getEncapsulatingAABB(collider.shape, collider.pos, body->rotation);
+		AABB minorBounds = getBounds(collider.shape, collider.pos, body->rotation);
 		Vec2 world = body->position + collider.pos;
 
 		min.x = std::min(min.x, world.x + minorBounds.min.x);
