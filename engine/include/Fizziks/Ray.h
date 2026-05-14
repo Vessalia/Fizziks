@@ -16,9 +16,9 @@ struct FIZZIKS_API RaycastResult
 {
 	bool hit;
 	uint32_t ID;
-	Vec2 point;
-	Vec2 normal;
+	Vec2 point, normal;
+	val_t entryT, exitT;
 };
 
-val_t raytest(const Ray& ray, const AABB& aabb);
+val_t raycast(const Ray& ray, const AABB& aabb);
 }

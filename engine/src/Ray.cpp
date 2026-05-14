@@ -5,7 +5,7 @@
 
 namespace Fizziks
 {
-val_t raytest(const Ray& _ray, const AABB& aabb)
+val_t raycast(const Ray& _ray, const AABB& aabb)
 {
 	if (!_ray.dir.norm()) 
 	{

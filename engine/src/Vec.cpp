@@ -5,6 +5,9 @@
 namespace Fizziks
 {
 // Vec2
+Vec2 Vec2::perped() const { return internal::ops::perp(*this); }
+Vec2& Vec2::perp()        { *this = internal::ops::perp(*this); return *this; }
+
 Vec2 Vec2::lerped(const Vec2& other, val_t t) const { return internal::ops::lerp(*this, other, t); }
 Vec2& Vec2::lerp(const Vec2& other, val_t t)        { *this = internal::ops::lerp(*this, other, t); return *this; }
 

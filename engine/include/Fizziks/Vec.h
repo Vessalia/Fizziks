@@ -20,6 +20,9 @@ struct FIZZIKS_API Vec2
 		return Vec2{ std::cos(angle), std::sin(angle) };
 	}
 
+	Vec2 perped() const;
+	Vec2& perp();
+
 	Vec2 lerped(const Vec2& other, val_t t) const;
 	Vec2& lerp(const Vec2& other, val_t t);
 

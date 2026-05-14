@@ -2,6 +2,7 @@
 #include <Fizziks/FizzShape.h>
 #include <Fizziks/MathUtils.h>
 #include <Fizziks/FizzLog.h>
+#include <Fizziks/Ray.h>
 
 #include <algorithm>
 #include <array>
@@ -88,6 +89,7 @@ Current list of InternalShape operations required to be supported:
 
 Current list of additional Primitive operations required to be supported:
 - contains
+- raycast
 */
 
 namespace Fizziks::internal::ops
@@ -110,6 +112,37 @@ bool contains(const Ellipse& e, const Vec2& p)
 	val_t nx = p.x / e.rx;
 	val_t ny = p.y / e.ry;
 	return nx*nx + ny*ny <= 1;
+}
+
+// (ox + t * dx)^2 / a^2 + (oy + t * dy)^2 / b^2 = 1
+// expand and solve quadratic equation At^2 + Bt + C = 0:
+// A = (dx / a) ^ 2 + (dy / b) ^ 2
+// B = 2 * (oxdx / a^2 + oydy / b^2)
+// C = (ox / a) ^ 2 + (oy / b) ^ 2 - 1
+RaycastResult raycast(const Ellipse& e, const Ray& ray)
+{
+	val_t a2 = 1 / (e.rx * e.rx);
+	val_t b2 = 1 / (e.ry * e.ry);
+
+	val_t A = ray.dir.x * ray.dir.x * a2 + ray.dir.y * ray.dir.y * b2;
+	val_t B = 2 * (ray.pos.x * ray.dir.x * a2 + ray.pos.y * ray.dir.y * b2);
+	val_t C = ray.pos.x * ray.pos.x * a2 + ray.pos.y * ray.pos.y * b2 - 1;
+
+	val_t disc = B * B - 4 * A * C;
+	if (disc < 0)
+	{
+		return { .hit = false };
+	}
+	else
+	{
+		val_t sqrtDisc = std::sqrt(disc);
+		return
+		{
+			.hit = true,
+			.entryT = (-B - sqrtDisc) / (2 * A),
+			.exitT  = (-B + sqrtDisc) / (2 * A)
+		};
+	}
 }
 
 val_t getMoI(const Ellipse& e, val_t mass)
@@ -177,6 +210,40 @@ bool contains(const Polygon& p, const Vec2& pt)
 		if ((B - A).cross(pt - A) < 0) return false;
 	}
 	return true;
+}
+
+// For plane/line segment P: n . (r - r0) = 0
+// letting r = o + t * d -> find the t solutions
+// results in t = -(o - r0) . n / (d . n)
+// repeat for every line segment in the polygon
+RaycastResult raycast(const Polygon& p, const Ray& ray)
+{
+	val_t entryT = -fizzmax<val_t>();
+	val_t exitT  =  fizzmax<val_t>();
+
+	const auto& verts = p.vertices;
+	uint32_t n = static_cast<uint32_t>(verts.size());
+	for (uint32_t i = 0; i < n; ++i)
+	{
+		Vec2 a = verts[i], b = verts[(i + 1) % n];
+
+		Vec2 edgeNormal = (b - a).perped();
+		val_t distance = (ray.pos - a).dot(edgeNormal);
+		val_t correctness = ray.dir.dot(edgeNormal);
+
+		if (abs(correctness) < epsilon) continue;
+
+		val_t t = -distance / correctness;
+
+		if (correctness * distance > 0) // if winding is CCW then both are +ve, if CW then both -ve
+			exitT  = std::min(exitT,  t);
+		else
+			entryT = std::max(entryT, t);
+
+		if (entryT > exitT) return { .hit = false };
+	}
+
+	return { .hit = true, .entryT = entryT, .exitT = exitT };
 }
 
 val_t getMoI(const Polygon& p, val_t mass)
@@ -361,14 +428,43 @@ Vec2 support(const Compound& c, const Vec2& dir)
 	return best;
 }
 
-uint32_t getFeature(const Compound& p, const Vec2& pos, const Vec2& normal)
+RaycastResult raycast(const ConvexPiece& piece, const Ray& ray)
 {
-	here;
-	return 0;
+	Ray localRay(ray.pos - piece.offset, piece.rot.transposed() * ray.dir);
+	return std::visit([&](const auto& shape) -> RaycastResult { return raycast(shape, localRay); }, piece.shape);
+}
+
+uint32_t getFeature(const Compound& cp, const Vec2& pos, const Vec2& normal)
+{
+	uint32_t bestPiece = 0;
+	val_t bestT = 0;
+	Ray ray(pos, normal);
+
+	for (uint32_t i = 0; i < static_cast<uint32_t>(cp.pieces.size()); ++i)
+	{
+		const auto& piece = cp.pieces[i];
+		RaycastResult cast = ops::raycast(piece, ray);
+		if (cast.hit && cast.exitT > 0 && cast.exitT > bestT)
+		{
+			bestT = cast.exitT;
+			bestPiece = i;
+		}
+	}
+
+	const auto& piece = cp.pieces[bestPiece];
+
+	Vec2 localPos = piece.rot.transposed() * (pos - piece.offset);
+	Vec2 localNormal = piece.rot.transposed() * normal;
+
+	uint32_t localFeature = std::visit([&](const auto& s) {
+		return getFeature(s, localPos, localNormal);
+	}, piece.shape);
+
+	return (bestPiece << 24) | (localFeature & 0xFFFFFF);
 }
 
 #pragma endregion
-};
+}
 
 namespace Fizziks
 {
@@ -749,7 +845,7 @@ void blowupSimplex(Simplex& simplex,
 		case (2): // line
 		{
 			const Vec2 line = simplex[1].CSO - simplex[0].CSO;
-			Vec2 perp = Vec2(-line.y, line.x); // in 2D vs 3D, don't need to be careful about tangent vectors
+			Vec2 perp = line.perped(); // in 2D vs 3D, don't need to be careful about tangent vectors
 			SupportVertex point = getCSOSupport(s1, p1, r1, s2, p2, r2, perp);
 			if ((point.CSO - simplex[0].CSO).squaredNorm() < epsilon)
 			{
@@ -788,7 +884,7 @@ Facet closestFacet(const Simplex& simplex, const Vec2& point)
 	Vec2 A = simplex[bestFacet.from].CSO;
 	Vec2 B = simplex[bestFacet.to].CSO;
 	Vec2 edge = B - A;
-	Vec2 dir(edge.y, -edge.x);   // perpendicular
+	Vec2 dir = edge.perped(); 
 	if (dir.dot(-A) > 0) dir = -dir;
 	bestFacet.dir = dir;
 
