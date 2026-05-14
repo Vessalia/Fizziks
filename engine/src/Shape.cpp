@@ -35,19 +35,24 @@ Polygon toInternal(const Fizziks::Rect& r)
 
 ShapeType toInternal(const Fizziks::Polygon& p)
 {
-	if (isConvex(p))
+	const Vec2 centroid = getCentroid(p.vertices);
+	std::vector<Vec2> verts = p.vertices;
+	val_t effectiveRadius = 0;
+	for (auto& vert : verts)
 	{
-		val_t effectiveRadius = 0;
-		for (auto& vert : p.vertices)
-		{
-			effectiveRadius = std::max(effectiveRadius, vert.norm());
-		}
+		vert -= centroid;
+		effectiveRadius = std::max(effectiveRadius, vert.norm());
+	}
 
-		return internal::Polygon{ p.vertices, effectiveRadius };
+	internal::Polygon inPoly(verts, effectiveRadius);
+
+	if (isConvex(inPoly))
+	{
+		return inPoly;
 	}
 	else
 	{
-		return decomposePolygon(p);
+		return decomposePolygon(inPoly);
 	}
 }
 
@@ -508,46 +513,12 @@ Rect createRect(val_t width, val_t height)
 
 Polygon createPolygon(const std::vector<Vec2>& vertices)
 {
-	auto centroid = getCentroid(vertices);
-	auto verts = vertices;
-	for (auto& vert : verts)
-	{
-		vert -= centroid;
-	}
-
-	return Polygon{ verts };
+	return Polygon{ vertices };
 }
 
 Capsule createCapsule(val_t capHeight, const Rect& body)
 {
 	return Capsule { capHeight, body };
-}
-
-bool isConvex(const Polygon& poly)
-{
-	int sign = 0;
-	int size = poly.vertices.size();
-	for (int i = 0; i < size; ++i)
-	{
-		auto& a = poly.vertices[i];
-		auto& b = poly.vertices[(i + 1) % size];
-		auto& c = poly.vertices[(i + 2) % size];
-
-		val_t cross = (c - b).cross(b - a);
-		if (std::abs(cross) > epsilon)
-		{
-			if (sign == 0) sign = (cross > 0) ? 1 : -1;
-			else if ((cross > 0) != (sign > 0)) return false;
-		}
-	}
-
-	return true;
-}
-
-internal::Compound decomposePolygon(const Polygon& poly)
-{
-	here;
-	return {};
 }
 
 val_t getMoI(const Shape& shape, val_t mass)
@@ -599,6 +570,32 @@ struct Facet
 	size_t from, to;
 	Vec2 dir;
 };
+
+bool isConvex(const Polygon& poly)
+{
+	int sign = 0;
+	int size = poly.vertices.size();
+	for (int i = 0; i < size; ++i)
+	{
+		auto& a = poly.vertices[i];
+		auto& b = poly.vertices[(i + 1) % size];
+		auto& c = poly.vertices[(i + 2) % size];
+
+		val_t cross = (c - b).cross(b - a);
+		if (std::abs(cross) > epsilon)
+		{
+			if (sign == 0) sign = (cross > 0) ? 1 : -1;
+			else if ((cross > 0) != (sign > 0)) return false;
+		}
+	}
+
+	return true;
+}
+
+Compound decomposePolygon(const Polygon& poly)
+{
+	return {};
+}
 
 val_t getMoI(const InternalShape& shape, val_t mass)
 {
