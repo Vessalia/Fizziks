@@ -4,7 +4,7 @@
 
 namespace Fizziks
 {
-struct FIZZIKS_API AABB
+struct AABB
 {
 	Vec2 min, max;
 	val_t hw = 0, hh = 0;

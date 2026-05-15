@@ -9,29 +9,29 @@
 // NOTE: positions and rotations here are relative to world-space, and about the centroid, not the user-based position
 namespace Fizziks
 {
-struct FIZZIKS_API Circle
+struct Circle
 {
 	val_t radius;
 };
 
-struct FIZZIKS_API Ellipse
+struct Ellipse
 {
 	val_t rx;
 	val_t ry;
 };
 
-struct FIZZIKS_API Rect
+struct Rect
 {
 	val_t width;
 	val_t height;
 };
 
-struct FIZZIKS_API Polygon
+struct Polygon
 {
 	std::vector<Vec2> vertices;
 };
 
-struct FIZZIKS_API Capsule
+struct Capsule
 {
 	val_t capHeight;
 	Rect body;
@@ -39,7 +39,7 @@ struct FIZZIKS_API Capsule
 
 using Shape = std::variant<Circle, Ellipse, Rect, Polygon, Capsule>;
 
-struct FIZZIKS_API Contact 
+struct Contact 
 {
 	Vec2 contactPointWorldA, contactPointWorldB;
 	Vec2 contactPointLocalA, contactPointLocalB;

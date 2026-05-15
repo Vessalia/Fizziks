@@ -4,7 +4,7 @@
 
 namespace Fizziks
 {
-struct FIZZIKS_API ColliderDef
+struct ColliderDef
 {
 	// inferred from other values i.e., ignored when set by user
 	uint32_t ID;
@@ -24,14 +24,14 @@ struct FIZZIKS_API ColliderDef
 	Vec2 pos;
 };
 
-enum class FIZZIKS_API BodyType
+enum class BodyType
 {
 	STATIC,
 	DYNAMIC,
 	KINEMATIC
 };
 
-struct FIZZIKS_API BodyDef
+struct BodyDef
 {
 	uint32_t layer = 0;
 

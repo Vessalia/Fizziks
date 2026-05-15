@@ -5,14 +5,14 @@
 
 namespace Fizziks
 {
-struct FIZZIKS_API Ray
+struct Ray
 {
 	Vec2 pos;
 	Vec2 dir;
 	val_t maxDist = -1;
 };
 
-struct FIZZIKS_API RaycastResult
+struct RaycastResult
 {
 	bool hit;
 	uint32_t ID;
@@ -20,5 +20,5 @@ struct FIZZIKS_API RaycastResult
 	val_t entryT, exitT;
 };
 
-val_t raycast(const Ray& ray, const AABB& aabb);
+FIZZIKS_API val_t raycast(const Ray& ray, const AABB& aabb);
 }
