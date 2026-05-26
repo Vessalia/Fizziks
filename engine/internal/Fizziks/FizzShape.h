@@ -14,6 +14,12 @@ struct Ellipse
 	val_t ry;
 };
 
+struct Edge
+{
+	uint32_t a, b;
+	bool operator==(const Edge&) const = default;
+};
+
 struct Polygon
 {
 	std::vector<Vec2> vertices;
@@ -54,4 +60,18 @@ FIZZIKS_API AABB getBounds(const InternalShape& s, const Vec2& centroid, val_t r
 
 FIZZIKS_API bool shapesOverlap(const InternalShape& s1, const Vec2& p1, val_t r1, const InternalShape& s2, const Vec2& p2, val_t r2);
 FIZZIKS_API Contact getShapeContact(const InternalShape& s1, const Vec2& p1, val_t r1, const InternalShape& s2, const Vec2& p2, val_t r2);
+}
+
+namespace std
+{
+template <>
+struct hash<Fizziks::internal::Edge>
+{
+	size_t operator()(const Fizziks::internal::Edge& e) const
+	{
+		size_t h1 = std::hash<int>{}(e.a);
+		size_t h2 = std::hash<int>{}(e.b);
+		return h1 ^ (h2 << 1);
+	}
+};
 }

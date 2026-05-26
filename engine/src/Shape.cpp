@@ -9,6 +9,81 @@
 #include <unordered_map>
 #include <numeric>
 
+namespace Fizziks
+{
+const Vec2 origin = Vec2::Zero();
+const val_t epsilon = val_t(0.0001); // should probably be tunable?
+
+// https://en.wikipedia.org/wiki/Centroid @ Of a polygon
+Vec2 getCentroid(const std::vector<Vec2>& vertices)
+{
+	Vec2 centroid = origin;
+	val_t area = 0;
+
+	size_t n = vertices.size();
+	for (size_t i = 0; i < n; ++i)
+	{
+		const Vec2& v0 = vertices[i];
+		const Vec2& v1 = vertices[(i + 1) % n];
+
+		val_t cross = v0.cross(v1);
+		centroid += (v0 + v1) * cross;
+		area += cross;
+	}
+
+	return area != 0 ? centroid / (3 * area) : origin;
+}
+
+Circle createCircle(val_t radius)
+{
+	return Circle{ radius };
+}
+
+Ellipse createEllipse(val_t rx, val_t ry)
+{
+	return Ellipse{ rx, ry };
+}
+
+Rect createRect(val_t width, val_t height)
+{
+	return Rect{ width, height };
+}
+
+Polygon createPolygon(const std::vector<Vec2>& vertices)
+{
+	return Polygon{ vertices };
+}
+
+Capsule createCapsule(val_t capHeight, const Rect& body)
+{
+	return Capsule { capHeight, body };
+}
+
+val_t getMoI(const Shape& shape, val_t mass)
+{
+	return internal::getMoI(internal::toInternal(shape), mass);
+}
+
+AABB getBounds(const Shape& s, const Vec2& centroid, val_t rot, bool tight)
+{
+	return getBounds(internal::toInternal(s), centroid, rot, tight);
+}
+
+bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t r1,
+				   const Shape& s2, const Vec2& p2, val_t r2)
+{
+	return shapesOverlap(internal::toInternal(s1), p1, r1,
+						 internal::toInternal(s2), p2, r2);
+}
+
+Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
+						const Shape& s2, const Vec2& p2, val_t rot2)
+{
+	return getShapeContact(internal::toInternal(s1), p1, rot1,
+						   internal::toInternal(s2), p2, rot2);
+}
+}
+
 // External to internal mapping functions
 namespace Fizziks::internal
 {
@@ -83,6 +158,231 @@ Polygon toInternal(const Fizziks::Rect& r)
 	};
 
 	return Polygon{ vertices, vertices[0].norm() };
+}
+
+bool isConvex(const Polygon& poly)
+{
+	int sign = 0;
+	int size = static_cast<int>(poly.vertices.size());
+	for (int i = 0; i < size; ++i)
+	{
+		auto& a = poly.vertices[i];
+		auto& b = poly.vertices[(i + 1) % size];
+		auto& c = poly.vertices[(i + 2) % size];
+
+		val_t cross = (c - b).cross(b - a);
+		if (std::abs(cross) > epsilon)
+		{
+			if (sign == 0) sign = (cross > 0) ? 1 : -1;
+			else if ((cross > 0) != (sign > 0)) return false;
+		}
+	}
+
+	return true;
+}
+
+std::vector<std::vector<uint32_t>> triangulate(const Polygon& poly)
+{
+	std::vector<std::vector<uint32_t>> triangulation;
+	const std::vector<Vec2>& vertices = poly.vertices;
+	std::vector<uint32_t> indices(vertices.size());
+	std::iota(indices.begin(), indices.end(), 0);
+
+	auto pointInTriangle = [](const Vec2& point, const Vec2 a, const Vec2 b, const Vec2 c)
+	{
+		return (b - a).cross(point - a) >= 0.0f &&
+			   (c - b).cross(point - b) >= 0.0f &&
+			   (a - c).cross(point - c) >= 0.0f;
+	};
+
+	auto isEar = [&](uint32_t i) -> bool
+	{
+		uint32_t prev = indices[(i + indices.size() - 1) % indices.size()];
+		uint32_t curr = indices[i];
+		uint32_t next = indices[(i + 1) % indices.size()];
+
+		Vec2 A = vertices[curr], B = vertices[prev], C = vertices[next];
+		Vec2 AB = B - A, AC = C - A;
+
+		if (AB.cross(AC) <= 0) return false;
+
+		for (int j = 0; j < indices.size(); ++j)
+		{
+			uint32_t idx = indices[j];
+			if (idx == curr || idx == prev || idx == next) continue;
+			if (pointInTriangle(vertices[idx], B, A, C)) return false;
+		}
+
+		return true;
+	};
+
+	while (indices.size() > 3)
+	{
+		for (int i = 0; i < indices.size(); ++i)
+		{
+			if (isEar(i))
+			{
+				triangulation.push_back({
+					indices[(i + indices.size() - 1) % indices.size()],
+					indices[i],
+					indices[(i + 1) % indices.size()]
+				});
+
+				indices.erase(indices.begin() + i);
+				break; // since we mutated indices, we need to reset our iteration
+			}
+		}
+	}
+
+	if (indices.size() == 3)
+	{
+		triangulation.push_back({
+			indices[0],
+			indices[1],
+			indices[2]
+		});
+	}
+
+	return triangulation;
+}
+
+// assume polygon is well formed at this point
+Compound decomposePolygon(const Polygon& poly)
+{
+	std::vector<std::vector<uint32_t>> triangulation = triangulate(poly);
+
+	auto makeEdge = [](uint32_t a, uint32_t b) -> Edge { return Edge(std::min(a,b), std::max(a,b)); };
+
+	std::unordered_map<Edge, bool> borderEdges;
+	for (uint32_t i = 0; i < static_cast<uint32_t>(poly.vertices.size()); ++i)
+	{
+		borderEdges[makeEdge(i, (i + 1) % poly.vertices.size())] = true;
+	}
+
+	auto getInternalEdges = [&](const std::vector<std::vector<uint32_t>>& polyList) -> std::unordered_map<Edge, std::vector<int>>
+	{
+		std::unordered_map<Edge, std::vector<int>> internalEdges;
+		for (int t = 0; t < polyList.size(); t++)
+		{
+			const auto& tri = polyList[t];
+			for (int i = 0; i < tri.size(); i++)
+			{
+				auto edge = makeEdge(tri[i], tri[(i + 1) % tri.size()]);
+				if (!borderEdges.contains(edge))
+				{
+					internalEdges[edge].push_back(t);
+				}
+			}
+		}
+
+		return internalEdges;
+	};
+
+	auto mergePolygons = [&](const std::vector<uint32_t>& p1,
+							 const std::vector<uint32_t>& p2,
+							 const Edge& sharedEdge) -> std::vector<uint32_t>
+	{
+		std::vector<uint32_t> merged;
+		merged.reserve(p1.size() + p2.size() - 2);
+
+		int start1 = -1;
+		for (int i = 0; i < p1.size(); ++i)
+		{
+			int j = (i + 1) % p1.size();
+			const Edge edge = makeEdge(p1[i], p1[j]);
+			if (edge == sharedEdge) { start1 = j; break; }
+		}
+
+		int start2 = -1;
+		for (int i = 0; i < p2.size(); ++i)
+		{
+			if (p2[i] == p1[start1]) { start2 = (i + 1) % p2.size(); break; }
+		}
+
+		for (int i = 0; i < p1.size() - 1; ++i)
+		{
+			merged.push_back(p1[(start1 + i) % p1.size()]);
+		}
+
+		for (int i = 0; i < p2.size() - 1; ++i)
+		{
+			merged.push_back(p2[(start2 + i) % p2.size()]);
+		}
+
+		return merged;
+	};
+
+	auto isConvexPiece = [&](const std::vector<uint32_t>& piece) -> bool
+	{
+		int sign = 0;
+		int size = static_cast<int>(piece.size());
+		for (int i = 0; i < size; ++i)
+		{
+			const Vec2& a = poly.vertices[piece[i]];
+			const Vec2& b = poly.vertices[piece[(i + 1) % size]];
+			const Vec2& c = poly.vertices[piece[(i + 2) % size]];
+			val_t cross = (c - b).cross(b - a);
+			if (std::abs(cross) > epsilon)
+			{
+				if (sign == 0) sign = (cross > 0) ? 1 : -1;
+				else if ((cross > 0) != (sign > 0)) return false;
+			}
+		}
+
+		return true;
+	};
+
+	std::vector<std::vector<uint32_t>> current = triangulation;
+	std::vector<std::vector<uint32_t>> next;
+	next.reserve(current.size());
+
+	bool changed = true;
+	while (changed)
+	{
+		changed = false;
+		std::vector<bool> merged(current.size(), false);
+		auto internalEdges = getInternalEdges(current);
+
+		for (auto& [edge, connected] : internalEdges)
+		{
+			if (connected.size() < 2) continue;
+			int t1 = connected[0], t2 = connected[1];
+			if (merged[t1] || merged[t2]) continue;
+
+			std::vector<uint32_t> candidate = mergePolygons(current[t1], current[t2], edge);
+			if (isConvexPiece(candidate))
+			{
+				next.push_back(std::move(candidate));
+				merged[t1] = merged[t2] = true;
+				changed = true;
+			}
+		}
+
+		for (int i = 0; i < (int)current.size(); i++)
+		{
+			if (!merged[i])
+			{
+				next.push_back(current[i]);
+			}
+		}
+
+		std::swap(current, next);
+		next.clear();
+	}
+
+	Compound compound;
+	for (int i = 0; i < current.size(); ++i)
+	{
+		std::vector<Vec2> vertices;
+		for (int j : current[i])
+		{
+			vertices.push_back(poly.vertices[j]);
+		}
+
+		compound.pieces.push_back(toConvexPiece(vertices));
+	}
+
+	return compound;
 }
 
 // this is pretty awkward, should probably fix this up
@@ -207,6 +507,7 @@ AABB getBoundsFast(const Ellipse& e, const Vec2& centroid)
 
 AABB getBoundsTight(const Ellipse& e, const Vec2& centroid, const Mat2& rot)
 {
+	rot; // supress C4100
 	return getBoundsFast(e, centroid);
 }
 
@@ -235,6 +536,7 @@ Vec2 support(const Ellipse& e, const Vec2& dir)
 constexpr int bucketCount = 16; // should definitely be based on size somehow
 uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 {
+	pos; // supress C4100
 	if (e.rx == e.ry)
 	{
 		return 0;
@@ -298,7 +600,7 @@ RaycastResult raycast(const Polygon& p, const Ray& ray)
 
 val_t getMoI(const Polygon& p, val_t mass)
 {
-	val_t MoI = 0;
+	val_t moi = 0;
 
 	val_t area = 0;
 	val_t cx = 0, cy = 0;
@@ -313,14 +615,14 @@ val_t getMoI(const Polygon& p, val_t mass)
 		cx += (v0.x + v1.x) * cross;
 		cy += (v0.y + v1.y) * cross;
 
-		MoI += (v0.x * v0.x + v0.x * v1.x + v1.x * v1.x +
+		moi += (v0.x * v0.x + v0.x * v1.x + v1.x * v1.x +
 		v0.y * v0.y + v0.y * v1.y + v1.y * v1.y) * cross;
 	}
 
 	cx /= (3 * area);
 	cy /= (3 * area);
 
-	MoI = MoI / 12 - mass * (cx * cx + cy * cy);
+	return moi / 12 - mass * (cx * cx + cy * cy);
 }
 
 // has an effective radius, so no fast impl needed
@@ -354,6 +656,9 @@ Vec2 support(const Polygon& p, const Vec2& dir)
 	}
 	return best;
 }
+
+val_t facingWeight = val_t(1);
+val_t proxWeight = val_t(0.1);
 
 uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 {
@@ -392,6 +697,28 @@ uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 
 #pragma region Compound ops
 
+// has an effective radius, so no fast impl needed
+AABB getBoundsTight(const Compound& cp, const Vec2& centroid, const Mat2& rot)
+{
+	Vec2 min = vec_max(), max = vec_min();
+	for (const ConvexPiece& piece : cp.pieces)
+	{
+		const Mat2 rotation = rot * piece.rot;
+		const Vec2 offset = rot * piece.offset + centroid;
+
+		std::visit([&](const auto& shape)
+		{
+			AABB box = getBoundsTight(shape, offset, rotation);
+			min.x = std::min(min.x, box.min.x);
+			min.y = std::min(min.y, box.min.y);
+			max.x = std::max(max.x, box.max.x);
+			max.y = std::max(max.y, box.max.y);
+		}, piece.shape);
+	}
+
+	return createAABB(min, max);
+}
+
 constexpr val_t integrationStep = (val_t)(1.0 / 32);
 
 // numerical integration approach to avoid overcounting areas
@@ -429,28 +756,6 @@ val_t getMoI(const Compound& c, val_t mass)
 	val_t density = mass / area;
 	val_t moi = density * cellArea * moiAccum;
 	return moi;
-}
-
-// has an effective radius, so no fast impl needed
-AABB getBoundsTight(const Compound& cp, const Vec2& centroid, const Mat2& rot)
-{
-	Vec2 min = vec_max(), max = vec_min();
-	for (const ConvexPiece& piece : cp.pieces)
-	{
-		const Mat2 rotation = rot * piece.rot;
-		const Vec2 offset = rot * piece.offset + centroid;
-
-		std::visit([&](const auto& shape)
-		{
-			AABB box = getBoundsTight(shape, offset, rotation);
-			min.x = std::min(min.x, box.min.x);
-			min.y = std::min(min.y, box.min.y);
-			max.x = std::max(max.x, box.max.x);
-			max.y = std::max(max.y, box.max.y);
-		}, piece.shape);
-	}
-
-	return createAABB(min, max);
 }
 
 Vec2 support(const ConvexPiece& piece, const Vec2& dir)
@@ -516,81 +821,6 @@ uint32_t getFeature(const Compound& cp, const Vec2& pos, const Vec2& normal)
 #pragma endregion
 }
 
-namespace Fizziks
-{
-const Vec2 origin = Vec2::Zero();
-const val_t epsilon = val_t(0.0001); // should probably be tunable?
-
-// https://en.wikipedia.org/wiki/Centroid @ Of a polygon
-Vec2 getCentroid(const std::vector<Vec2>& vertices)
-{
-	Vec2 centroid = origin;
-	val_t area = 0;
-
-	size_t n = vertices.size();
-	for (size_t i = 0; i < n; ++i)
-	{
-		const Vec2& v0 = vertices[i];
-		const Vec2& v1 = vertices[(i + 1) % n];
-
-		val_t cross = v0.cross(v1);
-		centroid += (v0 + v1) * cross;
-		area += cross;
-	}
-
-	return area != 0 ? centroid / (3 * area) : origin;
-}
-
-Circle createCircle(val_t radius)
-{
-	return Circle{ radius };
-}
-
-Ellipse createEllipse(val_t rx, val_t ry)
-{
-	return Ellipse{ rx, ry };
-}
-
-Rect createRect(val_t width, val_t height)
-{
-	return Rect{ width, height };
-}
-
-Polygon createPolygon(const std::vector<Vec2>& vertices)
-{
-	return Polygon{ vertices };
-}
-
-Capsule createCapsule(val_t capHeight, const Rect& body)
-{
-	return Capsule { capHeight, body };
-}
-
-val_t getMoI(const Shape& shape, val_t mass)
-{
-	return internal::getMoI(internal::toInternal(shape), mass);
-}
-
-AABB getBounds(const Shape& s, const Vec2& centroid, val_t rot, bool tight)
-{
-	return getBounds(internal::toInternal(s), centroid, rot, tight);
-}
-
-bool shapesOverlap(const Shape& s1, const Vec2& p1, val_t r1,
-				   const Shape& s2, const Vec2& p2, val_t r2)
-{
-	return shapesOverlap(internal::toInternal(s1), p1, r1,
-						 internal::toInternal(s2), p2, r2);
-}
-
-Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
-						const Shape& s2, const Vec2& p2, val_t rot2)
-{
-	return getShapeContact(internal::toInternal(s1), p1, rot1,
-						   internal::toInternal(s2), p2, rot2);
-}
-}
-
 namespace Fizziks::internal
 {
 const int maxIterationsGJK = 30;
@@ -615,237 +845,6 @@ struct Facet
 	size_t from, to;
 	Vec2 dir;
 };
-
-bool isConvex(const Polygon& poly)
-{
-	int sign = 0;
-	int size = poly.vertices.size();
-	for (int i = 0; i < size; ++i)
-	{
-		auto& a = poly.vertices[i];
-		auto& b = poly.vertices[(i + 1) % size];
-		auto& c = poly.vertices[(i + 2) % size];
-
-		val_t cross = (c - b).cross(b - a);
-		if (std::abs(cross) > epsilon)
-		{
-			if (sign == 0) sign = (cross > 0) ? 1 : -1;
-			else if ((cross > 0) != (sign > 0)) return false;
-		}
-	}
-
-	return true;
-}
-
-std::vector<std::vector<uint32_t>> triangulate(const Polygon& poly)
-{
-	std::vector<std::vector<uint32_t>> triangulation;
-	const std::vector<Vec2>& vertices = poly.vertices;
-	std::vector<uint32_t> indices(vertices.size());
-	std::iota(indices.begin(), indices.end(), 0);
-
-	auto pointInTriangle = [](const Vec2& point, const Vec2 a, const Vec2 b, const Vec2 c)
-	{
-		return (b - a).cross(point - a) >= 0.0f &&
-			   (c - b).cross(point - b) >= 0.0f &&
-			   (a - c).cross(point - c) >= 0.0f;
-	};
-
-	auto isEar = [&](uint32_t i) -> bool
-	{
-		uint32_t prev = indices[(i + indices.size() - 1) % indices.size()];
-		uint32_t curr = indices[i];
-		uint32_t next = indices[(i + 1) % indices.size()];
-
-		Vec2 A = vertices[curr], B = vertices[prev], C = vertices[next];
-		Vec2 AB = B - A, AC = C - A;
-
-		if (AB.cross(AC) <= 0) return false;
-
-		for (int j = 0; j < indices.size(); ++j)
-		{
-			uint32_t idx = indices[j];
-			if (idx == curr || idx == prev || idx == next) continue;
-			if (pointInTriangle(vertices[idx], B, A, C)) return false;
-		}
-
-		return true;
-	};
-
-	while (indices.size() > 3)
-	{
-		for (int i = 0; i < indices.size(); ++i)
-		{
-			if (isEar(i))
-			{
-				triangulation.push_back({
-					indices[(i + indices.size() - 1) % indices.size()],
-					indices[i],
-					indices[(i + 1) % indices.size()]
-				});
-
-				indices.erase(indices.begin() + i);
-				break; // since we mutated indices, we need to reset our iteration
-			}
-		}
-	}
-
-	if (indices.size() == 3)
-	{
-		triangulation.push_back({
-			indices[0],
-			indices[1],
-			indices[2]
-		});
-	}
-
-	return triangulation;
-}
-
-struct Edge
-{
-	uint32_t a, b;
-	bool operator==(const Edge&) const = default;
-};
-
-// assume polygon is well formed at this point
-Compound decomposePolygon(const Polygon& poly)
-{
-	std::vector<std::vector<uint32_t>> triangulation = triangulate(poly);
-
-	auto makeEdge = [](uint32_t a, uint32_t b) -> Edge { return Edge(std::min(a,b), std::max(a,b)); };
-
-	std::unordered_map<Edge, bool> borderEdges;
-	for (uint32_t i = 0; i < static_cast<uint32_t>(poly.vertices.size()); ++i)
-	{
-		borderEdges[makeEdge(i, (i + 1) % poly.vertices.size())] = true;
-	}
-
-	auto getInternalEdges = [&](const std::vector<std::vector<uint32_t>>& polyList) -> std::unordered_map<Edge, std::vector<int>>
-	{
-		std::unordered_map<Edge, std::vector<int>> internalEdges;
-		for (int t = 0; t < polyList.size(); t++)
-		{
-			const auto& tri = polyList[t];
-			for (int i = 0; i < tri.size(); i++)
-			{
-				auto edge = makeEdge(tri[i], tri[(i + 1) % tri.size()]);
-				if (!borderEdges.contains(edge))
-				{
-					internalEdges[edge].push_back(t);
-				}
-			}
-		}
-
-		return internalEdges;
-	};
-
-	auto mergePolygons = [&](const std::vector<uint32_t>& p1,
-							 const std::vector<uint32_t>& p2,
-							 const Edge& sharedEdge) -> std::vector<uint32_t>
-	{
-		std::vector<uint32_t> merged;
-		merged.reserve(p1.size() + p2.size() - 2);
-
-		int start1 = -1;
-		for (int i = 0; i < p1.size(); ++i)
-		{
-			int j = (i + 1) % p1.size();
-			const Edge edge = makeEdge(p1[i], p1[j]);
-			if (edge == sharedEdge) { start1 = j; break; }
-		}
-
-		int start2 = -1;
-		for (int i = 0; i < p2.size(); ++i)
-		{
-			if (p2[i] == p1[start1]) { start2 = (i + 1) % p2.size(); break; }
-		}
-
-		for (int i = 0; i < p1.size() - 1; ++i)
-		{
-			merged.push_back(p1[(start1 + i) % p1.size()]);
-		}
-
-		for (int i = 0; i < p2.size() - 1; ++i)
-		{
-			merged.push_back(p2[(start2 + i) % p2.size()]);
-		}
-
-		return merged;
-	};
-
-	auto isConvexPiece = [&](const std::vector<uint32_t>& p) -> bool
-	{
-		int sign = 0;
-		int size = p.size();
-		for (int i = 0; i < size; ++i)
-		{
-			const Vec2& a = poly.vertices[p[i]];
-			const Vec2& b = poly.vertices[p[(i + 1) % size]];
-			const Vec2& c = poly.vertices[p[(i + 2) % size]];
-			val_t cross = (c - b).cross(b - a);
-			if (std::abs(cross) > epsilon)
-			{
-				if (sign == 0) sign = (cross > 0) ? 1 : -1;
-				else if ((cross > 0) != (sign > 0)) return false;
-			}
-		}
-
-		return true;
-	};
-
-	std::vector<std::vector<uint32_t>> current = triangulation;
-	std::vector<std::vector<uint32_t>> next;
-	next.reserve(current.size());
-
-	bool changed = true;
-	while (changed)
-	{
-		changed = false;
-		std::vector<bool> merged(current.size(), false);
-		auto internalEdges = getInternalEdges(current);
-
-		for (auto& [edge, connected] : internalEdges)
-		{
-			if (connected.size() < 2) continue;
-			int t1 = connected[0], t2 = connected[1];
-			if (merged[t1] || merged[t2]) continue;
-
-			std::vector<uint32_t> candidate = mergePolygons(current[t1], current[t2], edge);
-			if (isConvexPiece(candidate))
-			{
-				next.push_back(std::move(candidate));
-				merged[t1] = merged[t2] = true;
-				changed = true;
-			}
-		}
-
-		for (int i = 0; i < (int)current.size(); i++)
-		{
-			if (!merged[i])
-			{
-				next.push_back(current[i]);
-			}
-		}
-
-		std::swap(current, next);
-		next.clear();
-	}
-
-	Compound compound;
-	for (int i = 0; i < current.size(); ++i)
-	{
-		std::vector<Vec2> vertices;
-		for (int j : current[i])
-		{
-			vertices.push_back(poly.vertices[j]);
-		}
-
-		compound.pieces.push_back(toConvexPiece(vertices));
-	}
-
-	return compound;
-}
 
 val_t getMoI(const InternalShape& shape, val_t mass)
 {
@@ -1166,9 +1165,6 @@ Contact getCircleCircleContact(const Ellipse& c1, const Vec2& p1, const Mat2& r1
 
 	return contact;
 }
-
-val_t facingWeight = val_t(1);
-val_t proxWeight = val_t(0.1);
 
 Contact getShapeContact(const InternalShape& shape1, const Vec2& p1, val_t rot1,
 						const InternalShape& shape2, const Vec2& p2, val_t rot2)
