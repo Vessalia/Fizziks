@@ -24,6 +24,7 @@ if(MSVC)
 		/MP             # parallel compilation
 		/Zc:__cplusplus # report correct __cplusplus value
 		/wd4251         # disable C4251: needs dll-interface for STL members
+		/wd4100         # disable C4100: lazy method overloads
 	)
 else()
 	target_compile_options(Fizziks PRIVATE

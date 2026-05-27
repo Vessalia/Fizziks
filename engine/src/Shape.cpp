@@ -507,7 +507,6 @@ AABB getBoundsFast(const Ellipse& e, const Vec2& centroid)
 
 AABB getBoundsTight(const Ellipse& e, const Vec2& centroid, const Mat2& rot)
 {
-	rot; // supress C4100
 	return getBoundsFast(e, centroid);
 }
 
@@ -536,7 +535,6 @@ Vec2 support(const Ellipse& e, const Vec2& dir)
 constexpr int bucketCount = 16; // should definitely be based on size somehow
 uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 {
-	pos; // supress C4100
 	if (e.rx == e.ry)
 	{
 		return 0;
@@ -890,7 +888,7 @@ SupportVertex getCSOSupport(const ShapeType& s1, const Vec2& p1, const Mat2& r1,
 
 uint32_t getFeature(const ShapeType& shape, const Vec2& pos, const Vec2& normal)
 {
-	return std::visit([&pos, &normal](const auto& s) -> uint32_t { return getFeature(s, pos, normal); }, shape);
+	return std::visit([&pos, &normal](const auto& s) -> uint32_t { return ops::getFeature(s, pos, normal); }, shape);
 }
 
 Shape toExternal(const InternalShape& shape)
