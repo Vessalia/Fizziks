@@ -3,8 +3,8 @@
 #include <Fizziks/RigidBodyImpl.h>
 #include <Fizziks/FizzWorldImpl.h>
 
-#define THIS (impl)
-#define WORLD (impl->world->impl)
+#define THIS (impl.get())
+#define WORLD (THIS->world->impl)
 
 namespace Fizziks::internal
 {

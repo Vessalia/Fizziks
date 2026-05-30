@@ -115,7 +115,7 @@ void FizzWorldImpl::remove_collider(const RigidBodyImpl& rb, uint32_t ID)
 	BodyData* body = get_body(rb);
 	if (!body) return;
 	std::vector<Collider>& colliders = body->colliders;
-	if(ID < 0 || colliders.size() < ID)
+	if(colliders.size() <= ID)
 	{
 		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be removed", ID);
 		return;
@@ -129,7 +129,7 @@ Collider FizzWorldImpl::get_collider(const RigidBodyImpl& rb, uint32_t ID)
 	BodyData* body = get_body(rb);
 	if (!body) return {};
 	std::vector<Collider>& colliders = body->colliders;
-	if(ID < 0 || colliders.size() < ID)
+	if(colliders.size() <= ID)
 	{
 		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be retrieved", ID);
 		return {};
@@ -143,7 +143,7 @@ void FizzWorldImpl::set_collider(const RigidBodyImpl& rb, uint32_t ID, const Col
 	BodyData* body = get_body(rb);
 	if (!body) return;
 	std::vector<Collider>& colliders = body->colliders;
-	if(ID < 0 || colliders.size() < ID)
+	if(colliders.size() <= ID)
 	{
 		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be set", ID);
 		return;
