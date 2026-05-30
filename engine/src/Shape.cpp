@@ -381,6 +381,7 @@ Compound decomposePolygon(const Polygon& poly)
 
 		compound.pieces.push_back(toConvexPiece(vertices));
 	}
+	compound.effectiveRadius = poly.effectiveRadius;
 
 	return compound;
 }
