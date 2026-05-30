@@ -10,7 +10,7 @@
 
 namespace Fizziks::internal
 {
-class FizzWorldImpl 
+class FizzWorldImpl
 {
 	friend class FizzWorld;
 	friend class RigidBody;
@@ -101,7 +101,7 @@ private:
 	std::vector<CollisionResolution> collisionResolutions;
 	std::unordered_map<ContactKey, CollisionResolution> warmStartCache;
 
-	std::queue<RigidBodyImpl> destructionQueue;
+	std::queue<RigidBody> destructionQueue;
 
 	Broadphase* broadphase;
 

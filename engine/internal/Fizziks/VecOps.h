@@ -25,7 +25,7 @@ inline val_t    vec_norm      (const Vector2p& v)                             { 
 inline val_t    vec_norm2     (const Vector2p& v)                             { return glm::length2(v); }
 inline Vector2p vec_normalize (const Vector2p& v)                             { return glm::normalize(v); }
 inline void     vec_normalize_inplace (Vec2& v)                               { map(v) = glm::normalize(map(v)); }
-inline Vector2p vec_perp      (const Vector2p& v)                             { return Vector2p(v.y, v.x); }
+inline Vector2p vec_perp      (const Vector2p& v)                             { return Vector2p(-v.y, v.x); }
 inline Vector2p vec_rotate    (const Vector2p& v, val_t a)                    { return glm::rotate(v, a); }
 inline Vector2p vec_lerp      (const Vector2p& a, const Vector2p& b, val_t t) { return glm::mix(a, b, t); }
 
@@ -48,7 +48,7 @@ inline val_t    vec_norm2     (const Vector2p& v)                             { 
 inline Vector2p vec_normalize (const Vector2p& v)                             { return v.normalized(); }
 inline void     vec_normalize_inplace (Vec2& v)                               { map(v).normalize(); }
 inline Vector2p vec_rotate    (const Vector2p& v, val_t a)                    { return (Rotation2p(a) * v).eval(); }
-inline Vector2p vec_perp      (const Vector2p& v)                             { return Vector2p(v.y(), v.x()); }
+inline Vector2p vec_perp      (const Vector2p& v)                             { return Vector2p(-v.y(), v.x()); }
 inline Vector2p vec_lerp      (const Vector2p& a, const Vector2p& b, val_t t) { return (a + t * (b - a)).eval(); }
 
 // Mat2

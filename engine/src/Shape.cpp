@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include <array>
-#include <unordered_map>
+#include <map>
 #include <numeric>
 
 namespace Fizziks
@@ -204,7 +204,7 @@ std::vector<std::vector<uint32_t>> triangulate(const Polygon& poly)
 		Vec2 A = vertices[curr], B = vertices[prev], C = vertices[next];
 		Vec2 AB = B - A, AC = C - A;
 
-		if (AB.cross(AC) <= 0) return false;
+		if (AB.cross(AC) >= 0) return false;
 
 		for (int j = 0; j < indices.size(); ++j)
 		{
@@ -253,15 +253,15 @@ Compound decomposePolygon(const Polygon& poly)
 
 	auto makeEdge = [](uint32_t a, uint32_t b) -> Edge { return Edge(std::min(a,b), std::max(a,b)); };
 
-	std::unordered_map<Edge, bool> borderEdges;
+	std::map<Edge, bool> borderEdges;
 	for (uint32_t i = 0; i < static_cast<uint32_t>(poly.vertices.size()); ++i)
 	{
 		borderEdges[makeEdge(i, (i + 1) % poly.vertices.size())] = true;
 	}
 
-	auto getInternalEdges = [&](const std::vector<std::vector<uint32_t>>& polyList) -> std::unordered_map<Edge, std::vector<int>>
+	auto getInternalEdges = [&](const std::vector<std::vector<uint32_t>>& polyList) -> std::map<Edge, std::vector<int>>
 	{
-		std::unordered_map<Edge, std::vector<int>> internalEdges;
+		std::map<Edge, std::vector<int>> internalEdges;
 		for (int t = 0; t < polyList.size(); t++)
 		{
 			const auto& tri = polyList[t];
@@ -403,7 +403,7 @@ ShapeType toInternal(const Fizziks::Polygon& p)
 
 Compound toInternal(const Fizziks::Capsule& cp)
 {
-	const Ellipse cap { cp.body.width, cp.capHeight };
+	const Ellipse cap { cp.body.width / 2, cp.capHeight };
 	const Mat2 noRot = Mat2::Rotation(0);
 
 	ConvexPiece topCap { cap, Vec2(0,  cp.body.height / 2), noRot };
@@ -541,7 +541,7 @@ uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 	}
 	else
 	{
-		float angle = std::atan2(normal.y, normal.x);
+		val_t angle = std::atan2(normal.y, normal.x);
 		int bucket = static_cast<int>((angle + PI) / (TWO_PI) * bucketCount) % bucketCount;
 		return static_cast<uint32_t>(bucket);
 	}
@@ -620,7 +620,9 @@ val_t getMoI(const Polygon& p, val_t mass)
 	cx /= (3 * area);
 	cy /= (3 * area);
 
-	return moi / 12 - mass * (cx * cx + cy * cy);
+	val_t actualArea = std::abs(area) * val_t(0.5);
+	val_t density = mass / actualArea;
+	return density * (moi / 12) - mass * (cx * cx + cy * cy);
 }
 
 // has an effective radius, so no fast impl needed
@@ -662,7 +664,7 @@ uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 {
 	uint32_t bestIndex = 0;
 
-	val_t bestScore = fizzmax<val_t>();
+	val_t bestScore = fizzmin<val_t>();
 	for (uint32_t i = 0; i < static_cast<uint32_t>(p.vertices.size()); ++i)
 	{
 		Vec2 A = p.vertices[i];
@@ -670,7 +672,7 @@ uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 		Vec2 AB = B - A;
 		Vec2 AP = pos - A;
 
-		Vec2 edgeNormal = Vec2(AB.y, -AB.x);
+		Vec2 edgeNormal = AB.perped();
 		val_t edgeLen = edgeNormal.norm();
 		if (edgeLen < epsilon) continue;
 
@@ -834,7 +836,7 @@ struct SupportVertex
 		return CSO;
 	}
 
-	bool operator==(const SupportVertex&) const = default;
+	bool operator<=>(const SupportVertex&) const = default;
 };
 using Simplex = std::vector<SupportVertex>;
 
@@ -972,7 +974,7 @@ void reduceSimplex(Simplex& simplex, Vec2& dir)
 		{
 			if (AC.dot(-A) > 0)
 			{
-				dir = lefttriplecross(AC, -A, AC); // this is the same value as our outer if, but is more 3D friendly since this may point out of the trangles plane
+				dir = lefttriplecross(AC, -A, AC); // this is the same value as our outer if, but is more 3D friendly since this may point out of the triangles plane
 				simplex.erase(simplex.begin() + 1); // simplex = { simplex[0], simplex[2] };
 			}
 			else if (AB.dot(-A) > 0) // it is possible with a very wide angle we can be infront of AB
@@ -1190,7 +1192,7 @@ Contact getShapeContact(const InternalShape& shape1, const Vec2& p1, val_t rot1,
 	int iterations = 0;
 	while (iterations++ < maxIterationsEPA && (support.CSO - lastSupport.CSO).squaredNorm() > epsilon)
 	{
-		// since s1 and s2 is convex, so is their minkowski difference,
+		// since s1 and s2 is convex, so is their Minkowski difference,
 		// so we don't need to remove any vertices
 		size_t insert = (facet.from + 1) % simplex.size();
 		simplex.insert(simplex.begin() + insert, support);

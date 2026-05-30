@@ -8,16 +8,16 @@
 
 namespace Fizziks::internal
 {
+struct Edge
+{
+	uint32_t a, b;
+	auto operator<=>(const Edge&) const = default;
+};
+
 struct Ellipse
 {
 	val_t rx;
 	val_t ry;
-};
-
-struct Edge
-{
-	uint32_t a, b;
-	bool operator==(const Edge&) const = default;
 };
 
 struct Polygon
