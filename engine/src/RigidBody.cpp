@@ -4,7 +4,7 @@
 #include <Fizziks/FizzWorldImpl.h>
 
 #define THIS (impl.get())
-#define WORLD (THIS->world->impl)
+#define WORLD (THIS->world->impl.get())
 
 namespace Fizziks::internal
 {
@@ -19,12 +19,7 @@ namespace Fizziks
 void RigidBody::destroy()
 {
 	if (!THIS || !WORLD) return;
-
-	if (THIS->world)
-	{
-		THIS->world->destroyBody(*this);
-		THIS->world = nullptr;
-	}
+	THIS->world->destroyBody(*this);
 }
 
 RigidBody& RigidBody::setBody(const BodyDef& def)
