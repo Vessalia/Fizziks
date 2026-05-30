@@ -7,10 +7,16 @@
 #include <vector>
 #include <queue>
 #include <unordered_map>
+#include <memory>
 
 namespace Fizziks::internal
 {
 class FizzWorldImpl;
+
+struct FIZZIKS_API FizzWorldImplDeleter
+{
+	void operator()(FizzWorldImpl* p) const;
+};
 }
 
 namespace Fizziks
@@ -27,7 +33,13 @@ public:
 
 	FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timeStep, AccelStruct accel = AccelStruct::BVH);
 	FizzWorld() : FizzWorld(20, 20, 5, 1 / 20.f, AccelStruct::BVH) { }
-	~FizzWorld();
+	~FizzWorld() = default;
+
+	FizzWorld(FizzWorld&&) noexcept = default;
+	FizzWorld& operator=(FizzWorld&&) noexcept = default;
+
+	FizzWorld(const FizzWorld&) = delete;
+	FizzWorld& operator=(const FizzWorld&) = delete;
 
 	RigidBody createBody(const BodyDef& def);
 	void destroyBody(RigidBody& body);
@@ -41,6 +53,6 @@ public:
 private:
 	friend class RigidBody;
 
-	internal::FizzWorldImpl* impl;
+	std::unique_ptr<internal::FizzWorldImpl, internal::FizzWorldImplDeleter> impl;
 };
 }
