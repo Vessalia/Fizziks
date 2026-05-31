@@ -1,9 +1,8 @@
 #pragma once
 #include <Fizziks/Fizziks.h>
-#include <Fizziks/Shape.h>
+#include <Fizziks/AABB.h>
 #include <Fizziks/Vec.h>
 #include <Fizziks/Ray.h>
-#include <Fizziks/RigidDef.h>
 
 namespace Fizziks::internal
 {

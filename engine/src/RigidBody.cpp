@@ -3,20 +3,23 @@
 #include <Fizziks/RigidBodyImpl.h>
 #include <Fizziks/FizzWorldImpl.h>
 
-#define THIS (impl)
-#define WORLD (impl->world->impl)
+#define THIS (impl.get())
+#define WORLD (THIS->world->impl.get())
+
+namespace Fizziks::internal
+{
+void RigidBodyImplDeleter::operator()(RigidBodyImpl* p) const
+{
+	delete p;
+}
+}
 
 namespace Fizziks
 {
-void RigidBody::destroy() 
-{ 
+void RigidBody::destroy()
+{
 	if (!THIS || !WORLD) return;
-
-	if (THIS->world)
-	{
-		THIS->world->destroyBody(*this);
-		THIS->world = nullptr;
-	}
+	THIS->world->destroyBody(*this);
 }
 
 RigidBody& RigidBody::setBody(const BodyDef& def)
@@ -25,31 +28,55 @@ RigidBody& RigidBody::setBody(const BodyDef& def)
 	return *this;
 }
 
-RigidBody& RigidBody::applyForce(const Vec2& force, const Vec2& at) 
+RigidBody& RigidBody::applyForce(const Vec2& force, const Vec2& at)
 {
-	WORLD->apply_force(*THIS, force, at); 
+	WORLD->apply_force(*THIS, force, at);
 	return *this;
 }
 
-RigidBody& RigidBody::addCollider(const Collider& collider)
+RigidBody& RigidBody::addCollider(const ColliderDef& def)
 {
+	internal::Collider collider = internal::buildCollider(def);
 	WORLD->add_collider(*THIS, collider);
 	return *this;
 }
-
-std::vector<Collider> RigidBody::colliders() const
+RigidBody& RigidBody::removeCollider(uint32_t ID)
 {
-	return WORLD->body_colliders(*THIS);
+	WORLD->remove_collider(*THIS, ID);
+	return *this;
+}
+ColliderDef RigidBody::getCollider(uint32_t ID) const
+{
+	internal::Collider collider = WORLD->get_collider(*THIS, ID);
+	return internal::toColliderDef(ID, collider);
+}
+RigidBody& RigidBody::setCollider(uint32_t ID, const ColliderDef& def)
+{
+	internal::Collider collider = internal::buildCollider(def);
+	WORLD->set_collider(*THIS, ID, collider);
+	return *this;
+}
+std::vector<ColliderDef> RigidBody::colliders() const
+{
+	std::vector<ColliderDef> defs;
+	std::vector<internal::Collider> colliders = WORLD->body_colliders(*THIS);
+
+	for (uint32_t ID = 0; ID < colliders.size(); ++ID)
+	{
+		defs.push_back(internal::toColliderDef(ID, colliders[ID]));
+	}
+
+	return defs;
 }
 
-Vec2 RigidBody::position() const 
-{ 
+Vec2 RigidBody::position() const
+{
 	return WORLD->body_position(*THIS);
 }
-RigidBody& RigidBody::position(const Vec2& pos) 
-{ 
+RigidBody& RigidBody::position(const Vec2& pos)
+{
 	WORLD->body_position(*THIS, pos);
-	return *this; 
+	return *this;
 }
 
 val_t RigidBody::rotation() const
@@ -67,34 +94,34 @@ Vec2 RigidBody::centroidPosition() const
 	return WORLD->body_centroidPosition(*THIS);
 }
 
-Vec2 RigidBody::velocity() const 
-{ 
+Vec2 RigidBody::velocity() const
+{
 	return WORLD->body_velocity(*THIS);
 }
-RigidBody& RigidBody::velocity(const Vec2& vel) 
-{ 
+RigidBody& RigidBody::velocity(const Vec2& vel)
+{
 	WORLD->body_velocity(*THIS, vel);
-	return *this; 
+	return *this;
 }
 
-val_t RigidBody::angularVelocity() const 
-{ 
+val_t RigidBody::angularVelocity() const
+{
 	return WORLD->body_angularVelocity(*THIS);
 }
-RigidBody& RigidBody::angularVelocity(val_t angVel) 
-{ 
+RigidBody& RigidBody::angularVelocity(val_t angVel)
+{
 	WORLD->body_angularVelocity(*THIS, angVel);
-	return *this; 
+	return *this;
 }
 
-val_t RigidBody::mass() const 
-{ 
+val_t RigidBody::mass() const
+{
 	return WORLD->body_mass(*THIS);
 }
-RigidBody& RigidBody::mass(val_t m) 
-{ 
+RigidBody& RigidBody::mass(val_t m)
+{
 	WORLD->body_mass(*THIS, m);
-	return *this; 
+	return *this;
 }
 
 val_t RigidBody::gravityScale() const
@@ -107,8 +134,8 @@ RigidBody& RigidBody::gravityScale(val_t gs)
 	return *this;
 }
 
-BodyType RigidBody::bodyType() const 
-{ 
+BodyType RigidBody::bodyType() const
+{
 	return WORLD->body_bodyType(*THIS);
 }
 

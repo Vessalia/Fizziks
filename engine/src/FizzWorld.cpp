@@ -14,7 +14,7 @@
 
 namespace Fizziks::internal
 {
-const FizzWorldImpl::BodyData FizzWorldImpl::null_body = 
+const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
 {
 	fizzmax<uint32_t>(),
 	vec_max(),
@@ -35,7 +35,7 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
 	, unitsY(unitsY)
 	, accumulator(0)
 	, timestep(timestep)
-	, collisionIterations(collisionIterations) 
+	, collisionIterations(collisionIterations)
 {
 	switch (accel)
 	{
@@ -49,9 +49,14 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
 	}
 }
 
-FizzWorldImpl::~FizzWorldImpl() 
-{ 
-	delete broadphase; 
+void FizzWorldImplDeleter::operator()(FizzWorldImpl* p) const
+{
+	delete p;
+}
+
+FizzWorldImpl::~FizzWorldImpl()
+{
+	delete broadphase;
 	for (auto* alloc : threadAllocators)
 	{
 		delete alloc;
@@ -61,7 +66,7 @@ FizzWorldImpl::~FizzWorldImpl()
 void FizzWorldImpl::apply_force(const RigidBodyImpl& rb, const Vec2& force, const Vec2& at)
 {
 	BodyData* body = get_body(rb);
-	if(body) 
+	if(body)
 	{
 		body->accumForce += force;
 		Vec2 r = at - (body->position + body->centroid);
@@ -78,7 +83,7 @@ void FizzWorldImpl::add_collider(const RigidBodyImpl& rb, const Collider& collid
 void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 {
 	body->colliders.push_back(collider);
-	
+
 	if(body->bodyType != BodyType::STATIC)
 	{
 		body->mass += collider.mass;
@@ -105,6 +110,48 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 	body->invMoI = 1 / MoI;
 }
 
+void FizzWorldImpl::remove_collider(const RigidBodyImpl& rb, uint32_t ID)
+{
+	BodyData* body = get_body(rb);
+	if (!body) return;
+	std::vector<Collider>& colliders = body->colliders;
+	if(colliders.size() <= ID)
+	{
+		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be removed", ID);
+		return;
+	}
+
+	colliders.erase(colliders.begin() + ID);
+}
+
+Collider FizzWorldImpl::get_collider(const RigidBodyImpl& rb, uint32_t ID)
+{
+	BodyData* body = get_body(rb);
+	if (!body) return {};
+	std::vector<Collider>& colliders = body->colliders;
+	if(colliders.size() <= ID)
+	{
+		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be retrieved", ID);
+		return {};
+	}
+
+	return colliders[ID];
+}
+
+void FizzWorldImpl::set_collider(const RigidBodyImpl& rb, uint32_t ID, const Collider& collider)
+{
+	BodyData* body = get_body(rb);
+	if (!body) return;
+	std::vector<Collider>& colliders = body->colliders;
+	if(colliders.size() <= ID)
+	{
+		FIZZIKS_LOG_ERROR("invalid collider ID {} could not be set", ID);
+		return;
+	}
+
+	colliders[ID] = collider;
+}
+
 std::vector<Collider> FizzWorldImpl::body_colliders(const RigidBodyImpl& rb) const
 {
 	auto* body = get_body(rb);
@@ -119,7 +166,7 @@ const AABB FizzWorldImpl::compute_bounds(BodyData* body)
 	Vec2 min = vec_max(), max = vec_min();
 	for (auto collider : body->colliders)
 	{
-		AABB minorBounds = getEncapsulatingAABB(collider.shape, collider.pos, body->rotation);
+		AABB minorBounds = getBounds(collider.shape, collider.pos, body->rotation);
 		Vec2 world = body->position + collider.pos;
 
 		min.x = std::min(min.x, world.x + minorBounds.min.x);
@@ -127,25 +174,41 @@ const AABB FizzWorldImpl::compute_bounds(BodyData* body)
 		max.x = std::max(max.x, world.x + minorBounds.max.x);
 		max.y = std::max(max.y, world.y + minorBounds.max.y);
 	}
-	
+
 	body->bounds = createAABB(min, max);
 	return body->bounds;
 }
 
 const FizzWorldImpl::BodyData* FizzWorldImpl::get_body(const RigidBodyImpl& rb) const
 {
-	if (rb.handle.index >= activeHandles.size()) return nullptr;
+	if (rb.handle.index < 0 || rb.handle.index >= activeHandles.size())
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 	Handle activeHandle = activeHandles[rb.handle.index];
-	if(activeHandle.gen != rb.handle.gen) return nullptr;
+	if(activeHandle.gen != rb.handle.gen)
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 
 	return &activeBodies[activeHandle.index];
 }
 
 FizzWorldImpl::BodyData* FizzWorldImpl::get_body(const RigidBodyImpl& rb)
 {
-	if (rb.handle.index >= activeHandles.size()) return nullptr;
+	if (rb.handle.index < 0 || rb.handle.index >= activeHandles.size())
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 	Handle activeHandle = activeHandles[rb.handle.index];
-	if(activeHandle.gen != rb.handle.gen) return nullptr;
+	if(activeHandle.gen != rb.handle.gen)
+	{
+		FIZZIKS_LOG_ERROR("Invalid RigidBody handle");
+		return nullptr;
+	}
 
 	return &activeBodies[activeHandle.index];
 }
@@ -173,9 +236,9 @@ void FizzWorldImpl::set_body(BodyData* body, const BodyDef& def)
 	body->mass = 0;
 	body->MoI = 0;
 
-	for(auto collider : def.colliderDefs)
+	for(auto colliderDef : def.colliderDefs)
 	{
-		add_collider(body, collider);
+		add_collider(body, buildCollider(colliderDef));
 	}
 
 	if(def.bodyType == BodyType::STATIC)
@@ -193,14 +256,14 @@ void FizzWorldImpl::set_body(BodyData* body, const BodyDef& def)
 	body->bounds = compute_bounds(body);
 }
 
-Vec2 FizzWorldImpl::body_position(const RigidBodyImpl& rb) const 
+Vec2 FizzWorldImpl::body_position(const RigidBodyImpl& rb) const
 {
 	auto* body = get_body(rb);
 	if (body) return body->position;
 	else	  return null_body.position;
 }
-void FizzWorldImpl::body_position(const RigidBodyImpl& rb, const Vec2& pos) 
-{ 
+void FizzWorldImpl::body_position(const RigidBodyImpl& rb, const Vec2& pos)
+{
 	auto* body = get_body(rb);
 	if (body) body->position = pos;
 }
@@ -224,38 +287,38 @@ Vec2 FizzWorldImpl::body_centroidPosition(const RigidBodyImpl& rb) const
 	else	  return null_body.position;
 }
 
-Vec2 FizzWorldImpl::body_velocity(const RigidBodyImpl& rb) const 
+Vec2 FizzWorldImpl::body_velocity(const RigidBodyImpl& rb) const
 {
 	auto* body = get_body(rb);
 	if (body) return body->velocity;
 	else	  return null_body.velocity;
 }
-void FizzWorldImpl::body_velocity(const RigidBodyImpl& rb, const Vec2& vel) 
+void FizzWorldImpl::body_velocity(const RigidBodyImpl& rb, const Vec2& vel)
 {
 	auto* body = get_body(rb);
 	if (body) body->velocity = vel;
 }
 
-val_t FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb) const 
+val_t FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb) const
 {
 	auto* body = get_body(rb);
 	if (body) return body->angularVelocity;
 	else	  return null_body.angularVelocity;
 }
-void FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb, val_t angVel) 
+void FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb, val_t angVel)
 {
 	auto* body = get_body(rb);
 	if (body) body->angularVelocity = angVel;
 }
 
-val_t FizzWorldImpl::body_mass(const RigidBodyImpl& rb) const 
+val_t FizzWorldImpl::body_mass(const RigidBodyImpl& rb) const
 {
 	auto* body = get_body(rb);
 	if (body) return 1 / body->invMass;
 	else	  return 1 / null_body.invMass;
 }
-void FizzWorldImpl::body_mass(const RigidBodyImpl& rb, val_t m) 
-{ 
+void FizzWorldImpl::body_mass(const RigidBodyImpl& rb, val_t m)
+{
 	auto* body = get_body(rb);
 	if (body) body->invMass = 1 / m;
 }
@@ -272,8 +335,8 @@ void FizzWorldImpl::body_gravityScale(const RigidBodyImpl& rb, val_t gs)
 	if (body) body->gravityScale = gs;
 }
 
-BodyType FizzWorldImpl::body_bodyType(const RigidBodyImpl& rb) const 
-{ 
+BodyType FizzWorldImpl::body_bodyType(const RigidBodyImpl& rb) const
+{
 	auto* body = get_body(rb);
 	if (body) return body->bodyType;
 	else	  return null_body.bodyType;
@@ -333,9 +396,9 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint3
 			{
 				ColliderContact collContact = { i, j, contact };
 				Allocator::Block block = threadAllocators[allocIndex]->write(&collContact, sizeof(ColliderContact));
-				if (first) 
+				if (first)
 				{
-					manifold.allocContact = block; 
+					manifold.allocContact = block;
 					first = false;
 				}
 				++manifold.numBlocks;
@@ -378,9 +441,9 @@ void FizzWorldImpl::detect_collisions()
 			const size_t end = begin + count;
 			offset = end;
 
-			threads.submit([t, begin, end, &processRange] 
-			{ 
-				processRange(begin, end, t); 
+			threads.submit([t, begin, end, &processRange]
+			{
+				processRange(begin, end, t);
 			});
 		}
 
@@ -400,7 +463,12 @@ void FizzWorldImpl::detect_collisions()
 
 ContactKey FizzWorldImpl::makeContactKey(const CollisionResolution& resolution) const
 {
-	return { resolution.bodyAId, resolution.bodyBId, resolution.collIdA, resolution.collIdB, resolution.contact.featureA, resolution.contact.featureB };
+	return
+	{
+		resolution.bodyAId, 		 resolution.bodyBId,
+		resolution.collIdA, 		 resolution.collIdB,
+		resolution.contact.featureA, resolution.contact.featureB
+	};
 }
 
 val_t beta = val_t(0.2);
@@ -592,8 +660,8 @@ void FizzWorldImpl::resolve_collisions(val_t dt)
 		for (int i = 0; i < manifold.numBlocks; ++i)
 		{
 			const auto& collContact = collContacts[i];
-			collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId, 
-															 collContact.collAId, collContact.collBId, 
+			collisionResolutions.push_back(collision_preStep(bodyAId, bodyBId,
+															 collContact.collAId, collContact.collBId,
 															 collContact.contact, dt));
 		}
 	}
@@ -644,8 +712,8 @@ void FizzWorldImpl::simulate_bodies(val_t dt, const Vec2& gravity)
 		body.accumTorque = 0;
 
 		bool posUpdate = prevPos != body.position;
-		bool rotUpdate = prevRot != body.rotation; 
-		if(posUpdate || rotUpdate) 
+		bool rotUpdate = prevRot != body.rotation;
+		if(posUpdate || rotUpdate)
 			broadphase->update(ID, compute_bounds(&body));
 	}
 }
@@ -689,7 +757,7 @@ RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
 	activeBodies.push_back(std::move(b));
 
 	Handle handle{ static_cast<uint32_t>(activeHandles.size()), 0 };
-	if (!freeList.empty()) 
+	if (!freeList.empty())
 	{
 		uint32_t freeIndex = freeList.back(); freeList.pop_back();
 		handle.index = freeIndex;
@@ -697,7 +765,7 @@ RigidBodyImpl FizzWorldImpl::createBody(const BodyDef& def, FizzWorld* parent)
 		activeHandles[freeIndex].index = ID;
 		activeList.push_back(freeIndex);
 	}
-	else 
+	else
 	{
 		activeHandles.push_back(handle);
 		activeList.push_back(handle.index);
@@ -737,25 +805,13 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 
 namespace Fizziks
 {
-FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel) 
-	: impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep, accel)) { }
-
-FizzWorld::~FizzWorld() 
-{ 
-	if (impl) 
-	{ 
-		delete impl; 
-	} 
-	impl = nullptr;
-
-	FIZZIKS_LOG_INFO("World destroyed");
-}
+FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel)
+	: impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep, accel), internal::FizzWorldImplDeleter{}) { }
 
 RigidBody FizzWorld::createBody(const BodyDef& def)
 {
 	RigidBody rb;
-	rb.impl = new internal::RigidBodyImpl();
-	*rb.impl = impl->createBody(def, this);
+	rb.impl.reset(new internal::RigidBodyImpl(impl->createBody(def, this)));
 	return rb;
 }
 

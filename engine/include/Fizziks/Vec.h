@@ -20,6 +20,9 @@ struct FIZZIKS_API Vec2
 		return Vec2{ std::cos(angle), std::sin(angle) };
 	}
 
+	Vec2 perped() const;
+	Vec2& perp();
+
 	Vec2 lerped(const Vec2& other, val_t t) const;
 	Vec2& lerp(const Vec2& other, val_t t);
 
@@ -83,6 +86,14 @@ struct FIZZIKS_API Mat2
 		Mat2 mat;
 		mat.m00 = sx; mat.m01 = 0;
 		mat.m10 = 0;  mat.m11 = sy;
+		return mat;
+	}
+
+	static constexpr Mat2 Shear(val_t shx, val_t shy)
+	{
+		Mat2 mat;
+		mat.m00 = 1;   mat.m01 = shx;
+		mat.m10 = shy; mat.m11 = 1;
 		return mat;
 	}
 

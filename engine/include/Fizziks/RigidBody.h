@@ -8,6 +8,11 @@
 namespace Fizziks::internal
 {
 class RigidBodyImpl;
+
+struct FIZZIKS_API RigidBodyImplDeleter
+{
+	void operator()(RigidBodyImpl* p) const;
+};
 }
 
 namespace Fizziks
@@ -52,9 +57,12 @@ public:
 	RigidBody& layer(uint32_t layer);
 
 	RigidBody& applyForce(const Vec2& force, const Vec2& at = { 0, 0 });
-	RigidBody& addCollider(const Collider& collider);
 
-	std::vector<Collider> colliders() const;
+	RigidBody& addCollider(const ColliderDef& def);
+	RigidBody& removeCollider(uint32_t ID);
+	ColliderDef getCollider(uint32_t ID) const;
+	RigidBody& setCollider(uint32_t ID, const ColliderDef& def);
+	std::vector<ColliderDef> colliders() const;
 
 	void collisionOnEnter();
 	void collisionOnStay();
@@ -63,8 +71,8 @@ public:
 private:
 	friend class FizzWorld;
 
-	RigidBody() : impl(nullptr) { }
+	RigidBody() : impl(nullptr, internal::RigidBodyImplDeleter{}) { }
 
-	internal::RigidBodyImpl* impl;
+	std::unique_ptr<internal::RigidBodyImpl, internal::RigidBodyImplDeleter> impl;
 };
 }

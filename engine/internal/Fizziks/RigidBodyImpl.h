@@ -3,9 +3,10 @@
 
 namespace Fizziks::internal
 {
-class RigidBodyImpl 
+class RigidBodyImpl
 {
 	friend class RigidBody;
+	friend struct RigidBodyImplDeleter;
 	friend class FizzWorld;
 	friend class FizzWorldImpl;
 

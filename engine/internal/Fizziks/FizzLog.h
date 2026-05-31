@@ -37,7 +37,7 @@ inline void emit(std::source_location loc, std::format_string<Args...> fmt, Args
 			std::shared_lock lock(state.mutex);
 			auto& sinks = state.sinks[static_cast<int>(L)];
 			if (sinks.empty()) return;
-			localSinks = sinks;
+			localSinks = sinks; // copy to avoid deadlocks from sinks doing logging
 		}
 
 		std::string msg = std::format(fmt, std::forward<Args>(args)...);

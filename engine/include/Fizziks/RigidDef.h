@@ -4,11 +4,14 @@
 
 namespace Fizziks
 {
-struct FIZZIKS_API Collider
+struct ColliderDef
 {
+	// inferred from other values i.e., ignored when set by user
+	uint32_t ID;
+	val_t MoI;
+
 	// Physics-related part
 	val_t mass;
-	val_t MoI;
 	
 	val_t staticFrictionCoeff = val_t(0.2);
 	val_t dynamicFrictionCoeff = val_t(0.1);
@@ -21,14 +24,14 @@ struct FIZZIKS_API Collider
 	Vec2 pos;
 };
 
-enum class FIZZIKS_API BodyType
+enum class BodyType
 {
 	STATIC,
 	DYNAMIC,
 	KINEMATIC
 };
 
-struct FIZZIKS_API BodyDef
+struct BodyDef
 {
 	uint32_t layer = 0;
 
@@ -47,8 +50,8 @@ struct FIZZIKS_API BodyDef
 
 	BodyType bodyType = BodyType::DYNAMIC;
 
-	std::vector<Collider> colliderDefs = {};
+	std::vector<ColliderDef> colliderDefs = {};
 };
 
-FIZZIKS_API Collider createCollider(const Shape& shape, val_t mass = 0, val_t rotation = 0, const Vec2& pos = Vec2::Zero());
+FIZZIKS_API ColliderDef createColliderDef(const Shape& shape, val_t mass = 0, val_t rotation = 0, const Vec2& pos = Vec2::Zero());
 }

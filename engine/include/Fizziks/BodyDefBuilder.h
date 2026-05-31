@@ -71,7 +71,7 @@ public:
 		return *this;
 	}
 
-	BodyDefBuilder& setColliderDefs(const std::vector<Collider>& colliderDefs) 
+	BodyDefBuilder& setColliderDefs(const std::vector<ColliderDef>& colliderDefs) 
 	{
 		def.colliderDefs = colliderDefs;
 		return *this;

@@ -522,7 +522,7 @@ RaycastResult BVH::raycast(const Ray& ray) const
 		uint32_t idx = stack.top(); stack.pop();
 
 		const Node& node = nodes[idx];
-		val_t t = raytest(ray, node.bounds);
+		val_t t = Fizziks::raycast(ray, node.bounds);
 		if (t < 0 || t > closestT || t > maxT) continue;
 		if (node.isleaf)
 		{
