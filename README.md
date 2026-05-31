@@ -6,6 +6,7 @@ Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for
 - BVH acceleration structure for broadphase detection
 - Per-step Iterative collision candidate pair detection in BVH 
 - Convex collision detection (GJK + EPA)
+- Concave to convex shape decomposition
 - Impulse-based + warm-started collision resolution
 - Constraint solving (currently just for contacts)
 - Material properties (restitution, friction, etc.)
@@ -66,27 +67,35 @@ using namespace Fizziks;
 
 int main(int argc, char** argv) 
 {
+	Fizziks::SinkOptions options;
+	options.threadSafe = true;
+	addLogSink([](Fizziks::LogLevel level, std::string_view msg, std::string_view file, int line)
+		{ 
+			std::cout << "level = " << toString(level) << ": msg = " << msg << ": file = " << file << ": line = " << line << std::endl;
+		}, options
+	);
+
 	FizzWorld world;
 
 	BodyDef def;
-	small.colliderDefs.push_back({ 
-		createCollider(createRect(0.25, 0.25), 1), Vec2::Zero() 
+	small.colliderDefs.push_back({
+		createColliderDef(createRect(0.25, 0.25), 1), Vec2::Zero()
 	});
 	bodies.push_back(world.createBody(small));
 
 	BodyDef big;
-	big.colliderDefs.push_back({ 
-		createCollider(createCircle(1.4), 10), Vec2::Zero() 
+	big.colliderDefs.push_back({
+		createColliderDef(createCircle(1.4), 10), Vec2::Zero()
 	});
 	big.initPosition = { 20, 5 };
 	big.initVelocity = { -3, 0 };
 	bodies.push_back(world.createBody(big));
 
 	BodyDef stat;
-	stat.colliderDefs.push_back({ 
-		createCollider(createPolygon({ 
-			Vec2(0, 0), Vec2(0, 1), Vec2(1, 0) 
-		}, 1, deg2rad(10)), Vec2::Zero()) 
+	stat.colliderDefs.push_back({
+		createColliderDef(createPolygon({
+			Vec2(0, 0), Vec2(0, 1), Vec2(1, 0)
+		}, 1, deg2rad(10)), Vec2::Zero())
 	});
 	stat.BodyType = BodyType::STATIC;
 	stat.initPosition = { 10, 2 };
@@ -107,7 +116,6 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
-- Handle convex polygons
 - Contact manifolds > contact points?
 - BVH raycasting/user data + callback abstraction
   - Collision event callbacks
