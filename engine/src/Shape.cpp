@@ -202,9 +202,9 @@ std::vector<std::vector<uint32_t>> triangulate(const Polygon& poly)
 		uint32_t next = indices[(i + 1) % indices.size()];
 
 		Vec2 A = vertices[curr], B = vertices[prev], C = vertices[next];
-		Vec2 AB = B - A, AC = C - A;
+		Vec2 BA = A - B, AC = C - A;
 
-		if (AB.cross(AC) >= 0) return false;
+		if (BA.cross(AC) >= 0) return false;
 
 		for (int j = 0; j < indices.size(); ++j)
 		{
