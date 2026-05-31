@@ -201,16 +201,16 @@ std::vector<std::vector<uint32_t>> triangulate(const Polygon& poly)
 		uint32_t curr = indices[i];
 		uint32_t next = indices[(i + 1) % indices.size()];
 
-		Vec2 A = vertices[curr], B = vertices[prev], C = vertices[next];
-		Vec2 BA = A - B, AC = C - A;
+		Vec2 A = vertices[prev], B = vertices[curr], C = vertices[next];
+		Vec2 AB = B - A, BC = C - B;
 
-		if (BA.cross(AC) >= 0) return false;
+		if (AB.cross(BC) <= 0) return false;
 
 		for (int j = 0; j < indices.size(); ++j)
 		{
 			uint32_t idx = indices[j];
 			if (idx == curr || idx == prev || idx == next) continue;
-			if (pointInTriangle(vertices[idx], B, A, C)) return false;
+			if (pointInTriangle(vertices[idx], A, B, C)) return false;
 		}
 
 		return true;
@@ -218,6 +218,8 @@ std::vector<std::vector<uint32_t>> triangulate(const Polygon& poly)
 
 	while (indices.size() > 3)
 	{
+		bool foundEar = false;
+
 		for (int i = 0; i < indices.size(); ++i)
 		{
 			if (isEar(i))
@@ -229,8 +231,15 @@ std::vector<std::vector<uint32_t>> triangulate(const Polygon& poly)
 				});
 
 				indices.erase(indices.begin() + i);
+				foundEar = true;
 				break; // since we mutated indices, we need to reset our iteration
 			}
+		}
+
+		if (!foundEar)
+		{
+			FIZZIKS_LOG_ERROR("Failed to triangulate polygon");
+			throw std::runtime_error("Failed to find an ear");
 		}
 	}
 
