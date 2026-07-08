@@ -23,7 +23,7 @@ jobs:
           cmake -S . -B build
           -DBUILD_SHARED_LIBS=ON
           -DFIZZIKS_BUILD_TESTS=OFF
-          -DFIZZIKS_USE_GLM=ON
+          -DFIZZIKS_USE_GLM=OFF
           -DCMAKE_INSTALL_PREFIX=package
 
       - name: Build
