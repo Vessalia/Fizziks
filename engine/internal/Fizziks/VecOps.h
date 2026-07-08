@@ -4,6 +4,7 @@
 #include <cmath>
 
 #ifdef FIZZIKS_USE_GLM
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/norm.hpp>
 #endif
