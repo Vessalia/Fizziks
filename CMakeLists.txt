@@ -106,12 +106,7 @@ else()
 	)
 endif()
 
-install(DIRECTORY
-	${CMAKE_CURRENT_SOURCE_DIR}/dependencies/eigen/Eigen
-	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/eigen
-)
-
-if(MSVC)
+if(MSVC AND BUILD_SHARED_LIBS)
 	install(FILES $<TARGET_PDB_FILE:Fizziks>
 		DESTINATION ${CMAKE_INSTALL_BINDIR}
 		OPTIONAL
@@ -119,28 +114,31 @@ if(MSVC)
 endif()
 
 # Cmake package config
-install(EXPORT FizziksTargets
-	FILE FizziksTargets.cmake
-	NAMESPACE Fizziks::
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Fizziks
-)
+# static library building is kinda broken right now, so just skip the problematic steps for now
+if(BUILD_SHARED_LIBS)
+	install(EXPORT FizziksTargets
+		FILE FizziksTargets.cmake
+		NAMESPACE Fizziks::
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Fizziks
+	)
 
-configure_package_config_file(
-	${CMAKE_CURRENT_SOURCE_DIR}/FizziksConfig.cmake.in
-	${CMAKE_CURRENT_BINARY_DIR}/FizziksConfig.cmake
-	INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Fizziks
-)
+	configure_package_config_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/FizziksConfig.cmake.in
+		${CMAKE_CURRENT_BINARY_DIR}/FizziksConfig.cmake
+		INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Fizziks
+	)
 
-write_basic_package_version_file(
-	${CMAKE_CURRENT_BINARY_DIR}/FizziksConfigVersion.cmake
-	VERSION       ${PROJECT_VERSION}
-	COMPATIBILITY SameMajorVersion
-)
+	write_basic_package_version_file(
+		${CMAKE_CURRENT_BINARY_DIR}/FizziksConfigVersion.cmake
+		VERSION       ${PROJECT_VERSION}
+		COMPATIBILITY SameMajorVersion
+	)
 
-install(FILES
-	"${CMAKE_CURRENT_BINARY_DIR}/FizziksConfig.cmake"
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Fizziks
-)
+	install(FILES
+		"${CMAKE_CURRENT_BINARY_DIR}/FizziksConfig.cmake"
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Fizziks
+	)
+endif()
 
 # Tests
 if(FIZZIKS_BUILD_TESTS)
