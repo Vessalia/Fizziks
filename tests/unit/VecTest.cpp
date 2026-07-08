@@ -137,3 +137,20 @@ TEST_F(Vec2NormalizationTest, NormalizedVectorPreservesDirection)
 	Vec2 n = diagonal.normalized();
 	EXPECT_VAL_EQ(n.x, n.y);
 }
+
+class Vec2RotationTest : public ::testing::Test
+{
+protected:
+	void SetUp() override
+	{
+		unit_x = { 1.0, 0.0 };
+	}
+
+	Vec2 unit_x;
+};
+
+TEST_F(Vec2RotationTest, RotateInPlaceActuallyMutates) {
+	val_t original_angle = unit_x.angle();
+	unit_x.rotate(PI / 2);
+	EXPECT_VAL_NE(unit_x.angle(), original_angle);
+}

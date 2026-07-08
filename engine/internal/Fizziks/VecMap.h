@@ -27,10 +27,13 @@ static_assert(sizeof(Mat2)  == sizeof(Matrix2p),  "Mat2 and Matrix2p size mismat
 static_assert(alignof(Vec2) == alignof(Vector2p), "Vec2 and Vector2p alignment mismatch");
 static_assert(alignof(Mat2) == alignof(Matrix2p), "Mat2 and Matrix2p alignment mismatch");
 
-inline Vector2p map(const Vec2& vec) { return std::bit_cast<Vector2p>(vec); }
-inline Vec2     map(const Vector2p& vec) { return std::bit_cast<Vec2>(vec); }
-inline Matrix2p map(const Mat2& mat) { return std::bit_cast<Matrix2p>(mat); }
-inline Mat2     map(const Matrix2p& mat) { return std::bit_cast<Mat2>(mat); }
+inline Vector2p&       map(Vec2& vec)             { return reinterpret_cast<Vector2p&>(vec); }
+inline const Vector2p& map(const Vec2& vec)       { return reinterpret_cast<const Vector2p&>(vec); }
+inline Matrix2p&       map(Mat2& mat)             { return reinterpret_cast<Matrix2p&>(mat); }
+inline const Matrix2p& map(const Mat2& mat)       { return reinterpret_cast<const Matrix2p&>(mat); }
+
+inline Vec2            map(const Vector2p& vec)   { return std::bit_cast<Vec2>(vec); }
+inline Mat2            map(const Matrix2p& mat)   { return std::bit_cast<Mat2>(mat); }
 
 inline Vector2p vec_zero() { return Vector2p(0, 0); }
 
