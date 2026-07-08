@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+        use_glm: [ON, OFF]
+        build_shared: [ON, OFF]
+
+    steps:
+      - name: Check out code (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: >
+          cmake -S . -B build
+          -DFIZZIKS_BUILD_DIST=OFF
+          -DBUILD_SHARED_LIBS=${{ matrix.build_shared }}
+          -DFIZZIKS_BUILD_TESTS=ON
+          -DFIZZIKS_USE_GLM=${{ matrix.use_glm }}
+          -DFIZZIKS_LOG_LEVEL=-1
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config }}
+
+      - name: Run tests
+        run: ctest --test-dir build -C ${{ matrix.config }} --output-on-failure --timeout 120

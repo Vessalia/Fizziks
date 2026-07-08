@@ -63,13 +63,13 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --preset)      PRESET="$2";     shift ;;
     --build-dir)   BUILD_DIR="$2";  shift ;;
-	--assets-dir)  ASSETS_DIR="$2"; shift ;;
-	--config)      CONFIG="$2";     shift ;;
+    --assets-dir)  ASSETS_DIR="$2"; shift ;;
+    --config)      CONFIG="$2";     shift ;;
     --no-dist)     BUILD_DIST=OFF;  MANUAL_FLAGS=true;;
     --no-shared)   SHARED_LIBS=OFF; MANUAL_FLAGS=true;;
     --use-glm)     USE_GLM=ON;      MANUAL_FLAGS=true;;
-	--log-level)   LOG_LEVEL="$2";  MANUAL_FLAGS=true;;
     --run-tests)   RUN_TESTS=ON;    MANUAL_FLAGS=true;;
+    --log-level)   LOG_LEVEL="$2";  MANUAL_FLAGS=true; shift;;
     -h|--help)     usage ;;
     *) echo "Unknown option: $1" >&2; usage ;;
   esac
@@ -166,7 +166,7 @@ if [[ -d "$BUILD_DIR/dist" && -f "$ASSETS_DIR/CMakeLists.txt" ]]; then
   cp "$ASSETS_DIR/CMakeLists.txt" ./dist/Fizziks
   log "Done."
 else
-  echo "⚠  $BUILD_DIR/dist, or $ASSET_DIR/CMakeLists.txt not found — skipping copy." >&2
+  echo "⚠  $BUILD_DIR/dist, or $ASSETS_DIR/CMakeLists.txt not found — skipping copy." >&2
 fi
 
 step "Complete"
