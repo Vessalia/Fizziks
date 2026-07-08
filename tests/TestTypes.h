@@ -6,3 +6,4 @@
 static constexpr val_t eps = std::is_same_v<val_t, float> ? val_t(1.0e-5) : val_t(1.0e-10);
 
 #define EXPECT_VAL_EQ(a, b) EXPECT_NEAR((a), (b), eps)
+#define EXPECT_VAL_NE(a, b) EXPECT_GT(std::abs((a) - (b)), eps)
