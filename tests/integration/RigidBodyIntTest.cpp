@@ -13,7 +13,7 @@ using namespace Fizziks;
 static RigidBody makeDynamicCircle(FizzWorld& world, val_t radius, const Vec2& pos, val_t mass = 1.0)
 {
 	Shape shape = createCircle(radius);
-	Collider col = createCollider(shape, mass, 0.0, Vec2::Zero());
+	ColliderDef col = createColliderDef(shape, mass, 0.0, Vec2::Zero());
 	BodyDef def;
 	def.initPosition = pos;
 	def.bodyType = BodyType::DYNAMIC;
@@ -26,22 +26,22 @@ static RigidBody makeDynamicCircle(FizzWorld& world, val_t radius, const Vec2& p
 	def.angularDamping = 0;
 	return world.createBody(def);
 }
- 
+
 static RigidBody makeStaticCircle(FizzWorld& world, val_t radius, const Vec2& pos)
 {
 	Shape shape = createCircle(radius);
-	Collider col = createCollider(shape, 1.0, 0.0, Vec2::Zero());
+	ColliderDef col = createColliderDef(shape, 1.0, 0.0, Vec2::Zero());
 	BodyDef def;
 	def.initPosition = pos;
 	def.bodyType = BodyType::STATIC;
 	def.colliderDefs = { col };
 	return world.createBody(def);
 }
- 
+
 static RigidBody makeDynamicBox(FizzWorld& world, val_t w, val_t h, const Vec2& pos, val_t mass = 1.0)
 {
 	Shape shape = createRect(w, h);
-	Collider col = createCollider(shape, mass, 0.0, Vec2::Zero());
+	ColliderDef col = createColliderDef(shape, mass, 0.0, Vec2::Zero());
 	BodyDef def;
 	def.initPosition = pos;
 	def.bodyType = BodyType::DYNAMIC;
@@ -65,7 +65,7 @@ protected:
 		def.linearDamping = 0;
 		def.angularDamping = 0;
 		Shape shape = createCircle(0.5);
-		def.colliderDefs = { createCollider(shape, 1.0, 0.0, Vec2::Zero()) };
+		def.colliderDefs = { createColliderDef(shape, 1.0, 0.0, Vec2::Zero()) };
 		body = std::make_unique<RigidBody>(world->createBody(def));
 	}
 
@@ -109,7 +109,7 @@ protected:
 	{
 		world = std::make_unique<FizzWorld>();
 		world->Gravity = Vec2::Zero();
-		
+
 		BodyDef def;
 		def.initPosition = { 0, 10 };
 		def.bodyType = BodyType::DYNAMIC;
@@ -117,7 +117,7 @@ protected:
 		def.linearDamping = 0;
 		def.angularDamping = 0;
 		Shape shape = createCircle(0.5);
-		def.colliderDefs = { createCollider(shape, 1.0, 0.0, Vec2::Zero()) };
+		def.colliderDefs = { createColliderDef(shape, 1.0, 0.0, Vec2::Zero()) };
 		body = std::make_unique<RigidBody>(world->createBody(def));
 		body->gravityScale(0).velocity(Vec2::Zero());
 	}
