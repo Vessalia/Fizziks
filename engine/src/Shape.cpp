@@ -682,7 +682,7 @@ uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 		Vec2 AB = B - A;
 		Vec2 AP = pos - A;
 
-		Vec2 edgeNormal = AB.perped();
+		Vec2 edgeNormal = -AB.perped();
 		val_t edgeLen = edgeNormal.norm();
 		if (edgeLen < epsilon) continue;
 

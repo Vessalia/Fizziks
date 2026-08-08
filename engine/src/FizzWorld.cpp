@@ -90,19 +90,21 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 		body->invMass = 1 / body->mass;
 	}
 
-	Vec2 centroid = Vec2::Zero();
+	val_t totalMass = 0;
+	Vec2 weightedSum = Vec2::Zero();
 	for(auto coll : body->colliders)
 	{
-		centroid += coll.mass * coll.pos;
+		weightedSum += coll.mass * coll.pos;
+		totalMass += coll.mass;
 	}
 
-	body->centroid = centroid * body->invMass;
+	body->centroid = totalMass > 0 ? weightedSum / totalMass : Vec2::Zero(); // in the static case we won't have a invMass set
 
 	val_t MoI = 0;
 	for(auto coll : body->colliders)
 	{
 		// parallel axis theorem
-		Vec2 r = centroid - coll.pos;
+		Vec2 r = body->centroid - coll.pos;
 		MoI += coll.MoI + coll.mass * r.dot(r);
 	}
 
@@ -544,11 +546,11 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 	resolution.invEffMass = effMass > 0 ? 1 / effMass : fizzmax<val_t>();
 	resolution.invEffTangentMass = effTangentMass > 0 ? 1 / effTangentMass : fizzmax<val_t>();
 
-	val_t baumgarte = -beta / dt * std::max(contact.penetration - slopPen, static_cast<val_t>(0));
+	val_t baumgarte = beta / dt * std::max(contact.penetration - slopPen, static_cast<val_t>(0));
 	Vec2 vA = bodyA.velocity + rA.cross(bodyA.angularVelocity);
 	Vec2 vB = bodyB.velocity + rB.cross(bodyB.angularVelocity);
 	Vec2 dv = vB - vA;
-	val_t closingVel = std::max(contact.normal.dot(dv) - slopRes, static_cast<val_t>(0));
+	val_t closingVel = std::max(-contact.normal.dot(dv) - slopRes, static_cast<val_t>(0));
 	val_t restitution = (closingVel > restitutionThreshold) ? closingVel * std::min(bodyA.restitution, bodyB.restitution) : 0;
 	resolution.bias = baumgarte + restitution;
 
@@ -572,7 +574,7 @@ void FizzWorldImpl::solve_normalConstraint(CollisionResolution& resolution)
 	Vec2 dv = vB - vA;
 	val_t Jv = dv.dot(contact.normal);
 
-	val_t lambda = resolution.invEffMass * -(Jv + resolution.bias);
+	val_t lambda = resolution.invEffMass * (-Jv + resolution.bias);
 
 	val_t oldImpulse = resolution.normalImpulse;
 	resolution.normalImpulse = std::max(static_cast<val_t>(0), oldImpulse + lambda);
