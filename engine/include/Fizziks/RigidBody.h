@@ -69,10 +69,7 @@ public:
 	void collisionOnStay();
 	void collisionOnExit();
 
-	bool operator==(const RigidBody& other) const
-	{
-		return impl == other.impl;
-	}
+	bool operator==(const RigidBody& other) const;
 
 
 private:
@@ -90,9 +87,7 @@ namespace std
 template <>
 struct hash<Fizziks::RigidBody>
 {
-	size_t operator()(const Fizziks::RigidBody r) const
-	{
-		return std::hash<Fizziks::internal::RigidBodyImpl*>{}(r.impl.get());
-	}
+	friend class Fizziks::RigidBody;
+	size_t operator()(const Fizziks::RigidBody r) const;
 };
 }
