@@ -9,6 +9,13 @@ class RigidBodyImpl
 	friend struct RigidBodyImplDeleter;
 	friend class FizzWorld;
 	friend class FizzWorldImpl;
+	friend struct std::hash<RigidBodyImpl>;
+
+public:
+	bool operator==(const RigidBodyImpl& other) const
+	{
+		return handle == other.handle && *world == *other.world;
+	}
 
 private:
 	Handle handle;
@@ -19,3 +26,14 @@ private:
 };
 }
 
+namespace std
+{
+template <>
+struct hash<Fizziks::internal::RigidBodyImpl>
+{
+	size_t operator()(const Fizziks::internal::RigidBodyImpl impl) const
+	{
+		return std::hash<Fizziks::internal::Handle>{}(impl.handle);
+	}
+};
+}

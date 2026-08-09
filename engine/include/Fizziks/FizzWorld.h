@@ -40,6 +40,11 @@ public:
 
 	FizzWorld(const FizzWorld&) = delete;
 	FizzWorld& operator=(const FizzWorld&) = delete;
+	
+	bool operator==(const FizzWorld& other) const
+	{
+		return impl == other.impl;
+	}
 
 	RigidBody createBody(const BodyDef& def);
 	void destroyBody(RigidBody& body);
@@ -48,11 +53,15 @@ public:
 
 	void tick(val_t dt);
 
+	std::vector<RigidBody> getActiveBodies() const;
 	std::vector<AABB> getBroadphaseDebugInfo() const;
 
 private:
 	friend class RigidBody;
 
 	std::unique_ptr<internal::FizzWorldImpl, internal::FizzWorldImplDeleter> impl;
+
+	std::unordered_map<RigidBody, int> bodyToIndex;
+	std::vector<RigidBody> activeBodies;
 };
 }

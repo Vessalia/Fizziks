@@ -68,11 +68,30 @@ public:
 	void collisionOnStay();
 	void collisionOnExit();
 
+	bool operator==(const RigidBody& other) const
+	{
+		return impl == other.impl;
+	}
+
+
 private:
 	friend class FizzWorld;
+	friend struct std::hash<RigidBody>;
 
 	RigidBody() : impl(nullptr, internal::RigidBodyImplDeleter{}) { }
 
 	std::unique_ptr<internal::RigidBodyImpl, internal::RigidBodyImplDeleter> impl;
+};
+}
+
+namespace std
+{
+template <>
+struct hash<Fizziks::RigidBody>
+{
+	size_t operator()(const Fizziks::RigidBody r) const
+	{
+		return std::hash<Fizziks::internal::RigidBodyImpl>{}(*r.impl);
+	}
 };
 }

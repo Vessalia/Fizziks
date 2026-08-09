@@ -47,6 +47,8 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
 	{
 		threadAllocators.push_back(new LinearAllocator(INIT_ALLOC)); // hard code 1KB per thread for now
 	}
+
+	worldID = nextWorldID++;
 }
 
 void FizzWorldImplDeleter::operator()(FizzWorldImpl* p) const
@@ -814,12 +816,26 @@ RigidBody FizzWorld::createBody(const BodyDef& def)
 {
 	RigidBody rb;
 	rb.impl.reset(new internal::RigidBodyImpl(impl->createBody(def, this)));
+
+	bodyToIndex[rb] = activeBodies.size();
+	activeBodies.push_back(rb);
+
 	return rb;
 }
 
 void FizzWorld::destroyBody(RigidBody& rb)
 {
 	impl->destructionQueue.push(*rb.impl);
+
+	int swapIndex = bodyToIndex[rb];
+	if (swapIndex != activeBodies.size())
+	{
+		std::swap(activeBodies[swapIndex], activeBodies[activeBodies.size() - 1]);
+		bodyToIndex[activeBodies[swapIndex]] = swapIndex;
+	}
+
+	bodyToIndex.erase(rb);
+	activeBodies.pop_back();
 }
 
 Vec2 FizzWorld::worldScale() const
@@ -830,6 +846,11 @@ Vec2 FizzWorld::worldScale() const
 void FizzWorld::tick(val_t dt)
 {
 	impl->tick(dt, Gravity);
+}
+
+std::vector<RigidBody> FizzWorld::getActiveBodies() const
+{
+	return activeBodies;
 }
 
 std::vector<AABB> FizzWorld::getBroadphaseDebugInfo() const
