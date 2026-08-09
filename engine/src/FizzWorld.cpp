@@ -47,8 +47,6 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
 	{
 		threadAllocators.push_back(new LinearAllocator(INIT_ALLOC)); // hard code 1KB per thread for now
 	}
-
-	worldID = nextWorldID++;
 }
 
 void FizzWorldImplDeleter::operator()(FizzWorldImpl* p) const
@@ -827,7 +825,7 @@ void FizzWorld::destroyBody(RigidBody& rb)
 {
 	impl->destructionQueue.push(*rb.impl);
 
-	int swapIndex = bodyToIndex[rb];
+	size_t swapIndex = bodyToIndex[rb];
 	if (swapIndex != activeBodies.size())
 	{
 		std::swap(activeBodies[swapIndex], activeBodies[activeBodies.size() - 1]);

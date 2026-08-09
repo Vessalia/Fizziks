@@ -17,18 +17,9 @@ class FizzWorldImpl
 	friend class RigidBody;
 	friend class RigidBodyImpl;
 
-public:
-	bool operator==(const FizzWorldImpl& other) const
-	{
-		return worldID == other.worldID;
-	}
-
 private:
 	FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel);
 	~FizzWorldImpl();
-
-	inline static size_t nextWorldID = 0;
-	size_t worldID;
 
 	size_t currstep = 0;
 	static constexpr size_t THREAD_THRESHOLD = 128;
