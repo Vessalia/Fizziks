@@ -18,7 +18,7 @@ namespace std
 template <>
 struct hash<Fizziks::internal::Handle>
 {
-	size_t operator()(const Fizziks::internal::Handle h) const
+	size_t operator()(const Fizziks::internal::Handle& h) const
 	{
 		size_t h1 = std::hash<uint32_t>{}(h.index);
 		size_t h2 = std::hash<uint32_t>{}(h.gen);

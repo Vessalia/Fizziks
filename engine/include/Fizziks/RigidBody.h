@@ -71,23 +71,17 @@ public:
 
 	bool operator==(const RigidBody& other) const;
 
-
 private:
 	friend class FizzWorld;
-	friend struct std::hash<RigidBody>;
+	friend struct RigidBodyHash;
 
 	RigidBody() : impl(nullptr, internal::RigidBodyImplDeleter{}) { }
 
 	std::unique_ptr<internal::RigidBodyImpl, internal::RigidBodyImplDeleter> impl;
 };
-}
 
-namespace std
+struct RigidBodyHash
 {
-template <>
-struct hash<Fizziks::RigidBody>
-{
-	friend class Fizziks::RigidBody;
-	size_t operator()(const Fizziks::RigidBody r) const;
+	size_t operator()(const RigidBody& r) const;
 };
 }

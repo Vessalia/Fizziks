@@ -175,19 +175,14 @@ RigidBody& RigidBody::layer(uint32_t mask)
 	WORLD->body_layer(*THIS, mask);
 	return *this;
 }
+
+bool RigidBody::operator==(const RigidBody& other) const
+{
+	return impl.get() == other.impl.get();
 }
 
-namespace std
+size_t RigidBodyHash::operator()(const RigidBody& r) const
 {
-size_t std::hash<Fizziks::internal::RigidBodyImpl>::operator()(const Fizziks::internal::RigidBodyImpl impl) const
-{
-	size_t h1 = std::hash<Fizziks::internal::Handle>{}(impl.handle);
-	size_t h2 = std::hash<Fizziks::FizzWorld>{}(*impl.world);
-	return (size_t)0;
-}
-
-size_t std::hash<Fizziks::RigidBody>::operator()(const Fizziks::RigidBody r) const
-{
-	return std::hash<Fizziks::internal::RigidBodyImpl>{}(*r.impl);
+	return std::hash<internal::RigidBodyImpl>{}(*r.impl);
 }
 }

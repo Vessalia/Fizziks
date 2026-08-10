@@ -24,6 +24,8 @@ namespace Fizziks
 class FIZZIKS_API FizzWorld
 {
 public:
+	size_t worldID;
+
 	Vec2 Gravity = {0, val_t(-9.81)};
 
 	enum class AccelStruct
@@ -54,9 +56,11 @@ public:
 private:
 	friend class RigidBody;
 
+	inline static size_t nextWorldID = 0;
+
 	std::unique_ptr<internal::FizzWorldImpl, internal::FizzWorldImplDeleter> impl;
 
-	std::unordered_map<RigidBody, size_t> bodyToIndex;
+	std::unordered_map<RigidBody, size_t, RigidBodyHash> bodyToIndex;
 	std::vector<RigidBody> activeBodies;
 };
 }
