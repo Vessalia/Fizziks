@@ -13,7 +13,7 @@ class RigidBodyImpl
 	friend class FizzWorldImpl;
 	friend struct std::hash<RigidBodyImpl>;
 
-	bool operator==(const RigidBodyImpl& other)
+	bool operator==(const RigidBodyImpl& other) const
 	{
 		return handle == other.handle && world->worldID == other.world->worldID;
 	}

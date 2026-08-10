@@ -178,7 +178,7 @@ RigidBody& RigidBody::layer(uint32_t mask)
 
 bool RigidBody::operator==(const RigidBody& other) const
 {
-	return impl.get() == other.impl.get();
+	return *impl == *other.impl;
 }
 
 size_t RigidBodyHash::operator()(const RigidBody& r) const
