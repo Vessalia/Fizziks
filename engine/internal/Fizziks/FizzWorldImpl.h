@@ -106,6 +106,8 @@ private:
 
 	Broadphase* broadphase;
 
+	void setBroadphase(FizzWorld::AccelStruct accel);
+
 	Vec2 get_worldPos(const BodyData& body, const Vec2& colliderPos) const;
 	val_t get_worldRotation(const BodyData& body, const Collider& collider) const;
 

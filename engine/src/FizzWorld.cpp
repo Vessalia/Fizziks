@@ -720,6 +720,34 @@ void FizzWorldImpl::simulate_bodies(val_t dt, const Vec2& gravity)
 	}
 }
 
+void FizzWorldImpl::setBroadphase(FizzWorld::AccelStruct accel)
+{
+	if (accel == FizzWorld::AccelStruct::SIMPLE)
+	{
+		delete(broadphase);
+		broadphase = new SimpleBP();
+
+		for (int ID = 0; ID < activeBodies.size(); ++ID)
+		{
+			broadphase->add(ID, activeBodies[ID].bounds);
+		}
+	}
+	else if (accel == FizzWorld::AccelStruct::BVH)
+	{
+		delete(broadphase);
+		broadphase = new BVH();
+
+		for (int ID = 0; ID < activeBodies.size(); ++ID)
+		{
+			broadphase->add(ID, activeBodies[ID].bounds);
+		}
+	}
+	else
+	{
+		FIZZIKS_LOG_ERROR("Requested broadphase acceleration structure does not exist in namespace Fizziks::internal");
+	}
+}
+
 void FizzWorldImpl::destroy_bodies()
 {
 	while (!destructionQueue.empty())
@@ -844,7 +872,12 @@ Vec2 FizzWorld::worldScale() const
 
 void FizzWorld::tick(val_t dt)
 {
-	impl->tick(dt, Gravity);
+	impl->tick(dt * timescale, Gravity);
+}
+
+void FizzWorld::broadphase(AccelStruct accel)
+{
+	impl->setBroadphase(accel);
 }
 
 std::vector<RigidBody> FizzWorld::getActiveBodies() const

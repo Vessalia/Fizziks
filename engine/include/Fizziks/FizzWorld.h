@@ -27,6 +27,7 @@ public:
 	size_t worldID;
 
 	Vec2 Gravity = {0, val_t(-9.81)};
+	val_t timescale = 1;
 
 	enum class AccelStruct
 	{
@@ -49,6 +50,8 @@ public:
 	Vec2 worldScale() const;
 
 	void tick(val_t dt);
+
+	void broadphase(AccelStruct accel);
 
 	std::vector<RigidBody> getActiveBodies() const;
 	std::vector<AABB> getBroadphaseDebugInfo() const;
