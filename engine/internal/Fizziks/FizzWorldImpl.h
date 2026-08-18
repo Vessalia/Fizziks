@@ -104,6 +104,7 @@ private:
 
 	std::queue<RigidBodyImpl> destructionQueue;
 
+	FizzWorld::AccelStruct broadphaseType;
 	Broadphase* broadphase;
 
 	void setBroadphase(FizzWorld::AccelStruct accel);

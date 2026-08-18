@@ -24,7 +24,7 @@ namespace Fizziks
 class FIZZIKS_API FizzWorld
 {
 public:
-	size_t worldID;
+	const size_t worldID;
 
 	Vec2 Gravity = {0, val_t(-9.81)};
 	val_t timescale = 1;
@@ -51,6 +51,7 @@ public:
 
 	void tick(val_t dt);
 
+	AccelStruct broadphase() const;
 	void broadphase(AccelStruct accel);
 
 	std::vector<RigidBody> getActiveBodies() const;

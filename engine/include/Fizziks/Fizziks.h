@@ -12,7 +12,7 @@
 	#else
 		#define FIZZIKS_API __declspec(dllimport)
 	#endif
-#else  
+#else
 	#define FIZZIKS_API __attribute__((visibility("default")))
 #endif
 
@@ -22,8 +22,11 @@ do {\
 	std::abort();\
 } while(0)
 
+namespace Fizziks
+{
 #ifdef FIZZIKS_PRECISION_MODE
 	using val_t = double;
 #else
 	using val_t = float;
 #endif
+}

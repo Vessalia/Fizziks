@@ -875,8 +875,14 @@ void FizzWorld::tick(val_t dt)
 	impl->tick(dt * timescale, Gravity);
 }
 
+FizzWorld::AccelStruct FizzWorld::broadphase() const
+{
+	return impl->broadphaseType;
+}
+
 void FizzWorld::broadphase(AccelStruct accel)
 {
+	impl->broadphaseType = accel;
 	impl->setBroadphase(accel);
 }
 
