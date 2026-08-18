@@ -170,6 +170,15 @@ private:
 	uint32_t body_layer(const RigidBodyImpl& rb) const;
 	void body_layer(const RigidBodyImpl& rb, uint32_t layer);
 
+	val_t body_linearDamping(const RigidBodyImpl& rb) const;
+	void body_linearDamping(const RigidBodyImpl& rb, val_t linDamp);
+
+	val_t body_angularDamping(const RigidBodyImpl& rb) const;
+	void body_angularDamping(const RigidBodyImpl& rb, val_t angDamp);
+
+	val_t body_restitution(const RigidBodyImpl& rb) const;
+	void body_restitution(const RigidBodyImpl& rb, val_t res);
+
 	RigidBodyImpl createBody(const BodyDef& def, FizzWorld* parent);
 	void tick(val_t dt, const Vec2& gravity);
 };

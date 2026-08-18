@@ -57,6 +57,15 @@ public:
 	uint32_t layer() const;
 	RigidBody& layer(uint32_t layer);
 
+	val_t linearDamping() const;
+	RigidBody& linearDamping(val_t linDamp);
+
+	val_t angularDamping() const;
+	RigidBody& angularDamping(val_t angDamp);
+
+	val_t restitution() const;
+	RigidBody& restitution(val_t res);
+
 	RigidBody& applyForce(const Vec2& force, const Vec2& at = { 0, 0 });
 
 	RigidBody& addCollider(const ColliderDef& def);
@@ -65,9 +74,10 @@ public:
 	RigidBody& setCollider(uint32_t ID, const ColliderDef& def);
 	std::vector<ColliderDef> colliders() const;
 
-	void collisionOnEnter();
-	void collisionOnStay();
-	void collisionOnExit();
+	// todo
+	// void collisionOnEnter();
+	// void collisionOnStay();
+	// void collisionOnExit();
 
 	bool operator==(const RigidBody& other) const;
 

@@ -158,7 +158,6 @@ BodyType RigidBody::bodyType() const
 {
 	return WORLD->body_bodyType(*THIS);
 }
-
 RigidBody& RigidBody::bodyType(const BodyType& type)
 {
 	WORLD->body_bodyType(*THIS, type);
@@ -169,10 +168,39 @@ uint32_t RigidBody::layer() const
 {
 	return WORLD->body_layer(*THIS);
 }
-
 RigidBody& RigidBody::layer(uint32_t mask)
 {
 	WORLD->body_layer(*THIS, mask);
+	return *this;
+}
+
+val_t RigidBody::linearDamping() const
+{
+	return WORLD->body_linearDamping(*THIS);
+}
+RigidBody& RigidBody::linearDamping(val_t linDamp)
+{
+	WORLD->body_linearDamping(*THIS, linDamp);
+	return *this;
+}
+
+val_t RigidBody::angularDamping() const
+{
+	return WORLD->body_angularDamping(*THIS);
+}
+RigidBody& RigidBody::angularDamping(val_t angDamp)
+{
+	WORLD->body_angularDamping(*THIS, angDamp);
+	return *this;
+}
+
+val_t RigidBody::restitution() const
+{
+	return WORLD->body_restitution(*THIS);
+}
+RigidBody& RigidBody::restitution(val_t res)
+{
+	WORLD->body_restitution(*THIS, res);
 	return *this;
 }
 

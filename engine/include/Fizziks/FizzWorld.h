@@ -34,7 +34,7 @@ public:
 		SIMPLE, BVH
 	};
 
-	FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timeStep, AccelStruct accel = AccelStruct::BVH);
+	FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel = AccelStruct::BVH);
 	FizzWorld() : FizzWorld(20, 20, 5, 1 / 20.f, AccelStruct::BVH) { }
 	~FizzWorld() = default;
 
@@ -48,11 +48,18 @@ public:
 	void destroyBody(RigidBody& body);
 
 	Vec2 worldScale() const;
+	FizzWorld& worldScale(const Vec2& scale);
 
-	void tick(val_t dt);
+	int collisionIterations() const;
+	FizzWorld& collisionIterations(int iters);
+
+	val_t timestep() const;
+	FizzWorld& timestep(val_t dt);
 
 	AccelStruct broadphase() const;
-	void broadphase(AccelStruct accel);
+	FizzWorld& broadphase(AccelStruct accel);
+
+	void tick(val_t dt);
 
 	std::vector<RigidBody> getActiveBodies() const;
 	std::vector<AABB> getBroadphaseDebugInfo() const;

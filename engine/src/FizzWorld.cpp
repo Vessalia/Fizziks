@@ -322,7 +322,11 @@ val_t FizzWorldImpl::body_mass(const RigidBodyImpl& rb) const
 void FizzWorldImpl::body_mass(const RigidBodyImpl& rb, val_t m)
 {
 	auto* body = get_body(rb);
-	if (body) body->invMass = 1 / m;
+	if (body)
+	{
+		body->mass = m;
+		body->invMass = 1 / m;
+	}
 }
 
 val_t FizzWorldImpl::body_gravityScale(const RigidBodyImpl& rb) const
@@ -343,7 +347,6 @@ BodyType FizzWorldImpl::body_bodyType(const RigidBodyImpl& rb) const
 	if (body) return body->bodyType;
 	else	  return null_body.bodyType;
 }
-
 void FizzWorldImpl::body_bodyType(const RigidBodyImpl& rb, const BodyType& type)
 {
 	auto* body = get_body(rb);
@@ -360,6 +363,42 @@ void FizzWorldImpl::body_layer(const RigidBodyImpl& rb, uint32_t layer)
 {
 	auto* body = get_body(rb);
 	if (body) body->layer = layer;
+}
+
+val_t FizzWorldImpl::body_linearDamping(const RigidBodyImpl& rb) const
+{
+	auto* body = get_body(rb);
+	if (body) return body->linearDamping;
+	else	  return null_body.linearDamping;
+}
+void FizzWorldImpl::body_linearDamping(const RigidBodyImpl& rb, val_t linDamp)
+{
+	auto* body = get_body(rb);
+	if (body) body->linearDamping = linDamp;
+}
+
+val_t FizzWorldImpl::body_angularDamping(const RigidBodyImpl& rb) const
+{
+	auto* body = get_body(rb);
+	if (body) return body->angularDamping;
+	else	  return null_body.angularDamping;
+}
+void FizzWorldImpl::body_angularDamping(const RigidBodyImpl& rb, val_t angDamp)
+{
+	auto* body = get_body(rb);
+	if (body) body->angularDamping = angDamp;
+}
+
+val_t FizzWorldImpl::body_restitution(const RigidBodyImpl& rb) const
+{
+	auto* body = get_body(rb);
+	if (body) return body->restitution;
+	else	  return null_body.restitution;
+}
+void FizzWorldImpl::body_restitution(const RigidBodyImpl& rb, val_t res)
+{
+	auto* body = get_body(rb);
+	if (body) body->restitution = res;
 }
 
 Vec2 FizzWorldImpl::get_worldPos(const BodyData& body, const Vec2& colliderPos) const
@@ -869,21 +908,46 @@ Vec2 FizzWorld::worldScale() const
 {
 	return { (val_t)impl->unitsX, (val_t)impl->unitsY };
 }
-
-void FizzWorld::tick(val_t dt)
+FizzWorld& FizzWorld::worldScale(const Vec2& scale)
 {
-	impl->tick(dt * timescale, Gravity);
+	// this is a nightmare do this later
+	return *this;
+}
+
+int FizzWorld::collisionIterations() const
+{
+	return impl->collisionIterations;
+}
+FizzWorld& FizzWorld::collisionIterations(int iters)
+{
+	impl->collisionIterations = iters;
+	return *this;
+}
+
+val_t FizzWorld::timestep() const
+{
+	return impl->timestep;
+}
+FizzWorld& FizzWorld::timestep(val_t dt)
+{
+	impl->timestep = dt;
+	return *this;
 }
 
 FizzWorld::AccelStruct FizzWorld::broadphase() const
 {
 	return impl->broadphaseType;
 }
-
-void FizzWorld::broadphase(AccelStruct accel)
+FizzWorld& FizzWorld::broadphase(AccelStruct accel)
 {
 	impl->broadphaseType = accel;
 	impl->setBroadphase(accel);
+	return *this;
+}
+
+void FizzWorld::tick(val_t dt)
+{
+	impl->tick(dt * timescale, Gravity);
 }
 
 std::vector<RigidBody> FizzWorld::getActiveBodies() const
