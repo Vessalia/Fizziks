@@ -36,6 +36,7 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
 	, accumulator(0)
 	, timestep(timestep)
 	, collisionIterations(collisionIterations)
+	, broadphaseType(accel)
 {
 	switch (accel)
 	{

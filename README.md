@@ -116,9 +116,11 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
+- Prevent deltatime debt spiral of death
+  - sometimes when given a large dt, we can take as long or longer to simulate that elapsed time
 - Contact manifolds > contact points?
 - BVH raycasting/user data + callback abstraction
-  - Collision event callbacks
+  - Collision event callbacks (collisionOnEnter/Exit/Stay)
   - RigidBody layermasking
 - Nearphase groups for multi-threading
 - Contact joints

@@ -4,7 +4,7 @@
 
 namespace Fizziks::internal
 {
-LinearAllocator::LinearAllocator(size_t tot_bytes) 
+LinearAllocator::LinearAllocator(size_t tot_bytes)
 	: Allocator(tot_bytes)
 	, init_bytes(tot_bytes)
 	, cursor(0)
@@ -14,8 +14,8 @@ LinearAllocator::LinearAllocator(size_t tot_bytes)
 	start = malloc(tot_bytes); // need to align start address?
 	if (!start) throw std::bad_alloc();
 }
-	
-static inline size_t calculatePadding(const uintptr_t baseAddress, const size_t alignment) 
+
+static inline size_t calculatePadding(const uintptr_t baseAddress, const size_t alignment)
 {
 	const size_t multiplier = (baseAddress / alignment) + 1; // next aligned block index
 	const uintptr_t alignedAddress = multiplier * alignment; // start of the next aligned block
@@ -46,7 +46,7 @@ void LinearAllocator::resize(size_t new_size)
 }
 
 void* LinearAllocator::allocate(size_t size, size_t alignment)
-{   
+{
 	size_t padding = 0;
 	uintptr_t currAddress = (uintptr_t)start + (uintptr_t)cursor;
 
@@ -54,7 +54,7 @@ void* LinearAllocator::allocate(size_t size, size_t alignment)
 	bool align = alignment && currAddress % alignment;
 	padding = align ? calculatePadding(currAddress, alignment) : 0;
 
-	if (cursor + padding + size > tot_bytes) 
+	if (cursor + padding + size > tot_bytes)
 	{
 		size_t newSize = std::max(tot_bytes * 2, cursor + padding + size);
 		resize(newSize);
@@ -62,8 +62,6 @@ void* LinearAllocator::allocate(size_t size, size_t alignment)
 		// start has moved, need to update addresses
 		currAddress = (uintptr_t)start + (uintptr_t)cursor;
 		padding = align ? calculatePadding(currAddress, alignment) : 0;
-		counter = 0;
-		timing = true;
 	}
 
 	uintptr_t nextAddress = currAddress + padding;
@@ -76,10 +74,11 @@ void* LinearAllocator::allocate(size_t size, size_t alignment)
 constexpr size_t COLLECTION_TIMER = 30;
 void LinearAllocator::reset()
 {
-	if (timing && counter++ == COLLECTION_TIMER)
+	peak = std::max(peak, cursor);
+
+	if (counter++ == COLLECTION_TIMER)
 	{
 		shrink();
-		timing = false;
 		counter = 0;
 		peak = 0;
 	}
@@ -90,7 +89,7 @@ void LinearAllocator::reset()
 void LinearAllocator::shrink()
 {
 	size_t target = std::max(peak * 2, init_bytes);
-	if (target < tot_bytes)resize(target);
+	if (target < tot_bytes) resize(target);
 }
 
 Allocator::Block LinearAllocator::write(void* data, size_t byte_count, size_t alignment)
