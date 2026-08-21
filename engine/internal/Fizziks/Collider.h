@@ -1,6 +1,7 @@
 #pragma once
 #include <Fizziks/FizzShape.h>
-#include <Fizziks/RigidDef.h>
+#include <Fizziks/BodyDef.h>
+#include <Fizziks/ColliderDef.h>
 
 namespace Fizziks::internal
 {
@@ -9,7 +10,7 @@ struct Collider
 	// Physics-related part
 	val_t mass;
 	val_t MoI;
-	
+
 	val_t staticFrictionCoeff = val_t(0.2);
 	val_t dynamicFrictionCoeff = val_t(0.1);
 
@@ -18,7 +19,7 @@ struct Collider
 	InternalShape shape;
 
 	// World-related part
-	Vec2 pos;
+	Vec2 position;
 };
 
 Collider buildCollider(const ColliderDef& def);

@@ -1,7 +1,7 @@
 #pragma once
 #include <Fizziks/Fizziks.h>
 #include <Fizziks/RigidBody.h>
-#include <Fizziks/RigidDef.h>
+#include <Fizziks/BodyDef.h>
 #include <Fizziks/Vec.h>
 
 #include <vector>
@@ -18,6 +18,11 @@ struct FIZZIKS_API FizzWorldImplDeleter
 	void operator()(FizzWorldImpl* p) const;
 };
 }
+
+struct Scale
+{
+	size_t x, y;
+};
 
 namespace Fizziks
 {
@@ -46,9 +51,10 @@ public:
 
 	RigidBody createBody(const BodyDef& def);
 	void destroyBody(RigidBody& body);
+	void destroyAllBodies();
 
-	Vec2 worldScale() const;
-	FizzWorld& worldScale(const Vec2& scale);
+	Scale worldScale() const;
+	FizzWorld& worldScale(const Scale& scale);
 
 	int collisionIterations() const;
 	FizzWorld& collisionIterations(int iters);

@@ -117,7 +117,7 @@ A demo of how to use this library can be found [here](https://github.com/Vessali
 
 ## Future Work
 - Prevent deltatime debt spiral of death
-  - sometimes when given a large dt, we can take as long or longer to simulate that elapsed time
+  - sometimes when given a large dt, we can take as long or longer to simulate that elapsed time. Have max time spent draining accumulator before surrendering
 - Contact manifolds > contact points?
 - BVH raycasting/user data + callback abstraction
   - Collision event callbacks (collisionOnEnter/Exit/Stay)

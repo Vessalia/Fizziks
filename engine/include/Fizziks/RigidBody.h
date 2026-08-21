@@ -1,6 +1,6 @@
 #pragma once
 #include <Fizziks/Fizziks.h>
-#include <Fizziks/RigidDef.h>
+#include <Fizziks/BodyDef.h>
 #include <Fizziks/Vec.h>
 
 #include <memory>

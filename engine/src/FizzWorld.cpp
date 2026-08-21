@@ -17,11 +17,15 @@ namespace Fizziks::internal
 const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
 {
 	fizzmax<uint32_t>(),
+
 	vec_max(),
+
 	vec_max(), vec_max(), vec_max(),
 	fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(),
+
 	fizzmax<val_t>(), fizzmax<val_t>(),
 	fizzmax<val_t>(), fizzmax<val_t>(),
+
 	fizzmax<val_t>(),
 	fizzmax<val_t>(), fizzmax<val_t>(), fizzmax<val_t>(),
 	{},
@@ -88,14 +92,14 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 	if(body->bodyType != BodyType::STATIC)
 	{
 		body->mass += collider.mass;
-		body->invMass = 1 / body->mass;
+		body->invMass = body->mass > 0 ? 1 / body->mass : 0;
 	}
 
 	val_t totalMass = 0;
 	Vec2 weightedSum = Vec2::Zero();
 	for(auto coll : body->colliders)
 	{
-		weightedSum += coll.mass * coll.pos;
+		weightedSum += coll.mass * coll.position;
 		totalMass += coll.mass;
 	}
 
@@ -105,12 +109,12 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 	for(auto coll : body->colliders)
 	{
 		// parallel axis theorem
-		Vec2 r = body->centroid - coll.pos;
+		Vec2 r = body->centroid - coll.position;
 		MoI += coll.MoI + coll.mass * r.dot(r);
 	}
 
 	body->MoI = MoI;
-	body->invMoI = 1 / MoI;
+	body->invMoI = MoI > 0 ? 1 / MoI : 0;
 }
 
 void FizzWorldImpl::remove_collider(const RigidBodyImpl& rb, uint32_t ID)
@@ -169,8 +173,8 @@ const AABB FizzWorldImpl::compute_bounds(BodyData* body)
 	Vec2 min = vec_max(), max = vec_min();
 	for (auto collider : body->colliders)
 	{
-		AABB minorBounds = getBounds(collider.shape, collider.pos, body->rotation);
-		Vec2 world = body->position + collider.pos;
+		AABB minorBounds = getBounds(collider.shape, collider.position, body->rotation);
+		Vec2 world = body->position + collider.position;
 
 		min.x = std::min(min.x, world.x + minorBounds.min.x);
 		min.y = std::min(min.y, world.y + minorBounds.min.y);
@@ -317,8 +321,8 @@ void FizzWorldImpl::body_angularVelocity(const RigidBodyImpl& rb, val_t angVel)
 val_t FizzWorldImpl::body_mass(const RigidBodyImpl& rb) const
 {
 	auto* body = get_body(rb);
-	if (body) return 1 / body->invMass;
-	else	  return 1 / null_body.invMass;
+	if (body) return body->mass;
+	else	  return null_body.mass;
 }
 void FizzWorldImpl::body_mass(const RigidBodyImpl& rb, val_t m)
 {
@@ -326,7 +330,7 @@ void FizzWorldImpl::body_mass(const RigidBodyImpl& rb, val_t m)
 	if (body)
 	{
 		body->mass = m;
-		body->invMass = 1 / m;
+		body->invMass = m > 0 ? 1 / m : 0;
 	}
 }
 
@@ -425,12 +429,12 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint3
 	for (uint32_t i = 0; i < bodyA.colliders.size(); ++i)
 	{
 		const auto& coll1 = bodyA.colliders[i];
-		const Vec2 posA = get_worldPos(bodyA, coll1.pos);
+		const Vec2 posA = get_worldPos(bodyA, coll1.position);
 		val_t rotA = get_worldRotation(bodyA, coll1);
 		for (uint32_t j = 0; j < bodyB.colliders.size(); ++j)
 		{
 			const auto& coll2 = bodyB.colliders[j];
-			const Vec2 posB = get_worldPos(bodyB, coll2.pos);
+			const Vec2 posB = get_worldPos(bodyB, coll2.position);
 			val_t rotB = get_worldRotation(bodyB, coll2);
 			const Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
 
@@ -905,13 +909,28 @@ void FizzWorld::destroyBody(RigidBody& rb)
 	activeBodies.pop_back();
 }
 
-Vec2 FizzWorld::worldScale() const
+void FizzWorld::destroyAllBodies()
 {
-	return { (val_t)impl->unitsX, (val_t)impl->unitsY };
+	for (auto& body : activeBodies)
+	{
+		impl->destructionQueue.push(*body.impl);
+	}
+
+	activeBodies.clear();
+	bodyToIndex.clear();
 }
-FizzWorld& FizzWorld::worldScale(const Vec2& scale)
+
+Scale FizzWorld::worldScale() const
 {
-	// this is a nightmare do this later
+	return { impl->unitsX, impl->unitsY };
+}
+FizzWorld& FizzWorld::worldScale(const Scale& scale)
+{
+	if (scale.x != impl->unitsX || scale.y != impl->unitsY)
+	{
+		// this is a nightmare do this later
+	}
+
 	return *this;
 }
 
@@ -941,8 +960,12 @@ FizzWorld::AccelStruct FizzWorld::broadphase() const
 }
 FizzWorld& FizzWorld::broadphase(AccelStruct accel)
 {
-	impl->broadphaseType = accel;
-	impl->setBroadphase(accel);
+	if (accel != impl->broadphaseType)
+	{
+		impl->broadphaseType = accel;
+		impl->setBroadphase(accel);
+	}
+
 	return *this;
 }
 

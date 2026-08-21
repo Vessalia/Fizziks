@@ -11,8 +11,8 @@ Collider buildCollider(const ColliderDef& def)
 	collider.dynamicFrictionCoeff = def.dynamicFrictionCoeff;
 	collider.rotation = def.rotation;
 	collider.shape = toInternal(def.shape);
-	collider.pos = def.pos;
-	
+	collider.position = def.position;
+
 	collider.MoI = getMoI(collider.shape, collider.mass);
 
 	return collider;
@@ -21,14 +21,14 @@ Collider buildCollider(const ColliderDef& def)
 ColliderDef toColliderDef(uint32_t ID, const Collider& collider)
 {
 	ColliderDef colliderDef;
-	
+
 	colliderDef.ID = ID;
 	colliderDef.mass = collider.mass;
 	colliderDef.staticFrictionCoeff = collider.staticFrictionCoeff;
 	colliderDef.dynamicFrictionCoeff = collider.dynamicFrictionCoeff;
 	colliderDef.rotation = collider.rotation;
 	colliderDef.shape = toExternal(collider.shape);
-	colliderDef.pos = collider.pos;
+	colliderDef.position = collider.position;
 
 	colliderDef.MoI = collider.MoI;
 

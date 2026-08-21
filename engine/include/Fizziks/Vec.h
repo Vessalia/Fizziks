@@ -4,7 +4,7 @@
 #include <cmath>
 
 namespace Fizziks
-{    
+{
 struct FIZZIKS_API Vec2
 {
 	val_t x = 0;
@@ -115,7 +115,7 @@ struct FIZZIKS_API Mat2
 	Mat2& operator*=(val_t scalar);
 	Mat2& operator*=(const Mat2& mat);
 	Mat2& operator/=(val_t scalar);
-	
+
 	Mat2 transposed() const;
 	Mat2& transpose();
 
