@@ -856,6 +856,7 @@ void FizzWorldImpl::tick_end()
 	}
 }
 
+static int MAX_TICK_STEPS = 10;
 void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 {
 	if (currstep == 0)
@@ -863,8 +864,9 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 		FIZZIKS_LOG_INFO("First world tick called!");
 	}
 
+	int tickSteps = 0;
 	accumulator += dt;
-	while (accumulator >= timestep)
+	while (accumulator >= timestep && tickSteps++ < MAX_TICK_STEPS)
 	{
 		accumulator -= timestep;
 
