@@ -19,7 +19,7 @@ struct ColliderDef
 
 	// Geometry-related part
 	val_t rotation = 0;
-	Shape shape;
+	Shape shape = Rect { 1, 1 }; // this is the default shape
 
 	// World-related part
 	Vec2 position = { 0, 0 };
