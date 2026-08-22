@@ -415,7 +415,7 @@ void BVH::removePair(uint32_t index)
 
 CollisionPairs BVH::computePairs(void)
 {
-	if (!moveBuffer.size()) return collPairs;
+	if (!nodes.size() || !moveBuffer.size()) return collPairs;
 
 	std::vector<uint32_t> stack;
 	stack.reserve(static_cast<size_t>(std::log2(nodes.size())));
