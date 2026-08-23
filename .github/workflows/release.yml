@@ -24,7 +24,7 @@ jobs:
           -DBUILD_SHARED_LIBS=ON
           -DFIZZIKS_BUILD_TESTS=OFF
           -DFIZZIKS_USE_GLM=OFF
-          -DCMAKE_INSTALL_PREFIX=package
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/package
 
       - name: Build
         run: cmake --build build --config Release
@@ -35,17 +35,12 @@ jobs:
       - name: Prepare package
         shell: pwsh
         run: |
-          # Rename the install tree to Fizziks
           Rename-Item package Fizziks
-
-          # Add the CMake wrapper used for add_subdirectory()
           Copy-Item assets/CMakeLists.release.txt Fizziks/CMakeLists.txt
 
       - name: Package
         shell: pwsh
         run: |
-          Rename-Item package Fizziks
-
           Compress-Archive `
             -Path Fizziks `
             -DestinationPath "Fizziks-${{ github.ref_name }}-windows-x64.zip"
