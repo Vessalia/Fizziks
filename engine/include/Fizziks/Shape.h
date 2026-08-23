@@ -39,7 +39,7 @@ struct Capsule
 
 using Shape = std::variant<Circle, Ellipse, Rect, Polygon, Capsule>;
 
-struct Contact 
+struct Contact
 {
 	Vec2 contactPointWorldA, contactPointWorldB;
 	Vec2 contactPointLocalA, contactPointLocalB;
@@ -58,6 +58,7 @@ FIZZIKS_API Rect createRect(val_t width, val_t height);
 FIZZIKS_API Polygon createPolygon(const std::vector<Vec2>& vertices);
 FIZZIKS_API Capsule createCapsule(val_t capHeight, const Rect& body);
 
+FIZZIKS_API Vec2 getCentroid(const std::vector<Vec2>& verts);
 FIZZIKS_API val_t getMoI(const Shape& shape, val_t mass);
 
 FIZZIKS_API AABB getBounds(const Shape& s, const Vec2& centroid, val_t rot, bool tight = true);

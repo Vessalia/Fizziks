@@ -13,7 +13,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Check out code (with submodules)
+      - name: Check out code
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -32,14 +32,25 @@ jobs:
       - name: Install
         run: cmake --install build --config Release
 
+      - name: Prepare package
+        shell: pwsh
+        run: |
+          # Rename the install tree to Fizziks
+          Rename-Item package Fizziks
+
+          # Add the CMake wrapper used for add_subdirectory()
+          Copy-Item assets/CMakeLists.release.txt Fizziks/CMakeLists.txt
+
       - name: Package
         shell: pwsh
         run: |
+          Rename-Item package Fizziks
+
           Compress-Archive `
-            -Path package/* `
-            -DestinationPath Fizziks-${{ github.ref_name }}.zip
+            -Path Fizziks `
+            -DestinationPath "Fizziks-${{ github.ref_name }}-windows-x64.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: Fizziks-${{ github.ref_name }}.zip
+          files: Fizziks-${{ github.ref_name }}-windows-x64.zip

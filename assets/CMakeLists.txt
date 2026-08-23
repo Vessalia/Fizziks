@@ -1,7 +1,7 @@
 add_library(Fizziks SHARED IMPORTED GLOBAL)
 
 set_target_properties(Fizziks PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/include"
+    INTERFACE_INCLUDE_DIRECTORIES    "${CMAKE_CURRENT_LIST_DIR}/include"
 
     IMPORTED_LOCATION_DEBUG          "${CMAKE_CURRENT_LIST_DIR}/bin/Debug/Fizziks.dll"
     IMPORTED_LOCATION_RELEASE        "${CMAKE_CURRENT_LIST_DIR}/bin/Release/Fizziks.dll"
@@ -16,3 +16,5 @@ set_target_properties(Fizziks PROPERTIES
     IMPORTED_PDB_DEBUG               "${CMAKE_CURRENT_LIST_DIR}/bin/Debug/Fizziks.pdb"
     IMPORTED_PDB_RELWITHDEBINFO      "${CMAKE_CURRENT_LIST_DIR}/bin/RelWithDebInfo/Fizziks.pdb"
 )
+
+add_library(Fizziks::Fizziks ALIAS Fizziks)

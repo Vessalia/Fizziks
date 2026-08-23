@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28...4.2)
 
-project(Fizziks_ngin VERSION 1.0 LANGUAGES CXX)
+project(Fizziks VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -96,16 +96,6 @@ install(DIRECTORY engine/include/Fizziks
 	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-if(FIZZIKS_USE_GLM)
-	install(DIRECTORY dependencies/glm/glm
-		DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-	)
-else()
-	install(DIRECTORY dependencies/eigen/Eigen
-		DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-	)
-endif()
-
 if(MSVC AND BUILD_SHARED_LIBS)
 	install(FILES $<TARGET_PDB_FILE:Fizziks>
 		DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -136,6 +126,7 @@ if(BUILD_SHARED_LIBS)
 
 	install(FILES
 		"${CMAKE_CURRENT_BINARY_DIR}/FizziksConfig.cmake"
+		"${CMAKE_CURRENT_BINARY_DIR}/FizziksConfigVersion.cmake"
 		DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Fizziks
 	)
 endif()
