@@ -60,6 +60,7 @@ FIZZIKS_API AABB getBounds(const InternalShape& s, const Vec2& centroid, val_t r
 
 FIZZIKS_API bool shapesOverlap(const InternalShape& s1, const Vec2& p1, val_t r1, const InternalShape& s2, const Vec2& p2, val_t r2);
 FIZZIKS_API Contact getShapeContact(const InternalShape& s1, const Vec2& p1, val_t r1, const InternalShape& s2, const Vec2& p2, val_t r2);
+FIZZIKS_API std::vector<Contact> getShapeContacts(const InternalShape& s1, const Vec2& p1, val_t r1, const InternalShape& s2, const Vec2& p2, val_t r2);
 }
 
 namespace std

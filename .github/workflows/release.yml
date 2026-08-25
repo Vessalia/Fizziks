@@ -37,6 +37,7 @@ jobs:
         run: |
           Rename-Item package Fizziks
           Copy-Item assets/CMakeLists.release.txt Fizziks/CMakeLists.txt
+          Copy-Item README.md Fizziks/README.md
 
       - name: Package
         shell: pwsh

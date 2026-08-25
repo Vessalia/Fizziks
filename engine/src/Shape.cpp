@@ -82,13 +82,21 @@ Contact getShapeContact(const Shape& s1, const Vec2& p1, val_t rot1,
 	return getShapeContact(internal::toInternal(s1), p1, rot1,
 						   internal::toInternal(s2), p2, rot2);
 }
+
+std::vector<Contact> getShapeContacts(const Shape& s1, const Vec2& p1, val_t rot1,
+									  const Shape& s2, const Vec2& p2, val_t rot2)
+{
+	return getShapeContacts(internal::toInternal(s1), p1, rot1,
+							internal::toInternal(s2), p2, rot2);
+}
 }
 
 // External to internal mapping functions
 namespace Fizziks::internal
 {
-enum class WindingDirection {
-CCW, CW, Degenerate
+enum class WindingDirection
+{
+	CCW, CW, Degenerate
 };
 
 WindingDirection getWindingDirection(const std::vector<Vec2>& vertices)
@@ -444,12 +452,12 @@ Current list of InternalShape operations required to be supported:
 - getMoI
 - getBoundsFast
 - getBoundsTight
-- support
-- getFeature
 
 Current list of additional Primitive operations required to be supported:
 - contains
-- raycast
+- raycast (this is obsolete now, but is likely to be useful so we'll keep it for now)
+- support
+- feature
 */
 
 namespace Fizziks::internal::ops
@@ -471,7 +479,7 @@ bool contains(const Ellipse& e, const Vec2& p)
 {
 	val_t nx = p.x / e.rx;
 	val_t ny = p.y / e.ry;
-	return nx*nx + ny*ny <= 1;
+	return nx * nx + ny * ny <= 1;
 }
 
 // (ox + t * dx)^2 / a^2 + (oy + t * dy)^2 / b^2 = 1
@@ -543,7 +551,7 @@ Vec2 support(const Ellipse& e, const Vec2& dir)
 }
 
 constexpr int bucketCount = 16; // should definitely be based on size somehow
-uint32_t getFeature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
+uint32_t feature(const Ellipse& e, const Vec2& pos, const Vec2& normal)
 {
 	if (e.rx == e.ry)
 	{
@@ -670,7 +678,7 @@ Vec2 support(const Polygon& p, const Vec2& dir)
 val_t facingWeight = val_t(1);
 val_t proxWeight = val_t(0.1);
 
-uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
+uint32_t feature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 {
 	uint32_t bestIndex = 0;
 
@@ -702,6 +710,34 @@ uint32_t getFeature(const Polygon& p, const Vec2& pos, const Vec2& normal)
 }
 
 #pragma endregion
+
+Vec2 support(const ConvexPiece& piece, const Vec2& dir)
+{
+	Vec2 localDir = piece.rot.transposed() * dir;
+	Vec2 localPoint = std::visit([&](const auto& shape) -> Vec2 { return support(shape, localDir); }, piece.shape);
+	return piece.rot * localPoint + piece.offset;
+}
+
+RaycastResult raycast(const ConvexPiece& piece, const Ray& ray)
+{
+	Ray localRay(ray.pos - piece.offset, piece.rot.transposed() * ray.dir);
+	return std::visit([&](const auto& shape) -> RaycastResult { return raycast(shape, localRay); }, piece.shape);
+}
+
+bool contains(const ConvexPiece& piece, const Vec2& point)
+{
+	Vec2 local = piece.rot.transposed() * (point - piece.offset);
+	return std::visit([&](const auto& s) {
+		return contains(s, local);
+	}, piece.shape);
+}
+
+uint32_t feature(const ConvexPiece& piece, const Vec2& pos, const Vec2& normal)
+{
+	Vec2 localPos    = piece.rot.transposed() * (pos - piece.offset);
+	Vec2 localNormal = piece.rot.transposed() * normal;
+	return std::visit([&](const auto& s) -> uint32_t { return ops::feature(s, localPos, localNormal); }, piece.shape);
+}
 
 #pragma endregion
 
@@ -747,12 +783,7 @@ val_t getMoI(const Compound& c, val_t mass)
 			Vec2 r(x, y);
 			for (const auto& piece : c.pieces)
 			{
-				Vec2 local = piece.rot.transposed() * (r - piece.offset);
-				bool inside = std::visit([&](const auto& s) {
-					return contains(s, local);
-				}, piece.shape);
-
-				if (inside)
+				if (contains(piece, r))
 				{
 					++hits;
 					moiAccum += r.squaredNorm(); // integrate by r^2dm
@@ -766,66 +797,6 @@ val_t getMoI(const Compound& c, val_t mass)
 	val_t density = mass / area;
 	val_t moi = density * cellArea * moiAccum;
 	return moi;
-}
-
-Vec2 support(const ConvexPiece& piece, const Vec2& dir)
-{
-	Vec2 localDir = piece.rot.transposed() * dir;
-	Vec2 localPoint = std::visit([&](const auto& shape) -> Vec2 { return support(shape, localDir); }, piece.shape);
-	return piece.rot * localPoint + piece.offset;
-}
-
-Vec2 support(const Compound& c, const Vec2& dir)
-{
-	val_t bestProj = -fizzmax<val_t>();
-	Vec2 best = origin;
-	for (const ConvexPiece& piece : c.pieces)
-	{
-		Vec2 candidate = support(piece, dir);
-		val_t proj = candidate.dot(dir);
-		if (proj > bestProj)
-		{
-			bestProj = proj;
-			best = candidate;
-		}
-	}
-
-	return best;
-}
-
-RaycastResult raycast(const ConvexPiece& piece, const Ray& ray)
-{
-	Ray localRay(ray.pos - piece.offset, piece.rot.transposed() * ray.dir);
-	return std::visit([&](const auto& shape) -> RaycastResult { return raycast(shape, localRay); }, piece.shape);
-}
-
-uint32_t getFeature(const Compound& cp, const Vec2& pos, const Vec2& normal)
-{
-	uint32_t bestPiece = 0;
-	val_t bestT = 0;
-	Ray ray(pos, normal);
-
-	for (uint32_t i = 0; i < static_cast<uint32_t>(cp.pieces.size()); ++i)
-	{
-		const auto& piece = cp.pieces[i];
-		RaycastResult cast = ops::raycast(piece, ray);
-		if (cast.hit && cast.exitT > 0 && cast.exitT > bestT)
-		{
-			bestT = cast.exitT;
-			bestPiece = i;
-		}
-	}
-
-	const auto& piece = cp.pieces[bestPiece];
-
-	Vec2 localPos = piece.rot.transposed() * (pos - piece.offset);
-	Vec2 localNormal = piece.rot.transposed() * normal;
-
-	uint32_t localFeature = std::visit([&](const auto& s) {
-		return getFeature(s, localPos, localNormal);
-	}, piece.shape);
-
-	return (bestPiece << 24) | (localFeature & 0xFFFFFF);
 }
 
 #pragma endregion
@@ -883,14 +854,35 @@ AABB getBounds(const InternalShape& s, const Vec2& centroid, val_t rot, bool tig
 	return getBounds(s.data, centroid, rot, tight);
 }
 
-Vec2 getSupport(const ShapeType& shape, const Mat2& rot, const Vec2& direction)
+std::vector<ConvexPiece> getConvexPieces(const ShapeType& shape)
 {
-	const Vec2 dir = rot.transposed() * direction;
-	return std::visit([&dir](const auto& s) -> Vec2 { return ops::support(s, dir); }, shape);
+	std::vector<ConvexPiece> pieces;
+
+	std::visit([&](const auto& s)
+	{
+		using T = std::decay_t<decltype(s)>;
+		if constexpr (std::is_same_v<T, Compound>)
+		{
+			pieces.reserve(s.pieces.size());
+			for (const ConvexPiece& piece : s.pieces) pieces.push_back(piece);
+		}
+		else // Ellipse or Polygon
+		{
+			pieces.push_back(ConvexPiece{ Primitive(s), Vec2::Zero(), Mat2::Rotation(0) });
+		}
+	}, shape);
+
+	return pieces;
 }
 
-SupportVertex getCSOSupport(const ShapeType& s1, const Vec2& p1, const Mat2& r1,
-							const ShapeType& s2, const Vec2& p2, const Mat2& r2,
+Vec2 getSupport(const ConvexPiece& piece, const Mat2& rot, const Vec2& direction)
+{
+	const Vec2 dir = rot.transposed() * direction;
+	return ops::support(piece, dir);
+}
+
+SupportVertex getCSOSupport(const ConvexPiece& s1, const Vec2& p1, const Mat2& r1,
+							const ConvexPiece& s2, const Vec2& p2, const Mat2& r2,
 							const Vec2& dir)
 {
 	Vec2 support1 = getSupport(s1, r1,  dir);
@@ -898,9 +890,9 @@ SupportVertex getCSOSupport(const ShapeType& s1, const Vec2& p1, const Mat2& r1,
 	return { (r1 * support1 + p1) - (r2 * support2 + p2), support1, support2 };
 }
 
-uint32_t getFeature(const ShapeType& shape, const Vec2& pos, const Vec2& normal)
+uint32_t getFeature(const ConvexPiece& piece, const Vec2& pos, const Vec2& normal)
 {
-	return std::visit([&pos, &normal](const auto& s) -> uint32_t { return ops::getFeature(s, pos, normal); }, shape);
+	return ops::feature(piece, pos, normal);
 }
 
 Shape toExternal(const InternalShape& shape)
@@ -1027,8 +1019,8 @@ void reduceSimplex(Simplex& simplex, Vec2& dir)
 	}
 }
 
-std::pair<bool, Simplex> getGJKSimplex(const ShapeType& s1, const Vec2& p1, const Mat2& r1,
-									   const ShapeType& s2, const Vec2& p2, const Mat2& r2)
+std::pair<bool, Simplex> getGJKSimplex(const ConvexPiece& s1, const Vec2& p1, const Mat2& r1,
+									   const ConvexPiece& s2, const Vec2& p2, const Mat2& r2)
 {
 	Simplex simplex;
 	simplex.reserve(maxIterationsGJK / 2); // we'll usually exit early
@@ -1058,8 +1050,16 @@ bool shapesOverlap(const InternalShape& s1, const Vec2& p1, val_t rot1,
 				   const InternalShape& s2, const Vec2& p2, val_t rot2)
 {
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
-	const auto [overlaps, _] = getGJKSimplex(s1.data, p1, r1, s2.data, p2, r2);
-	return overlaps;
+
+	for (const auto& pieceA : getConvexPieces(s1.data))
+	{
+		for (const auto& pieceB : getConvexPieces(s2.data))
+		{
+			if (getGJKSimplex(pieceA, p1, r1, pieceB, p2, r2).first) return true;
+		}
+	}
+
+	return false;
 }
 
 #pragma endregion
@@ -1073,8 +1073,8 @@ const Vec2 neg_y = { 0, -1};
 const std::array<Vec2, 4> dirs = { pos_x, neg_x, pos_y, neg_y };
 const std::array<Vec2, 2> axes = { pos_x, pos_y };
 void blowupSimplex(Simplex& simplex,
-				   const ShapeType& s1, const Vec2& p1, const Mat2& r1,
-				   const ShapeType& s2, const Vec2& p2, const Mat2& r2)
+				   const ConvexPiece& s1, const Vec2& p1, const Mat2& r1,
+				   const ConvexPiece& s2, const Vec2& p2, const Mat2& r2)
 {
 	if (simplex.size() < 1 || simplex.size() > 2) return; // can only blow up a point or line
 
@@ -1107,7 +1107,6 @@ void blowupSimplex(Simplex& simplex,
 		}
 	}
 
-	// enforce CCW winding
 	enforceCCWWinding(simplex);
 }
 
@@ -1170,25 +1169,15 @@ Contact getCircleCircleContact(const Ellipse& c1, const Vec2& p1, const Mat2& r1
 	contact.contactPointLocalA = r1.transposed() * (contact.contactPointWorldA - p1);
 	contact.contactPointLocalB = r2.transposed() * (contact.contactPointWorldB - p2);
 
-	contact.featureA = getFeature(c1, p1, contact.normal);
-	contact.featureB = getFeature(c2, p2, -contact.normal);
+	contact.featureA = ops::feature(c1, p1, contact.normal);
+	contact.featureB = ops::feature(c2, p2, -contact.normal);
 
 	return contact;
 }
 
-Contact getShapeContact(const InternalShape& shape1, const Vec2& p1, val_t rot1,
-						const InternalShape& shape2, const Vec2& p2, val_t rot2)
+Contact getShapeContact(const ConvexPiece& s1, const Vec2& p1, const Mat2& r1,
+						const ConvexPiece& s2, const Vec2& p2, const Mat2& r2)
 {
-	const ShapeType& s1 = shape1.data; const ShapeType& s2 = shape2.data;
-	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
-
-	if (std::holds_alternative<Ellipse>(s1) && std::get<Ellipse>(s1).rx == std::get<Ellipse>(s1).ry &&
-		std::holds_alternative<Ellipse>(s2) && std::get<Ellipse>(s2).rx == std::get<Ellipse>(s2).ry)
-	{
-		return getCircleCircleContact(std::get<Ellipse>(s1), p1, r1,
-									  std::get<Ellipse>(s2), p2, r2);
-	}
-
 	Contact contact;
 	auto [overlaps, simplex] = getGJKSimplex(s1, p1, r1, s2, p2, r2);
 	contact.overlaps = overlaps;
@@ -1212,7 +1201,9 @@ Contact getShapeContact(const InternalShape& shape1, const Vec2& p1, val_t rot1,
 	}
 
 	if (iterations == maxIterationsEPA + 1)
+	{
 		FIZZIKS_LOG_DEBUG("Max EPA iterations surpassed");
+	}
 
 	// closest edge of final simplex to the origin
 	facet = closestFacet(simplex, origin);
@@ -1241,10 +1232,63 @@ Contact getShapeContact(const InternalShape& shape1, const Vec2& p1, val_t rot1,
 	contact.contactPointLocalB = vert.B;
 	contact.contactPointWorldA = r1 * vert.A + p1;
 	contact.contactPointWorldB = r2 * vert.B + p2;
-	contact.featureA = getFeature(s1, vert.A, contact.normal);
+	contact.featureA = getFeature(s1, vert.A,  contact.normal);
 	contact.featureB = getFeature(s2, vert.B, -contact.normal);
 
 	return contact;
+}
+
+std::vector<Contact> getShapeContacts(const InternalShape& shape1, const Vec2& p1, val_t rot1,
+									  const InternalShape& shape2, const Vec2& p2, val_t rot2)
+{
+	const ShapeType& s1 = shape1.data; const ShapeType& s2 = shape2.data;
+	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
+
+	if (std::holds_alternative<Ellipse>(s1) && std::get<Ellipse>(s1).rx == std::get<Ellipse>(s1).ry &&
+		std::holds_alternative<Ellipse>(s2) && std::get<Ellipse>(s2).rx == std::get<Ellipse>(s2).ry)
+	{
+		return { getCircleCircleContact(std::get<Ellipse>(s1), p1, r1,
+										std::get<Ellipse>(s2), p2, r2) };
+	}
+
+	const auto pieces1 = getConvexPieces(s1);
+	const auto pieces2 = getConvexPieces(s2);
+
+	std::vector<Contact> contacts;
+	contacts.reserve(pieces1.size() * pieces2.size()); // worst case, most pairs won't overlap
+
+	for (uint32_t i = 0; i < static_cast<uint32_t>(pieces1.size()); ++i)
+	{
+		for (uint32_t j = 0; j < static_cast<uint32_t>(pieces2.size()); ++j)
+		{
+			Contact c = getShapeContact(pieces1[i], p1, r1, pieces2[j], p2, r2);
+			if (!c.overlaps) continue;
+
+			// track all features in flat int
+			c.featureA = (i << 24) | (c.featureA & 0xFFFFFF);
+			c.featureB = (j << 24) | (c.featureB & 0xFFFFFF);
+
+			contacts.push_back(c);
+		}
+	}
+
+	return contacts;
+}
+
+Contact getShapeContact(const InternalShape& shape1, const Vec2& p1, val_t rot1,
+						const InternalShape& shape2, const Vec2& p2, val_t rot2)
+{
+	Contact best;
+	best.overlaps = false;
+	for (auto& c : getShapeContacts(shape1, p1, rot1, shape2, p2, rot2))
+	{
+		if (!best.overlaps || c.penetration > best.penetration)
+		{
+			best = c;
+		}
+	}
+
+	return best;
 }
 
 #pragma endregion

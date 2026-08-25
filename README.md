@@ -77,29 +77,43 @@ int main(int argc, char** argv)
 
 	FizzWorld world;
 
-	BodyDef def;
-	small.colliderDefs.push_back({
-		createColliderDef(createRect(0.25, 0.25), 1), Vec2::Zero()
-	});
-	bodies.push_back(world.createBody(small));
+	BodyDef left = BodyDefBuilder()
+		.setInitPosition({ 0, 0 })
+		.setBodyType(BodyType::STATIC)
+		.setColliderDefs({ ColliderDefBuilder().setShape(createRect(1, 20)).build() })
+		.setRestitution(0.0f)
+		.build();
 
-	BodyDef big;
-	big.colliderDefs.push_back({
-		createColliderDef(createCircle(1.4), 10), Vec2::Zero()
-	});
-	big.initPosition = { 20, 5 };
-	big.initVelocity = { -3, 0 };
-	bodies.push_back(world.createBody(big));
+	BodyDef right = BodyDefBuilder()
+		.setInitPosition({ 20, 0 })
+		.setBodyType(BodyType::STATIC)
+		.setColliderDefs({ ColliderDefBuilder().setShape(createRect(1, 20)).build() })
+		.setRestitution(0.0f)
+		.build();
 
-	BodyDef stat;
-	stat.colliderDefs.push_back({
-		createColliderDef(createPolygon({
-			Vec2(0, 0), Vec2(0, 1), Vec2(1, 0)
-		}, 1, deg2rad(10)), Vec2::Zero())
-	});
-	stat.BodyType = BodyType::STATIC;
-	stat.initPosition = { 10, 2 };
-	bodies.push_back(world.createBody(stat));
+	BodyDef bottom = BodyDefBuilder()
+		.setInitPosition({ 10, 0.5 })
+		.setBodyType(BodyType::STATIC)
+		.setColliderDefs({ ColliderDefBuilder().setShape(createRect(20, 1)).build() })
+		.setRestitution(0.1f)
+		.build();
+
+	BodyDef poly = BodyDefBuilder()
+		.setInitPosition({ 10, 10 })
+		.setColliderDefs({
+			ColliderDefBuilder()
+				.setShape(createPolygon({
+					Vec2(0, 0), Vec2(1, 0), Vec2(1, 1)
+				}))
+				.setMass(2)
+				.build()
+		})
+		.build();
+
+	world.createBody(left);
+	world.createBody(right);
+	world.createBody(bottom);
+	world.createBody(poly);
 
 	float dt = 1 / 60.f;
 
@@ -116,14 +130,16 @@ int main(int argc, char** argv)
 A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
+- Contact manifolds
+  - Concave shapes are *actually* handled now (GJK/EPA use convex hulls, so before we just broke things up and operated on their convex hull), but stability is poor since we don't operate on the contact manifold, just the face with the largest penetration
 - Prevent deltatime debt spiral of death
   - sometimes when given a large dt, we can take as long or longer to simulate that elapsed time. Have max time spent draining accumulator before surrendering
-- Contact manifolds > contact points?
 - BVH raycasting/user data + callback abstraction
   - Collision event callbacks (collisionOnEnter/Exit/Stay)
   - RigidBody layermasking
 - Nearphase groups for multi-threading
 - Contact joints
+- Springs and strings
 
 ## References
 - [Ming-Lun "Allen" Chou's Game Physics Series](https://allenchou.net/game-physics-series/)
