@@ -45,6 +45,9 @@ cmake --build build
   - `X = 5`, corresponding to debug messages
   - The build will fail if X is not one of these values
 
+## Release Builds
+- Aimed to work using either `use_subdirectory`, or `use_package`. If you desire debug symbols, then build using the `build.sh` script for the 4 most common configurations.
+
 ## Usage
 - **RigidBody** - A user facing representation of a physics body. Implemented as a handle to the actual data stored in the `FizzWorld` it was created from.
 - **FizzWorld** - Owns bodies and simulation state. Responsible for creating, simulating, and destroying `RigidBody`s.
