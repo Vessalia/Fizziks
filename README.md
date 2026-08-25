@@ -47,6 +47,7 @@ cmake --build build
 
 ## Release Builds
 - Aimed to work using either `use_subdirectory`, or `use_package`. If you desire debug symbols, then build using the `build.sh` script for the 4 most common configurations.
+- The library uses the CMake alias `Fizziks::Fizziks`.
 
 ## Usage
 - **RigidBody** - A user facing representation of a physics body. Implemented as a handle to the actual data stored in the `FizzWorld` it was created from.
