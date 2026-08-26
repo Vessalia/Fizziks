@@ -141,6 +141,7 @@ A demo of how to use this library can be found [here](https://github.com/Vessali
 - BVH raycasting/user data + callback abstraction
   - Collision event callbacks (collisionOnEnter/Exit/Stay)
   - RigidBody layermasking
+- Collision Prediction
 - Nearphase groups for multi-threading
 - Contact joints
 - Springs and strings
