@@ -1,6 +1,9 @@
 # Fizziks
 Fizziks is a real-time 2d rigid body physics engine written in C++. Designed for deterministic simulation, educational clarity, and easy integration into games and simulations.
 
+## Demo
+A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
+
 ## Features
 - Broadphase and narrowphase collision detection
 - BVH acceleration structure for broadphase detection
@@ -129,9 +132,6 @@ int main(int argc, char** argv)
 	return 0;
 }
 ```
-
-## Demo
-A demo of how to use this library can be found [here](https://github.com/Vessalia/PlayFizziks).
 
 ## Future Work
 - Contact manifolds
