@@ -1244,21 +1244,23 @@ std::vector<Contact> getShapeContacts(const InternalShape& shape1, const Vec2& p
 	const ShapeType& s1 = shape1.data; const ShapeType& s2 = shape2.data;
 	Mat2 r1 = Mat2::Rotation(rot1), r2 = Mat2::Rotation(rot2);
 
+	std::vector<Contact> contacts;
 	if (std::holds_alternative<Ellipse>(s1) && std::get<Ellipse>(s1).rx == std::get<Ellipse>(s1).ry &&
 		std::holds_alternative<Ellipse>(s2) && std::get<Ellipse>(s2).rx == std::get<Ellipse>(s2).ry)
 	{
-		return { getCircleCircleContact(std::get<Ellipse>(s1), p1, r1,
-										std::get<Ellipse>(s2), p2, r2) };
+		Contact c = getCircleCircleContact(std::get<Ellipse>(s1), p1, r1,
+										   std::get<Ellipse>(s2), p2, r2);
+		if (c.overlaps) contacts.push_back(c);
+		return contacts;
 	}
 
 	const auto pieces1 = getConvexPieces(s1);
 	const auto pieces2 = getConvexPieces(s2);
 
-	std::vector<Contact> contacts;
 	contacts.reserve(pieces1.size() * pieces2.size()); // worst case, most pairs won't overlap
 
 	for (uint32_t i = 0; i < static_cast<uint32_t>(pieces1.size()); ++i)
-	{
+	{	
 		for (uint32_t j = 0; j < static_cast<uint32_t>(pieces2.size()); ++j)
 		{
 			Contact c = getShapeContact(pieces1[i], p1, r1, pieces2[j], p2, r2);

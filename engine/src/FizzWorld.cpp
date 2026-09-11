@@ -435,9 +435,9 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint3
 			const auto& coll2 = bodyB.colliders[j];
 			const Vec2 posB = get_worldPos(bodyB, coll2.position);
 			val_t rotB = get_worldRotation(bodyB, coll2);
-			const Contact contact = getShapeContact(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
+			const std::vector<Contact> contacts = getShapeContacts(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
 
-			if (contact.overlaps)
+			for (auto contact : contacts)
 			{
 				ColliderContact collContact = { i, j, contact };
 				Allocator::Block block = threadAllocators[allocIndex]->write(&collContact, sizeof(ColliderContact));
