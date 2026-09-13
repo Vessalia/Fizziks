@@ -7,10 +7,11 @@
 
 #include <Fizziks/LinearAllocator.h>
 
-#include <algorithm>
-
 #include <Fizziks/ScopeProfiler.h>
 #include <Fizziks/FizzLog.h>
+
+#include <algorithm>
+#include <chrono>
 
 namespace Fizziks::internal
 {
@@ -437,7 +438,7 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint3
 			val_t rotB = get_worldRotation(bodyB, coll2);
 			const std::vector<Contact> contacts = getShapeContacts(coll1.shape, posA, rotA, coll2.shape, posB, rotB);
 
-			for (auto contact : contacts)
+			for (const auto& contact : contacts)
 			{
 				ColliderContact collContact = { i, j, contact };
 				Allocator::Block block = threadAllocators[allocIndex]->write(&collContact, sizeof(ColliderContact));
@@ -855,7 +856,7 @@ void FizzWorldImpl::tick_end()
 	}
 }
 
-static int MAX_TICK_STEPS = 10;
+static int MAX_TICK_TIME_MS = 5;
 void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 {
 	if (currstep == 0)
@@ -863,10 +864,14 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 		FIZZIKS_LOG_INFO("First world tick called!");
 	}
 
-	int tickSteps = 0;
+	float timeMS = 0;
+	float averageStepTime = 0;
+	int numSteps = 0;
 	accumulator += dt;
-	while (accumulator >= timestep && tickSteps++ < MAX_TICK_STEPS)
+	while (accumulator >= timestep && (timeMS + averageStepTime) < MAX_TICK_TIME_MS)
 	{
+		const auto start = std::chrono::high_resolution_clock::now();
+
 		accumulator -= timestep;
 
 		simulate_bodies(timestep, gravity);
@@ -874,6 +879,13 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 		destroy_bodies();
 		tick_end();
 		currstep++;
+
+		const auto end = std::chrono::high_resolution_clock::now();
+		
+		const auto duration = duration_cast<std::chrono::duration<float, std::milli>>(end - start);
+		timeMS += duration.count();
+		averageStepTime = ((averageStepTime * numSteps) + duration.count()) / (numSteps + 1);
+		++numSteps;
 	}
 }
 }

@@ -16,6 +16,7 @@ A demo of how to use this library can be found [here](https://github.com/Vessali
 - No external dependencies required for integration
 - Thread safe logging
 - Google test suite
+- Configurable frame budget
 
 ## Building
 ### Requirements
@@ -135,9 +136,8 @@ int main(int argc, char** argv)
 
 ## Future Work
 - Contact manifolds
-  - Concave shapes are *actually* handled now (GJK/EPA use convex hulls, so before we just broke things up and operated on their convex hull), but stability is poor since we don't operate on the contact manifold, just the face with the largest penetration
-- Prevent deltatime debt spiral of death
-  - sometimes when given a large dt, we can take as long or longer to simulate that elapsed time. Have max time spent draining accumulator before surrendering
+	- right now we just apply resolving forces at the point of deepest penetration, but this will introduce wobbling for stacked objects. We can see this effect stronly simply by looking at multiple wide rects stacked, resulting in phasing with static geometry
+- static objects seem to be phased into quite commonly, maybe need stronger resolving forces for static?
 - BVH raycasting/user data + callback abstraction
   - Collision event callbacks (collisionOnEnter/Exit/Stay)
   - RigidBody layermasking
