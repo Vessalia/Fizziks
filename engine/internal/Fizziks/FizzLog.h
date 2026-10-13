@@ -14,7 +14,7 @@ constexpr int LevelCount = static_cast<int>(LogLevel::DEBUG) + 1;
 struct RegisteredSink
 {
 	LogSink sink;
-	std::shared_ptr<std::mutex>  mutex; // non-null if not thread-safe
+	std::shared_ptr<std::mutex> mutex; // non-null if not thread-safe
 };
 
 struct LogState

@@ -8,22 +8,22 @@ namespace Fizziks::internal
 class RigidBodyImpl
 {
 	friend class RigidBody;
-	friend struct RigidBodyImplDeleter;
 	friend class FizzWorld;
 	friend class FizzWorldImpl;
 	friend struct std::hash<RigidBodyImpl>;
 
+public:
 	bool operator==(const RigidBodyImpl& other) const
 	{
 		return handle == other.handle && world->worldID == other.world->worldID;
 	}
 
+	RigidBodyImpl() : handle({ 0, 0 }), world(nullptr) { }
+	RigidBodyImpl(Handle handle, FizzWorld* world) : handle(handle), world(world) { }
+
 private:
 	Handle handle;
 	FizzWorld* world;
-
-	RigidBodyImpl() : handle({ 0, 0 }), world(nullptr) { }
-	RigidBodyImpl(Handle handle, FizzWorld* world) : handle(handle), world(world) { }
 };
 }
 

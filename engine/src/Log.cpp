@@ -45,6 +45,8 @@ void clearLogSinks()
 	auto& state = internal::globalLogState();
 	std::unique_lock lock(state.mutex);
 	for (auto& level : state.sinks)
+	{
 		level.clear();
+	}
 }
 }

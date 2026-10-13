@@ -52,6 +52,26 @@ struct Contact
 	bool overlaps;
 };
 
+struct ContactPoint
+{
+	Vec2 contactPointWorldA, contactPointWorldB;
+	Vec2 contactPointLocalA, contactPointLocalB;
+	val_t penetration;
+};
+
+struct ContactManifold
+{
+	int numContacts;
+	ContactPoint contacts[2];
+
+	Vec2 normal;
+	Vec2 tangent;
+
+	uint32_t featureA, featureB;
+
+	bool overlaps;
+};
+
 FIZZIKS_API Circle createCircle(val_t radius);
 FIZZIKS_API Ellipse createEllipse(val_t rx, val_t ry);
 FIZZIKS_API Rect createRect(val_t width, val_t height);

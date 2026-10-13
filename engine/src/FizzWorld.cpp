@@ -55,11 +55,6 @@ FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIteratio
 	}
 }
 
-void FizzWorldImplDeleter::operator()(FizzWorldImpl* p) const
-{
-	delete p;
-}
-
 FizzWorldImpl::~FizzWorldImpl()
 {
 	delete broadphase;
@@ -893,7 +888,7 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 namespace Fizziks
 {
 FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel)
-	: impl(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep, accel), internal::FizzWorldImplDeleter{})
+	: impl(std::make_unique<internal::FizzWorldImpl>(unitsX, unitsY, collisionIterations, timestep, accel))
 	, worldID(nextWorldID++) { }
 
 RigidBody FizzWorld::createBody(const BodyDef& def)

@@ -6,14 +6,6 @@
 #define THIS (impl.get())
 #define WORLD (THIS->world->impl.get())
 
-namespace Fizziks::internal
-{
-void RigidBodyImplDeleter::operator()(RigidBodyImpl* p) const
-{
-	delete p;
-}
-}
-
 namespace Fizziks
 {
 RigidBody::RigidBody(const RigidBody& other)
@@ -25,10 +17,7 @@ RigidBody& RigidBody::operator=(const RigidBody& other)
 {
 	if (!THIS)
 	{
-		impl = std::unique_ptr<Fizziks::internal::RigidBodyImpl, Fizziks::internal::RigidBodyImplDeleter>
-		(
-			new Fizziks::internal::RigidBodyImpl(), Fizziks::internal::RigidBodyImplDeleter{}
-		);
+		impl = std::make_unique<Fizziks::internal::RigidBodyImpl>();
 	}
 
 	impl->handle = other.impl->handle;
