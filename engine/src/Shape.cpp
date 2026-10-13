@@ -727,9 +727,7 @@ RaycastResult raycast(const ConvexPiece& piece, const Ray& ray)
 bool contains(const ConvexPiece& piece, const Vec2& point)
 {
 	Vec2 local = piece.rot.transposed() * (point - piece.offset);
-	return std::visit([&](const auto& s) {
-		return contains(s, local);
-	}, piece.shape);
+	return std::visit([&](const auto& s) -> bool { return contains(s, local); }, piece.shape);
 }
 
 uint32_t feature(const ConvexPiece& piece, const Vec2& pos, const Vec2& normal)
