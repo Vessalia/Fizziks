@@ -190,9 +190,9 @@ uint32_t BVH::add(uint32_t ID, const AABB& aabb)
 	
 	if (oldParent != BVH::INVALID) // the sibling wasn't the root
 	{
-		if (nodes[oldParent].child1 == sibling) 
+		if (nodes[oldParent].child1 == sibling)
 			nodes[oldParent].child1 = newParent;
-		else                                    
+		else
 			nodes[oldParent].child2 = newParent;
 	}
 	else // the sibling was the root
@@ -336,7 +336,7 @@ void BVH::update(uint32_t ID, const AABB& aabb)
 
 	AABB newBounds = fatten(aabb);
 	node.bounds = newBounds;
-	if (node.parent == BVH::INVALID) return;
+	if (node.parent == INVALID) return;
 	else
 	{
 		removeNode(ID, true);
