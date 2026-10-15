@@ -58,7 +58,7 @@ inline Eigen::Map<const Vector2p> map(const Vec2& vec) { return Eigen::Map<const
 inline Eigen::Map<const Matrix2p> map(const Mat2& mat) { return Eigen::Map<const Matrix2p>(reinterpret_cast<const val_t*>(&mat.m00)); }
 
 inline Vec2 map(const Vector2p& vec) { return { vec.x(), vec.y() }; }
-inline Mat2 map(const Matrix2p& mat) { return { mat(0,0), mat(1,0), mat(0,1), mat(1,1) }; }
+inline Mat2 map(const Matrix2p& mat) { return { mat(0, 0), mat(1, 0), mat(0, 1), mat(1, 1) }; }
 
 inline Vector2p vec_zero() { return Vector2p::Zero(); }
 

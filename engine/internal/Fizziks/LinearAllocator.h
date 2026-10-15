@@ -1,6 +1,6 @@
 #pragma once
 #include <Fizziks/Allocator.h>
-#include <mutex>
+#include <shared_mutex>
 
 namespace Fizziks::internal
 {
@@ -11,21 +11,25 @@ public:
 	virtual ~LinearAllocator();
 
 	virtual void reset() override;
-	void shrink();
 
-	virtual Block write(void* data, size_t byte_count, size_t alignment = 0) override;
-	virtual void* read(Block block) const override;
+	virtual Block write(const void* data, size_t byte_count, size_t alignment = 0) override;
+	virtual bool read(Block block, void*& out) const override;
 
 private:
-	void* start = nullptr;
+	static constexpr size_t MAX_ALIGN = 64;
+
+	void* start = nullptr; // aligned
+	void* raw_start = nullptr; // malloced, needs freeing
 	size_t cursor;
 	size_t init_bytes;
 
-	std::mutex mutex;
+	mutable std::shared_mutex mutex; // needs mutable to be called in read since it's const
 
 	bool timing;
 	size_t counter;
 
+	void shrink();
+	void allocateBuffer(size_t bytes, void*& raw, void*& aligned);
 	virtual void resize(size_t new_size) override;
 	virtual void* allocate(size_t size, size_t alignment = 0) override;
 };

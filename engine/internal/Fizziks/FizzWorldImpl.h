@@ -15,7 +15,7 @@ class FizzWorldImpl
 	friend class FizzWorld;
 	friend class RigidBody;
 	friend class RigidBodyImpl;
-	
+
 public:
 	FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel);
 	~FizzWorldImpl();

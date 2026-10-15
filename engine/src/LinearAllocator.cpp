@@ -1,45 +1,57 @@
 #include <Fizziks/LinearAllocator.h>
 #include <cstdlib>
+#include <cassert>
 #include <algorithm>
 
 namespace Fizziks::internal
 {
+static inline size_t calculatePadding(const uintptr_t baseAddress, const size_t alignment)
+{
+	if (alignment <= 1) return 0;
+	assert((alignment & (alignment - 1)) == 0 && "alignment must be a power of two");
+
+	// round up to the next multiple of alignment
+	// ex: if alignment is 0b1000, then add 0b0111 and mask out 0b0111 (bottom 3 bits) to round
+	const uintptr_t alignedAddress = (baseAddress + alignment - 1) & ~(uintptr_t)(alignment - 1);
+	return static_cast<size_t>(alignedAddress - baseAddress);
+}
+
+void LinearAllocator::allocateBuffer(size_t bytes, void*& raw, void*& aligned)
+{
+	raw = malloc(bytes + MAX_ALIGN); // slack by MAX_ALIGN so we can round up
+	if (!raw) throw std::bad_alloc();
+
+	uintptr_t addr = (uintptr_t)raw;
+	aligned = (void*)(addr + calculatePadding(addr, MAX_ALIGN));
+}
+
 LinearAllocator::LinearAllocator(size_t tot_bytes)
 	: Allocator(tot_bytes)
-	, init_bytes(tot_bytes)
 	, cursor(0)
+	, init_bytes(tot_bytes)
 	, timing(false)
 	, counter(0)
 {
-	start = malloc(tot_bytes); // need to align start address?
-	if (!start) throw std::bad_alloc();
-}
-
-static inline size_t calculatePadding(const uintptr_t baseAddress, const size_t alignment)
-{
-	const size_t multiplier = (baseAddress / alignment) + 1; // next aligned block index
-	const uintptr_t alignedAddress = multiplier * alignment; // start of the next aligned block
-	const size_t padding = alignedAddress - baseAddress; // how many bytes we need to skip to get to the next block
-
-	return padding;
+	allocateBuffer(tot_bytes, raw_start, start);
 }
 
 LinearAllocator::~LinearAllocator()
 {
-	free(start);
+	free(raw_start);
+	raw_start = nullptr;
 	start = nullptr;
 }
 
 void LinearAllocator::resize(size_t new_size)
 {
-	void* newStart = malloc(new_size);
-	if (!newStart) throw std::bad_alloc();
+	void *newRaw, *newStart;
+	allocateBuffer(new_size, newRaw, newStart);
 
 	size_t bytesToCopy = std::min(new_size, cursor);
 	memcpy(newStart, start, bytesToCopy);
 
-	free(start);
-
+	free(raw_start);
+	raw_start = newRaw;
 	start = newStart;
 	tot_bytes = new_size;
 	cursor = bytesToCopy;
@@ -47,21 +59,15 @@ void LinearAllocator::resize(size_t new_size)
 
 void* LinearAllocator::allocate(size_t size, size_t alignment)
 {
-	size_t padding = 0;
-	uintptr_t currAddress = (uintptr_t)start + (uintptr_t)cursor;
+	assert(alignment <= MAX_ALIGN && "alignment exceeds MAX_ALIGN");
 
-	// if we care about alignment, and the cursor is not currently
-	bool align = alignment && currAddress % alignment;
-	padding = align ? calculatePadding(currAddress, alignment) : 0;
+	uintptr_t currAddress = (uintptr_t)start + cursor;
+	size_t padding = calculatePadding(currAddress, alignment);
 
 	if (cursor + padding + size > tot_bytes)
 	{
-		size_t newSize = std::max(tot_bytes * 2, cursor + padding + size);
-		resize(newSize);
-
-		// start has moved, need to update addresses
-		currAddress = (uintptr_t)start + (uintptr_t)cursor;
-		padding = align ? calculatePadding(currAddress, alignment) : 0;
+		resize(std::max(tot_bytes * 2, cursor + padding + size));
+		currAddress = (uintptr_t)start + cursor;
 	}
 
 	uintptr_t nextAddress = currAddress + padding;
@@ -74,7 +80,11 @@ void* LinearAllocator::allocate(size_t size, size_t alignment)
 constexpr size_t COLLECTION_TIMER = 30;
 void LinearAllocator::reset()
 {
+	std::unique_lock lock(mutex);
+
 	peak = std::max(peak, cursor);
+	cursor = 0;
+	++gen;
 
 	if (counter++ == COLLECTION_TIMER)
 	{
@@ -82,8 +92,6 @@ void LinearAllocator::reset()
 		counter = 0;
 		peak = 0;
 	}
-
-	cursor = 0;
 }
 
 void LinearAllocator::shrink()
@@ -92,20 +100,25 @@ void LinearAllocator::shrink()
 	if (target < tot_bytes) resize(target);
 }
 
-Allocator::Block LinearAllocator::write(void* data, size_t byte_count, size_t alignment)
+Allocator::Block LinearAllocator::write(const void* data, size_t byte_count, size_t alignment)
 {
 	std::lock_guard lock(mutex);
 
-	size_t writeStart = cursor;
 	void* location = allocate(byte_count, alignment);
-	if (location) memcpy(location, data, byte_count);
+	size_t offset = (size_t)((uintptr_t)location - (uintptr_t)start);
+	memcpy(location, data, byte_count);
 
-	return { writeStart, byte_count };
+	return { offset, byte_count, gen };
 }
 
-void* LinearAllocator::read(Block block) const
+bool LinearAllocator::read(Block block, void*& out) const
 {
-	if (block.base + block.byte_count > tot_bytes) return nullptr;
-	return static_cast<char*>(start) + block.base;
+	std::shared_lock lock(mutex);
+
+	if (block.gen != gen) return false;
+	if (block.byte_count > cursor || block.base > cursor - block.byte_count) return false;
+
+	out = static_cast<char*>(start) + block.base;
+	return true;
 }
 }
