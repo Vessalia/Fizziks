@@ -12,8 +12,11 @@ public:
 
 	virtual void reset() override;
 
-	virtual Block write(const void* data, size_t byte_count, size_t alignment = 0) override;
-	virtual bool read(Block block, void*& out) const override;
+protected:
+	virtual Block write_internal(const void* data, size_t byte_count, size_t alignment = 0) override;
+	virtual bool read_internal(Block block, void** out) const override;
+	virtual void resize(size_t new_size) override;
+	virtual void* allocate(size_t size, size_t alignment = 0) override;
 
 private:
 	static constexpr size_t MAX_ALIGN = 64;
@@ -29,8 +32,6 @@ private:
 	size_t counter;
 
 	void shrink();
-	void allocateBuffer(size_t bytes, void*& raw, void*& aligned);
-	virtual void resize(size_t new_size) override;
-	virtual void* allocate(size_t size, size_t alignment = 0) override;
+	void allocateBuffer(size_t bytes, void** raw, void** aligned);
 };
 }

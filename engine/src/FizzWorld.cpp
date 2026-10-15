@@ -436,7 +436,7 @@ FizzWorldImpl::CollisionManifold FizzWorldImpl::get_manifold(uint32_t idA, uint3
 			for (const auto& contact : contacts)
 			{
 				ColliderContact collContact = { i, j, contact };
-				Allocator::Block block = threadAllocators[allocIndex]->write(&collContact, sizeof(ColliderContact), alignof(ColliderContact));
+				Allocator::Block block = threadAllocators[allocIndex]->write(&collContact);
 				if (first)
 				{
 					manifold.allocContact = block;
@@ -697,10 +697,9 @@ void FizzWorldImpl::resolve_collisions(val_t dt)
 		const auto bodyAId = manifold.bodyAId;
 		const auto bodyBId = manifold.bodyBId;
 		const auto* alloc = threadAllocators[manifold.allocIndex];
-		void* data = nullptr;
-		if (alloc->read(manifold.allocContact, data))
+		ColliderContact* collContacts = nullptr;
+		if (alloc->read(manifold.allocContact, &collContacts))
 		{
-			ColliderContact* collContacts = static_cast<ColliderContact*>(data);
 			for (int i = 0; i < manifold.numBlocks; ++i)
 			{
 				const auto& collContact = collContacts[i];
