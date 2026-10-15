@@ -68,7 +68,7 @@ void* LinearAllocator::allocate(size_t size, size_t alignment)
 	if (cursor + padding + size > tot_bytes)
 	{
 		resize(std::max(tot_bytes * 2, cursor + padding + size));
-		currAddress = (uintptr_t)start + cursor;
+		currAddress = (uintptr_t)start + cursor; // start has moved
 	}
 
 	uintptr_t nextAddress = currAddress + padding;
@@ -103,7 +103,7 @@ void LinearAllocator::shrink()
 
 Allocator::Block LinearAllocator::write_internal(const void* data, size_t byte_count, size_t alignment)
 {
-	std::lock_guard lock(mutex);
+	std::unique_lock lock(mutex);
 
 	void* location = allocate(byte_count, alignment);
 	size_t offset = (size_t)((uintptr_t)location - (uintptr_t)start);
