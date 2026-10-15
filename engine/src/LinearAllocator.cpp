@@ -120,6 +120,7 @@ bool LinearAllocator::read_internal(Block block, void** out) const
 	if (block.byte_count > cursor || block.base > cursor - block.byte_count) return false;
 
 	*out = static_cast<char*>(start) + block.base;
+
 	return true;
 }
 }
