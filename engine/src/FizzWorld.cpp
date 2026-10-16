@@ -520,12 +520,12 @@ val_t slopPen = val_t(0.01);
 val_t slopRes = val_t(0.01);
 val_t warmStart = val_t(0.75);
 // precompute inverse effective mass (JM^-1J^T)^-1 and bias term
-// J = [-n^T -(rA x n)^T n^T (rB x n)^T]
+// J = [-n^T, -(rA x n)^T, n^T, (rB x n)^T]
 // M^-1 = [Ma^-1 0 0 0]
 //        [0 Ia^-1 0 0]
 //        [0 0 Mb^-1 0]
 //        [0 0 0 Ib^-1]
-// JM^-1    = [-n^TMa^-1 -(rA x n)^TIa^-1 n^TMb^-1 (rB x n)^TIb^-1]
+// JM^-1    = [-n^TMa^-1, -(rA x n)^TIa^-1, n^TMb^-1, (rB x n)^TIb^-1]
 // JM^-1J^T = |n|^2Ma^-1 + |rA x n|^2 Ia^-1 + |n|^2Mb^-1 + |rB x n|^2 Ib^-1
 //          = Ma^-1 + |rA x n|^2 Ia^-1 + Mb^-1 + |rB x n|^2 Ib^-1
 FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA, uint32_t idB, uint32_t collIdA, uint32_t collIdB, const Contact& contact, val_t dt)
@@ -599,9 +599,11 @@ FizzWorldImpl::CollisionResolution FizzWorldImpl::collision_preStep(uint32_t idA
 }
 
 // dv  = vb + rb x wb - (va + ra x wa)
-// Jv  = n . (vb - va) + (rb x n)wb - (ra x n)wa
-//     = n . (dv)
+// Jv  = n . (dv), and using n . (w x r) = w(r x n) gives
+//     = n . (vb - va) + (rb x n)wb - (ra x n)wa
 // lam = (-Jv + b)/effMass
+// ΔV = M^-1J^T lam = [Ma^-1, 0, 0, 0; 0, Ia^-1, 0, 0; 0, 0, Mb^-1, 0; 0, 0, 0, Ib^-1][-n; ra x -n; n; rb x n] * lam
+// ΔV = [-n / Ma; -(ra x n) / Ia; n / Mb; (rb x n) / Ib] * lam
 void FizzWorldImpl::solve_normalConstraint(CollisionResolution& resolution)
 {
 	auto& bodyA = activeBodies[resolution.bodyAId];
@@ -654,6 +656,7 @@ void FizzWorldImpl::solve_frictionConstraint(CollisionResolution& resolution)
 	val_t lambdaT = resolution.invEffTangentMass * (-Jvt);
 	val_t oldImpulse = resolution.tangentImpulse;
 	val_t newImpulse = resolution.tangentImpulse + lambdaT;
+	// up to here identical to normal constraint but no bias
 
 	val_t maxStatic = std::min(collA.staticFrictionCoeff, collB.staticFrictionCoeff) * resolution.normalImpulse;
 	val_t maxDynamic = std::min(collA.dynamicFrictionCoeff, collB.dynamicFrictionCoeff) * resolution.normalImpulse;
