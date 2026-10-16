@@ -9,6 +9,11 @@
 namespace Fizziks::internal
 {
 class RigidBodyImpl;
+
+struct FIZZIKS_API RigidBodyImplDeleter
+{
+	void operator()(RigidBodyImpl* p) const;
+};
 }
 
 namespace Fizziks
@@ -82,7 +87,7 @@ private:
 
 	RigidBody() : impl(nullptr) { }
 
-	std::unique_ptr<internal::RigidBodyImpl> impl;
+	std::unique_ptr<internal::RigidBodyImpl, internal::RigidBodyImplDeleter> impl;
 };
 
 struct RigidBodyHash

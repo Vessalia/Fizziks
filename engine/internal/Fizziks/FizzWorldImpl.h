@@ -13,14 +13,14 @@ namespace Fizziks::internal
 class FizzWorldImpl
 {
 	friend class FizzWorld;
+	friend struct FizzWorldImplDeleter;
 	friend class RigidBody;
 	friend class RigidBodyImpl;
 
-public:
+private:
 	FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel);
 	~FizzWorldImpl();
 
-private:
 	size_t currstep = 0;
 	static constexpr size_t THREAD_THRESHOLD = 128;
 

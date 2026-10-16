@@ -34,6 +34,11 @@ const FizzWorldImpl::BodyData FizzWorldImpl::null_body =
 	BodyType::STATIC
 };
 
+void FizzWorldImplDeleter::operator()(FizzWorldImpl* p) const
+{
+	delete p;
+}
+
 constexpr size_t INIT_ALLOC = 1024;
 FizzWorldImpl::FizzWorldImpl(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, FizzWorld::AccelStruct accel)
 	: unitsX(unitsX)
@@ -896,7 +901,7 @@ void FizzWorldImpl::tick(val_t dt, const Vec2& gravity)
 namespace Fizziks
 {
 FizzWorld::FizzWorld(size_t unitsX, size_t unitsY, int collisionIterations, val_t timestep, AccelStruct accel)
-	: impl(std::make_unique<internal::FizzWorldImpl>(unitsX, unitsY, collisionIterations, timestep, accel))
+	: impl(std::unique_ptr<internal::FizzWorldImpl, internal::FizzWorldImplDeleter>(new internal::FizzWorldImpl(unitsX, unitsY, collisionIterations, timestep, accel)))
 	, worldID(nextWorldID++) { }
 
 RigidBody FizzWorld::createBody(const BodyDef& def)

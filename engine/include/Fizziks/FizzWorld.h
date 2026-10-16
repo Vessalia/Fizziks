@@ -12,6 +12,11 @@
 namespace Fizziks::internal
 {
 class FizzWorldImpl;
+
+struct FIZZIKS_API FizzWorldImplDeleter
+{
+	void operator()(FizzWorldImpl* p) const;
+};
 }
 
 struct Scale
@@ -70,7 +75,7 @@ private:
 
 	inline static size_t nextWorldID = 0;
 
-	std::unique_ptr<internal::FizzWorldImpl> impl;
+	std::unique_ptr<internal::FizzWorldImpl, internal::FizzWorldImplDeleter> impl;
 
 	std::unordered_map<RigidBody, size_t, RigidBodyHash> bodyToIndex;
 	std::vector<RigidBody> activeBodies;
