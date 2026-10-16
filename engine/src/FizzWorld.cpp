@@ -113,6 +113,7 @@ void FizzWorldImpl::add_collider(BodyData* body, const Collider& collider)
 	body->invMoI = MoI > 0 ? 1 / MoI : 0;
 }
 
+// need to recalc the MoI and mass
 void FizzWorldImpl::remove_collider(const RigidBodyImpl& rb, uint32_t ID)
 {
 	BodyData* body = get_body(rb);
@@ -141,6 +142,7 @@ Collider FizzWorldImpl::get_collider(const RigidBodyImpl& rb, uint32_t ID)
 	return colliders[ID];
 }
 
+// need to recalc the MoI and mass
 void FizzWorldImpl::set_collider(const RigidBodyImpl& rb, uint32_t ID, const Collider& collider)
 {
 	BodyData* body = get_body(rb);
