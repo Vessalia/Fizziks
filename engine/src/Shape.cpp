@@ -574,9 +574,10 @@ bool contains(const Polygon& p, const Vec2& pt)
 	for (int i = 0; i < p.vertices.size(); ++i)
 	{
 		Vec2 A = p.vertices[i];
-		Vec2 B = p.vertices[(i+1) % p.vertices.size()];
+		Vec2 B = p.vertices[(i + 1) % p.vertices.size()];
 		if ((B - A).cross(pt - A) < 0) return false;
 	}
+
 	return true;
 }
 
