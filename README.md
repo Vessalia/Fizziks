@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 ```
 
 ## Future Work
-- Contact manifolds
+- Contact manifolds ([Box2d approach to look into](https://box2d.org/files/ErinCatto_ContactManifolds_GDC2007.pdf))
 	- right now we just apply resolving forces at the point of deepest penetration, but this will introduce wobbling for stacked objects. We can see this effect stronly simply by looking at multiple wide rects stacked, resulting in phasing with static geometry
 - static objects seem to be phased into quite commonly, maybe need stronger resolving forces for static?
 - BVH raycasting/user data + callback abstraction
